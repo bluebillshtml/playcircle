@@ -10,7 +10,11 @@
       "Bash(node:*)",
       "Bash(for:*)",
       "Bash(do echo \"Checking $file...\")",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(npm install:*)",
+      "Bash(npx expo start:*)",
+      "Read(//var/folders/zh/mgnlh1hn21b0xgd16v22vh140000gn/T/TemporaryItems/NSIRD_screencaptureui_pu77nX/**)",
+      "Read(//var/folders/zh/mgnlh1hn21b0xgd16v22vh140000gn/T/TemporaryItems/NSIRD_screencaptureui_nJ4K5H/**)"
     ],
     "deny": [],
     "ask": []

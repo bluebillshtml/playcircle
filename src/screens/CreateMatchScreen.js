@@ -17,14 +17,12 @@ const COURTS = [
   { id: 3, name: 'Elite Padel Academy', pricePerHour: 50 },
 ];
 
-const SKILL_LEVELS = ['Beginner', 'Intermediate', 'Advanced', 'All Levels'];
 const DURATIONS = [60, 90, 120];
 
 export default function CreateMatchScreen({ navigation }) {
   const { colors } = useTheme();
   const [selectedCourt, setSelectedCourt] = useState(null);
   const [matchType, setMatchType] = useState('casual');
-  const [skillLevel, setSkillLevel] = useState('All Levels');
   const [duration, setDuration] = useState(90);
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
@@ -67,6 +65,7 @@ export default function CreateMatchScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      <View style={styles.spacer} />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
@@ -135,31 +134,6 @@ export default function CreateMatchScreen({ navigation }) {
                 Competitive
               </Text>
             </TouchableOpacity>
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Skill Level</Text>
-          <View style={styles.optionsGrid}>
-            {SKILL_LEVELS.map((level) => (
-              <TouchableOpacity
-                key={level}
-                style={[
-                  styles.optionButton,
-                  skillLevel === level && styles.optionButtonActive,
-                ]}
-                onPress={() => setSkillLevel(level)}
-              >
-                <Text
-                  style={[
-                    styles.optionButtonText,
-                    skillLevel === level && styles.optionButtonTextActive,
-                  ]}
-                >
-                  {level}
-                </Text>
-              </TouchableOpacity>
-            ))}
           </View>
         </View>
 
@@ -293,6 +267,10 @@ const createStyles = (colors) => StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  spacer: {
+    height: 60,
+    backgroundColor: colors.background,
+  },
   scrollView: {
     flex: 1,
   },
@@ -301,26 +279,46 @@ const createStyles = (colors) => StyleSheet.create({
   },
   section: {
     backgroundColor: colors.surface,
-    padding: 20,
+    padding: 24,
     marginTop: 12,
+    borderRadius: 24,
+    marginHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 19,
+    fontWeight: '700',
     color: colors.text,
-    marginBottom: 16,
+    marginBottom: 18,
+    letterSpacing: -0.3,
   },
   courtOption: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
   },
   courtOptionSelected: {
     borderColor: colors.primary,
     borderWidth: 2,
     backgroundColor: colors.surfaceLight,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 2,
   },
   courtOptionContent: {
     flexDirection: 'row',
@@ -358,32 +356,32 @@ const createStyles = (colors) => StyleSheet.create({
   segmentedControl: {
     flexDirection: 'row',
     backgroundColor: colors.surfaceLight,
-    borderRadius: 10,
-    padding: 4,
-    gap: 4,
+    borderRadius: 16,
+    padding: 6,
+    gap: 6,
   },
   segmentButton: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 14,
     alignItems: 'center',
-    borderRadius: 8,
+    borderRadius: 12,
   },
   segmentButtonActive: {
-    backgroundColor: colors.card,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    backgroundColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
   },
   segmentButtonText: {
-    fontSize: 15,
-    fontWeight: '500',
+    fontSize: 16,
+    fontWeight: '600',
     color: colors.textSecondary,
   },
   segmentButtonTextActive: {
-    color: colors.text,
-    fontWeight: '600',
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   optionsGrid: {
     flexDirection: 'row',
@@ -391,24 +389,35 @@ const createStyles = (colors) => StyleSheet.create({
     gap: 8,
   },
   optionButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    borderRadius: 14,
     backgroundColor: colors.surfaceLight,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
   },
   optionButtonActive: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
   },
   optionButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 15,
+    fontWeight: '600',
     color: colors.text,
   },
   optionButtonTextActive: {
     color: '#FFFFFF',
+    fontWeight: '700',
   },
   inputRow: {
     flexDirection: 'row',
@@ -505,24 +514,30 @@ const createStyles = (colors) => StyleSheet.create({
     right: 0,
     backgroundColor: colors.surface,
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+    paddingTop: 20,
+    paddingBottom: 24,
+    borderTopWidth: 0,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
   },
   createButton: {
     backgroundColor: colors.primary,
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: 22,
+    borderRadius: 20,
     alignItems: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 6,
   },
   createButtonText: {
     color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: -0.3,
   },
 });

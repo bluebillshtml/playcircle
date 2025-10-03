@@ -70,14 +70,16 @@ export default function ProfileScreen() {
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.header}>
+    <View style={styles.wrapper}>
+      <View style={styles.spacer} />
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.header}>
         <View style={styles.avatarContainer}>
-          <Ionicons name="person" size={48} color="#FFFFFF" />
+          <Ionicons name="person" size={64} color="#FFFFFF" />
         </View>
         <Text style={styles.name}>{USER_DATA.name}</Text>
         <Text style={styles.email}>{USER_DATA.email}</Text>
@@ -235,14 +237,22 @@ export default function ProfileScreen() {
       </TouchableOpacity>
 
       <Text style={styles.versionText}>Version 1.0.0</Text>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const createStyles = (colors) => StyleSheet.create({
-  container: {
+  wrapper: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  spacer: {
+    height: 60,
+    backgroundColor: colors.background,
+  },
+  container: {
+    flex: 1,
   },
   content: {
     paddingBottom: 40,
@@ -250,29 +260,41 @@ const createStyles = (colors) => StyleSheet.create({
   header: {
     backgroundColor: colors.surface,
     alignItems: 'center',
-    padding: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    paddingTop: 32,
+    paddingBottom: 36,
+    paddingHorizontal: 32,
+    borderBottomWidth: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 4,
   },
   avatarContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 24,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 8,
   },
   name: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 28,
+    fontWeight: '800',
     color: colors.text,
-    marginBottom: 4,
+    marginBottom: 6,
+    letterSpacing: -0.5,
   },
   email: {
-    fontSize: 15,
+    fontSize: 16,
     color: colors.textSecondary,
-    marginBottom: 12,
+    marginBottom: 16,
   },
   ratingContainer: {
     flexDirection: 'row',
@@ -288,21 +310,29 @@ const createStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.surface,
     flexDirection: 'row',
     marginTop: 12,
-    padding: 20,
+    paddingVertical: 28,
+    paddingHorizontal: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
   statItem: {
     flex: 1,
     alignItems: 'center',
   },
   statValue: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 28,
+    fontWeight: '800',
     color: colors.text,
-    marginBottom: 4,
+    marginBottom: 6,
+    letterSpacing: -0.5,
   },
   statLabel: {
-    fontSize: 13,
+    fontSize: 14,
     color: colors.textSecondary,
+    fontWeight: '500',
   },
   statDivider: {
     width: 1,
@@ -310,23 +340,38 @@ const createStyles = (colors) => StyleSheet.create({
   },
   section: {
     backgroundColor: colors.surface,
-    marginTop: 12,
-    padding: 20,
+    marginTop: 16,
+    padding: 24,
+    marginHorizontal: 16,
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
     color: colors.text,
-    marginBottom: 16,
+    marginBottom: 18,
+    letterSpacing: -0.4,
   },
   matchCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    padding: 20,
     backgroundColor: colors.surfaceLight,
-    borderRadius: 12,
-    marginBottom: 12,
+    borderRadius: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
   },
   matchCardLeft: {
     flexDirection: 'row',
@@ -364,7 +409,7 @@ const createStyles = (colors) => StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: colors.text,
-    marginBottom: 2,
+    marginBottom: 6,
   },
   matchDate: {
     fontSize: 13,
@@ -390,18 +435,19 @@ const createStyles = (colors) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 14,
+    paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
   menuItemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
   },
   menuItemText: {
-    fontSize: 16,
+    fontSize: 17,
     color: colors.text,
+    fontWeight: '500',
   },
   menuItemSubtext: {
     fontSize: 13,
@@ -412,17 +458,26 @@ const createStyles = (colors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 14,
     backgroundColor: colors.surface,
-    marginTop: 12,
-    padding: 16,
-    borderRadius: 12,
+    marginTop: 24,
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    borderRadius: 20,
     marginHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 4,
+    borderWidth: 1.5,
+    borderColor: colors.error,
   },
   logoutText: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 17,
+    fontWeight: '700',
     color: colors.error,
+    letterSpacing: -0.2,
   },
   versionText: {
     textAlign: 'center',

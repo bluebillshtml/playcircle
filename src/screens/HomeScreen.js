@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,8 +6,11 @@ import {
   TouchableOpacity,
   ScrollView,
   Dimensions,
+  Image,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
@@ -25,6 +28,7 @@ const UPCOMING_MATCHES = [
     joinedPlayers: 2,
     totalPlayers: 4,
     pricePerPlayer: 10,
+    image: 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=400&h=300&fit=crop',
   },
   {
     id: 2,
@@ -37,6 +41,7 @@ const UPCOMING_MATCHES = [
     joinedPlayers: 3,
     totalPlayers: 4,
     pricePerPlayer: 8.75,
+    image: 'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=400&h=300&fit=crop',
   },
 ];
 
@@ -81,6 +86,14 @@ const USER_STATS = {
 
 export default function HomeScreen({ navigation }) {
   const { colors } = useTheme();
+  const scrollY = useRef(new Animated.Value(0)).current;
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good Morning';
+    if (hour < 18) return 'Good Afternoon';
+    return 'Good Evening';
+  };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -103,69 +116,171 @@ export default function HomeScreen({ navigation }) {
   const styles = createStyles(colors);
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <View style={styles.container}>
+      <Animated.ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true }
+        )}
+        scrollEventThrottle={16}
+      >
+      {/* Header */}
+      <Animated.View
+        style={[
+          styles.header,
+          {
+            opacity: scrollY.interpolate({
+              inputRange: [0, 100],
+              outputRange: [1, 0.3],
+              extrapolate: 'clamp',
+            }),
+          },
+        ]}
+      >
+        <View>
+          <Text style={styles.greeting}>{getGreeting()}</Text>
+          <Text style={styles.subGreeting}>Ready to play?</Text>
+        </View>
+      </Animated.View>
+
+      {/* Quick Stats */}
+      <Animated.View
+        style={[
+          styles.quickStats,
+          {
+            opacity: scrollY.interpolate({
+              inputRange: [50, 150],
+              outputRange: [1, 0.2],
+              extrapolate: 'clamp',
+            }),
+          },
+        ]}
+      >
+        <View style={styles.statCard}>
+          <Ionicons name="tennisball" size={24} color={colors.primary} />
+          <Text style={styles.statNumber}>{USER_STATS.totalMatches}</Text>
+          <Text style={styles.statLabel}>Matches</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Ionicons name="trophy" size={24} color={colors.warning} />
+          <Text style={styles.statNumber}>{USER_STATS.winRate}%</Text>
+          <Text style={styles.statLabel}>Win Rate</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Ionicons name="time" size={24} color={colors.success} />
+          <Text style={styles.statNumber}>{USER_STATS.hoursPlayed}h</Text>
+          <Text style={styles.statLabel}>Played</Text>
+        </View>
+      </Animated.View>
+
       {/* Upcoming Matches Section */}
       <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Upcoming Matches</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Matches')}>
-            <Text style={styles.seeAllText}>See All</Text>
-          </TouchableOpacity>
-        </View>
+        <Animated.View
+          style={{
+            opacity: scrollY.interpolate({
+              inputRange: [100, 250],
+              outputRange: [1, 0.15],
+              extrapolate: 'clamp',
+            }),
+          }}
+        >
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Upcoming Matches</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Matches')}>
+              <Text style={styles.seeAllText}>See All</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
 
         {UPCOMING_MATCHES.length > 0 ? (
-          UPCOMING_MATCHES.map((match) => (
-            <TouchableOpacity
+          UPCOMING_MATCHES.map((match, index) => (
+            <Animated.View
               key={match.id}
-              style={styles.matchCard}
-              onPress={() =>
-                navigation.navigate('MatchDetail', { matchId: match.id })
-              }
+              style={{
+                opacity: scrollY.interpolate({
+                  inputRange: [150 + (index * 100), 300 + (index * 100)],
+                  outputRange: [1, 0.15],
+                  extrapolate: 'clamp',
+                }),
+              }}
             >
-              <View style={styles.matchCardHeader}>
-                <View
-                  style={[
-                    styles.typeBadge,
-                    match.type === 'competitive'
-                      ? styles.typeBadgeCompetitive
-                      : styles.typeBadgeCasual,
-                  ]}
-                >
-                  <Text style={styles.typeBadgeText}>
-                    {match.type === 'competitive' ? 'COMPETITIVE' : 'CASUAL'}
-                  </Text>
+              <TouchableOpacity
+                style={styles.matchCard}
+                onPress={() =>
+                  navigation.navigate('MatchDetail', { matchId: match.id })
+                }
+              >
+              <View style={styles.cardContent}>
+                {/* Court Preview with Extended Blurred Background */}
+                <View style={styles.courtPreview}>
+                  <Image
+                    source={{ uri: match.image }}
+                    style={styles.courtImage}
+                    resizeMode="cover"
+                    blurRadius={3}
+                  />
+                  <LinearGradient
+                    colors={['rgba(0,0,0,0.4)', 'rgba(0,0,0,0.3)', colors.card]}
+                    locations={[0, 0.15, 0.55]}
+                    start={{ x: 0, y: 1 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.imageGradient}
+                  />
+                  <View
+                    style={[
+                      styles.typeBadgeSmall,
+                      match.type === 'competitive'
+                        ? styles.typeBadgeCompetitive
+                        : styles.typeBadgeCasual,
+                    ]}
+                  >
+                    <Text style={styles.typeBadgeTextSmall}>
+                      {match.type === 'competitive' ? 'COMP' : 'CASUAL'}
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.dateTimeContainer}>
-                  <Text style={styles.dateText}>{formatDate(match.date)}</Text>
-                  <Text style={styles.timeText}>{match.time}</Text>
-                </View>
-              </View>
 
-              <Text style={styles.courtName}>{match.courtName}</Text>
-              <View style={styles.matchInfo}>
-                <View style={styles.infoRow}>
-                   <Ionicons
-                     name="time-outline"
-                     size={16}
-                     color={colors.textSecondary}
-                   />
-                   <Text style={styles.infoText}>{match.duration} min</Text>
-                 </View>
-                 <View style={styles.infoRow}>
-                   <Ionicons
-                     name="people-outline"
-                     size={16}
-                     color={colors.textSecondary}
-                   />
-                   <Text style={styles.infoText}>
-                     {match.joinedPlayers}/{match.totalPlayers} players
-                   </Text>
-                 </View>
-                 <View style={styles.infoRow}>
-                   <Text style={styles.price}>${match.pricePerPlayer}</Text>
+                {/* Match Details */}
+                <View style={styles.matchDetails}>
+                  <View style={styles.matchCardHeader}>
+                    <Text style={styles.courtName}>{match.courtName}</Text>
+                    <View style={styles.dateTimeContainer}>
+                      <Text style={styles.dateText}>{formatDate(match.date)}</Text>
+                      <Text style={styles.timeText}>{match.time}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.matchInfo}>
+                    <View style={styles.infoRow}>
+                      <Ionicons
+                        name="time-outline"
+                        size={16}
+                        color={colors.textSecondary}
+                      />
+                      <Text style={styles.infoText}>{match.duration} min</Text>
+                    </View>
+                    <View style={styles.infoRow}>
+                      <Ionicons
+                        name="people-outline"
+                        size={16}
+                        color={colors.textSecondary}
+                      />
+                      <Text style={styles.infoText}>
+                        {match.joinedPlayers}/{match.totalPlayers}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.priceRow}>
+                    <Text style={styles.price}>${match.pricePerPlayer}</Text>
+                    <Text style={styles.perPlayer}>per player</Text>
+                  </View>
                 </View>
               </View>
-            </TouchableOpacity>
+              </TouchableOpacity>
+            </Animated.View>
           ))
         ) : (
            <View style={styles.emptyState}>
@@ -183,9 +298,29 @@ export default function HomeScreen({ navigation }) {
 
       {/* Past Matches Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Recent Activity</Text>
-        {PAST_MATCHES.map((match) => (
-          <TouchableOpacity key={match.id} style={styles.pastMatchCard}>
+        <Animated.View
+          style={{
+            opacity: scrollY.interpolate({
+              inputRange: [350, 500],
+              outputRange: [1, 0.15],
+              extrapolate: 'clamp',
+            }),
+          }}
+        >
+          <Text style={styles.sectionTitle}>Recent Activity</Text>
+        </Animated.View>
+        {PAST_MATCHES.map((match, index) => (
+          <Animated.View
+            key={match.id}
+            style={{
+              opacity: scrollY.interpolate({
+                inputRange: [400 + (index * 80), 550 + (index * 80)],
+                outputRange: [1, 0.15],
+                extrapolate: 'clamp',
+              }),
+            }}
+          >
+            <TouchableOpacity style={styles.pastMatchCard}>
             <View style={styles.pastMatchLeft}>
               <View
                 style={[
@@ -222,30 +357,36 @@ export default function HomeScreen({ navigation }) {
               </View>
             </View>
             <Text style={styles.scoreText}>{match.score}</Text>
-          </TouchableOpacity>
+            </TouchableOpacity>
+          </Animated.View>
         ))}
       </View>
 
-      {/* Quick Actions */}
-      <View style={styles.actionsSection}>
+      {/* Quick Action */}
+      <Animated.View
+        style={[
+          styles.actionsSection,
+          {
+            opacity: scrollY.interpolate({
+              inputRange: [500, 650],
+              outputRange: [1, 0.15],
+              extrapolate: 'clamp',
+            }),
+          },
+        ]}
+      >
          <TouchableOpacity
            style={styles.actionButton}
            onPress={() => navigation.navigate('Matches')}
          >
-           <Ionicons name="search" size={24} color={colors.white} />
-           <Text style={styles.actionButtonText}>Find Matches</Text>
+           <Ionicons name="search" size={26} color={colors.white} />
+           <Text style={styles.actionButtonText}>Find Players Near You</Text>
          </TouchableOpacity>
-         <TouchableOpacity
-           style={[styles.actionButton, styles.actionButtonSecondary]}
-           onPress={() => navigation.navigate('Create')}
-         >
-           <Ionicons name="add-circle" size={24} color={colors.primary} />
-           <Text style={styles.actionButtonTextSecondary}>Create Match</Text>
-         </TouchableOpacity>
-      </View>
+      </Animated.View>
 
       <View style={styles.bottomPadding} />
-    </ScrollView>
+      </Animated.ScrollView>
+    </View>
   );
 }
 
@@ -253,6 +394,58 @@ const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 120,
+    paddingBottom: 20,
+  },
+  greeting: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: colors.text,
+    marginBottom: 4,
+    letterSpacing: -0.5,
+  },
+  subGreeting: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    fontWeight: '400',
+  },
+  quickStats: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    gap: 12,
+    marginBottom: 8,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+  },
+  statNumber: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text,
+    marginTop: 8,
+    marginBottom: 2,
+  },
+  statLabel: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    fontWeight: '500',
   },
   section: {
     paddingHorizontal: 16,
@@ -266,10 +459,11 @@ const createStyles = (colors) => StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: 22,
+    fontWeight: '700',
     color: colors.text,
     marginBottom: 16,
+    letterSpacing: -0.5,
   },
   seeAllText: {
     fontSize: 14,
@@ -278,25 +472,56 @@ const createStyles = (colors) => StyleSheet.create({
   },
   matchCard: {
     backgroundColor: colors.card,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: 24,
+    marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowRadius: 16,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    overflow: 'hidden',
+    position: 'relative',
   },
-  matchCardHeader: {
+  cardContent: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
+    minHeight: 120,
   },
-  typeBadge: {
+  courtPreview: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: '100%',
+    backgroundColor: colors.surfaceLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  courtImage: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    resizeMode: 'cover',
+  },
+  imageGradient: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    right: 0,
+  },
+  typeBadgeSmall: {
+    position: 'absolute',
+    bottom: 12,
+    left: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 6,
+    borderRadius: 8,
+    zIndex: 3,
   },
   typeBadgeCompetitive: {
     backgroundColor: colors.badgeCompetitive,
@@ -304,16 +529,34 @@ const createStyles = (colors) => StyleSheet.create({
   typeBadgeCasual: {
     backgroundColor: colors.badgeCasual,
   },
-  typeBadgeText: {
-    fontSize: 10,
+  typeBadgeTextSmall: {
+    fontSize: 9,
     fontWeight: '700',
     color: colors.text,
+    letterSpacing: 0.5,
   },
-  dateTimeContainer: {
+  matchDetails: {
+    flex: 1,
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    padding: 20,
+    paddingLeft: 0,
+    zIndex: 2,
+  },
+  matchCardHeader: {
+    flexDirection: 'column',
+    gap: 6,
+    marginBottom: 8,
     alignItems: 'flex-end',
   },
+  dateTimeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-end',
+  },
   dateText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.text,
   },
@@ -323,39 +566,56 @@ const createStyles = (colors) => StyleSheet.create({
   },
   courtName: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
     color: colors.text,
-    marginBottom: 12,
+    marginBottom: 10,
+    letterSpacing: -0.3,
   },
   matchInfo: {
     flexDirection: 'row',
-    gap: 16,
-    alignItems: 'center',
+    gap: 12,
+    marginBottom: 8,
+    alignItems: 'flex-end',
+    justifyContent: 'flex-end',
   },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
   infoText: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.textSecondary,
   },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 6,
+    alignSelf: 'flex-end',
+  },
   price: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 24,
+    fontWeight: '800',
     color: colors.primary,
+    letterSpacing: -0.5,
+  },
+  perPlayer: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: '500',
   },
   emptyState: {
     backgroundColor: colors.card,
-    borderRadius: 16,
-    padding: 32,
+    borderRadius: 24,
+    padding: 40,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
   },
   emptyStateText: {
     fontSize: 16,
@@ -365,9 +625,14 @@ const createStyles = (colors) => StyleSheet.create({
   },
   createButton: {
     backgroundColor: colors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 10,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 16,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   createButtonText: {
     color: '#FFFFFF',
@@ -376,17 +641,19 @@ const createStyles = (colors) => StyleSheet.create({
   },
   pastMatchCard: {
     backgroundColor: colors.card,
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 18,
+    padding: 18,
     marginBottom: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 10,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
   },
   pastMatchLeft: {
     flexDirection: 'row',
@@ -424,7 +691,7 @@ const createStyles = (colors) => StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: colors.text,
-    marginBottom: 4,
+    marginBottom: 8,
   },
   pastMatchDetails: {
     fontSize: 13,
@@ -449,31 +716,26 @@ const createStyles = (colors) => StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 20,
-    gap: 12,
   },
   actionButton: {
     backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 12,
-    gap: 8,
-  },
-  actionButtonSecondary: {
-    backgroundColor: colors.surface,
-    borderWidth: 2,
-    borderColor: colors.primary,
+    paddingVertical: 22,
+    borderRadius: 20,
+    gap: 14,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 6,
   },
   actionButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  actionButtonTextSecondary: {
-    color: colors.primary,
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: -0.3,
   },
   bottomPadding: {
     height: 20,

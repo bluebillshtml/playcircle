@@ -6,77 +6,91 @@ import { COLORS } from '../constants/colors';
 const ThemeContext = createContext();
 
 const DARK_COLORS = {
-  // Primary colors
-  primary: '#3DD598',
-  primaryDark: '#2BC486',
+  // Primary colors - Using beige as accent
+  primary: '#D2C1B6',
+  primaryDark: '#C4B0A3',
 
-  // Background colors
-  background: '#000000',
-  surface: '#1C1C1E',
-  card: '#2C2C2E',
+  // Background colors - Using blue palette
+  background: '#1B3C53',
+  surface: '#234C6A',
+  surfaceLight: '#456882',
+  card: '#234C6A',
 
   // Text colors
   text: '#FFFFFF',
-  textSecondary: '#98989F',
+  textSecondary: '#D2C1B6',
 
   // Border colors
-  border: '#38383A',
+  border: '#456882',
 
   // Status colors
-  error: '#FF453A',
-  success: '#32D74B',
-  warning: '#FF9F0A',
+  error: '#FF6B6B',
+  success: '#51CF66',
+  warning: '#FFD43B',
 
   // Additional colors
-  lightGray: '#38383A',
+  lightGray: '#456882',
   white: '#FFFFFF',
 
   // Badge colors
-  badgeCompetitive: '#3A2020',
-  badgeCasual: '#1A2A3A',
+  badgeCompetitive: 'rgba(210, 193, 182, 0.2)',
+  badgeCompetitiveText: '#D2C1B6',
+  badgeCasual: 'rgba(69, 104, 130, 0.3)',
+  badgeCasualText: '#D2C1B6',
 
   // Match result colors
-  winBackground: '#1E3A1E',
-  winText: '#4ADE80',
-  lossBackground: '#3A1E1E',
-  lossText: '#F87171',
+  winBackground: 'rgba(81, 207, 102, 0.15)',
+  winText: '#51CF66',
+  lossBackground: 'rgba(255, 107, 107, 0.15)',
+  lossText: '#FF6B6B',
+
+  // Glass effect colors
+  glass: 'rgba(35, 76, 106, 0.95)',
+  glassBorder: 'rgba(210, 193, 182, 0.15)',
 };
 
 const LIGHT_COLORS = {
-  // Primary colors
-  primary: COLORS.primary,
-  primaryDark: COLORS.primaryDark,
+  // Primary colors - Using darkest blue as primary
+  primary: '#1B3C53',
+  primaryDark: '#142D3F',
 
-  // Background colors
-  background: COLORS.background,
-  surface: COLORS.white,
-  card: COLORS.white,
+  // Background colors - Light palette
+  background: '#F5F5F5',
+  surface: '#FFFFFF',
+  surfaceLight: '#F0EBE8',
+  card: '#FFFFFF',
 
   // Text colors
-  text: COLORS.text,
-  textSecondary: COLORS.textSecondary,
+  text: '#1B3C53',
+  textSecondary: '#456882',
 
   // Border colors
-  border: COLORS.border,
+  border: '#E0E0E0',
 
   // Status colors
-  error: COLORS.error,
-  success: COLORS.success,
-  warning: COLORS.warning,
+  error: '#D32F2F',
+  success: '#388E3C',
+  warning: '#F57C00',
 
   // Additional colors
-  lightGray: COLORS.lightGray,
-  white: COLORS.white,
+  lightGray: '#F0EBE8',
+  white: '#FFFFFF',
 
   // Badge colors
   badgeCompetitive: '#FFE5E5',
-  badgeCasual: '#E5F5FF',
+  badgeCompetitiveText: '#1B3C53',
+  badgeCasual: '#E5F0F7',
+  badgeCasualText: '#1B3C53',
 
   // Match result colors
   winBackground: '#E8F5E9',
   winText: '#2E7D32',
   lossBackground: '#FFEBEE',
   lossText: '#C62828',
+
+  // Glass effect colors
+  glass: 'rgba(255, 255, 255, 0.95)',
+  glassBorder: 'rgba(27, 60, 83, 0.1)',
 };
 
 export const useTheme = () => {
