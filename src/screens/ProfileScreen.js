@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import NavigationButton from '../components/NavigationButton';
 
 // Mock user data
 const USER_DATA = {
@@ -78,16 +79,20 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-        <View style={styles.avatarContainer}>
-          <Ionicons name="person" size={64} color="#FFFFFF" />
+          <View style={styles.headerTop}>
+            <NavigationButton navigation={navigation} currentScreen="Profile" />
+            <Text style={styles.headerTitle}>Profile</Text>
+          </View>
+          <View style={styles.avatarContainer}>
+            <Ionicons name="person" size={64} color="#FFFFFF" />
+          </View>
+          <Text style={styles.name}>{USER_DATA.name}</Text>
+          <Text style={styles.email}>{USER_DATA.email}</Text>
+          <View style={styles.ratingContainer}>
+            <Ionicons name="star" size={20} color={colors.warning} />
+            <Text style={styles.rating}>{USER_DATA.rating}</Text>
+          </View>
         </View>
-        <Text style={styles.name}>{USER_DATA.name}</Text>
-        <Text style={styles.email}>{USER_DATA.email}</Text>
-        <View style={styles.ratingContainer}>
-          <Ionicons name="star" size={20} color={colors.warning} />
-          <Text style={styles.rating}>{USER_DATA.rating}</Text>
-        </View>
-      </View>
 
       <View style={styles.statsCard}>
         <View style={styles.statItem}>
@@ -263,12 +268,19 @@ const createStyles = (colors) => StyleSheet.create({
     paddingTop: 32,
     paddingBottom: 36,
     paddingHorizontal: 32,
-    borderBottomWidth: 0,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 4,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 24,
+    gap: 16,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: colors.text,
+    flex: 1,
   },
   avatarContainer: {
     width: 140,

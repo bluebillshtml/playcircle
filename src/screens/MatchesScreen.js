@@ -10,6 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
+import NavigationButton from '../components/NavigationButton';
 
 // Mock data for available matches
 const MOCK_MATCHES = [
@@ -123,6 +124,11 @@ export default function MatchesScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <View style={styles.spacer} />
+      {/* Header */}
+      <View style={styles.header}>
+        <NavigationButton navigation={navigation} currentScreen="Matches" />
+        <Text style={styles.headerTitle}>Available Matches</Text>
+      </View>
       <View style={styles.filterContainer}>
         <TouchableOpacity
           style={[styles.filterButton, filter === 'all' && styles.filterActive]}
@@ -283,6 +289,19 @@ const createStyles = (colors) => StyleSheet.create({
   spacer: {
     height: 60,
     backgroundColor: colors.background,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    gap: 16,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: colors.text,
+    flex: 1,
   },
   filterContainer: {
     flexDirection: 'row',

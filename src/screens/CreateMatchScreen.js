@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import NavigationButton from '../components/NavigationButton';
 
 const COURTS = [
   { id: 1, name: 'Downtown Padel Club', pricePerHour: 40 },
@@ -66,6 +67,11 @@ export default function CreateMatchScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <View style={styles.spacer} />
+      {/* Header */}
+      <View style={styles.header}>
+        <NavigationButton navigation={navigation} currentScreen="Create" />
+        <Text style={styles.headerTitle}>Create Match</Text>
+      </View>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
@@ -270,6 +276,19 @@ const createStyles = (colors) => StyleSheet.create({
   spacer: {
     height: 60,
     backgroundColor: colors.background,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    gap: 16,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: colors.text,
+    flex: 1,
   },
   scrollView: {
     flex: 1,

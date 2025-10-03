@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -9,98 +9,98 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import NavigationButton from '../components/NavigationButton';
 
 // Mock leaderboard data
-const LEADERBOARD_DATA = [
+const TOP_3_DATA = [
   {
     id: 1,
-    name: 'Dalia Kvedaraite',
-    rating: 5,
-    points: 2847,
-    isOnline: true,
+    name: 'Eiden',
+    username: '@eiden_gamer',
+    points: 2430,
     rank: 1,
     avatar: null,
+    color: '#FF6B35',
   },
   {
     id: 2,
-    name: 'Hilda Murray',
-    rating: 4,
-    points: 2653,
-    isOnline: true,
+    name: 'Jackson',
+    username: '@jackson_pro',
+    points: 1847,
     rank: 2,
     avatar: null,
+    color: '#4A90E2',
   },
   {
     id: 3,
-    name: 'Stephanie Kleimann',
-    rating: 5,
-    points: 2431,
-    isOnline: true,
+    name: 'Emma Aria',
+    username: '@emma_aria',
+    points: 1674,
     rank: 3,
     avatar: null,
+    color: '#7ED321',
   },
+];
+
+const LEADERBOARD_DATA = [
   {
     id: 4,
-    name: 'Alex Martinez',
-    rating: 4,
-    points: 2198,
-    isOnline: true,
+    name: 'Sebastian',
+    username: '@sebastian_play',
+    points: 1124,
     rank: 4,
     avatar: null,
+    trend: 'up',
   },
   {
     id: 5,
-    name: 'Sarah Johnson',
-    rating: 3,
-    points: 1987,
-    isOnline: false,
+    name: 'Jason',
+    username: '@jason_master',
+    points: 875,
     rank: 5,
     avatar: null,
+    trend: 'down',
   },
   {
     id: 6,
-    name: 'Mike Chen',
-    rating: 3,
-    points: 1823,
-    isOnline: false,
+    name: 'Natalie',
+    username: '@natalie_ace',
+    points: 774,
     rank: 6,
     avatar: null,
+    trend: 'up',
+  },
+  {
+    id: 7,
+    name: 'Serenity',
+    username: '@serenity_queen',
+    points: 723,
+    rank: 7,
+    avatar: null,
+    trend: 'up',
+  },
+  {
+    id: 8,
+    name: 'Hannah',
+    username: '@hannah_flower',
+    points: 559,
+    rank: 8,
+    avatar: null,
+    trend: 'down',
   },
 ];
 
 export default function DashboardScreen({ navigation }) {
   const { colors } = useTheme();
+  const [activeTab, setActiveTab] = useState('Region');
 
-  const renderStars = (rating) => {
-    const stars = [];
-    for (let i = 1; i <= 5; i++) {
-      stars.push(
-        <Ionicons
-          key={i}
-          name={i <= rating ? 'star' : 'star-outline'}
-          size={16}
-          color={i <= rating ? '#FFD700' : colors.textSecondary}
-          style={{ marginRight: 2 }}
-        />
-      );
+  const renderTrendIcon = (trend) => {
+    if (trend === 'up') {
+      return <Ionicons name="trending-up" size={16} color={colors.success} />;
+    } else if (trend === 'down') {
+      return <Ionicons name="trending-down" size={16} color={colors.error} />;
     }
-    return stars;
-  };
-
-  const renderUserStatus = (isOnline) => {
-    if (isOnline) {
-      return (
-        <View style={styles.statusIndicator}>
-          <Ionicons name="checkmark" size={16} color={colors.primary} />
-        </View>
-      );
-    } else {
-      return (
-        <TouchableOpacity style={styles.challengeButton}>
-          <Ionicons name="hand-left-outline" size={16} color={colors.textSecondary} />
-        </TouchableOpacity>
-      );
-    }
+    return null;
   };
 
   const styles = createStyles(colors);
@@ -108,26 +108,93 @@ export default function DashboardScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <View style={styles.spacer} />
+      
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <View style={styles.pointsBadge}>
-            <Text style={styles.pointsLabel}>WP</Text>
-            <Text style={styles.pointsValue}>648,982</Text>
+          <NavigationButton navigation={navigation} currentScreen="Dashboard" />
+        </View>
+      </View>
+
+      {/* Navigation Tabs */}
+      <View style={styles.tabContainer}>
+        <TouchableOpacity 
+          style={[styles.tab, activeTab === 'Region' && styles.activeTab]}
+          onPress={() => setActiveTab('Region')}
+        >
+          <Text style={[styles.tabText, activeTab === 'Region' && styles.activeTabText]}>Region</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.tab, activeTab === 'National' && styles.activeTab]}
+          onPress={() => setActiveTab('National')}
+        >
+          <Text style={[styles.tabText, activeTab === 'National' && styles.activeTabText]}>National</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.tab, activeTab === 'Global' && styles.activeTab]}
+          onPress={() => setActiveTab('Global')}
+        >
+          <Text style={[styles.tabText, activeTab === 'Global' && styles.activeTabText]}>Global</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Top 3 Section */}
+      <View style={styles.top3Section}>
+        <View style={styles.top3Container}>
+          {/* 2nd Place */}
+          <View style={styles.top3Card}>
+            <View style={[styles.top3Avatar, { backgroundColor: TOP_3_DATA[1].color }]}>
+              {TOP_3_DATA[1].avatar ? (
+                <Image source={{ uri: TOP_3_DATA[1].avatar }} style={styles.top3AvatarImage} />
+              ) : (
+                <Ionicons name="person" size={32} color={colors.text} />
+              )}
+              <View style={styles.rankBadge}>
+                <Text style={styles.rankBadgeText}>2</Text>
+              </View>
+            </View>
+            <Text style={styles.top3Name}>{TOP_3_DATA[1].name}</Text>
+            <Text style={[styles.top3Points, { color: TOP_3_DATA[1].color }]}>{TOP_3_DATA[1].points}</Text>
+            <Text style={styles.top3Username}>{TOP_3_DATA[1].username}</Text>
           </View>
-          <Text style={styles.headerTitle}>Leaderboard</Text>
-          <TouchableOpacity style={styles.proButton}>
-            <Text style={styles.proButtonText}>PRO</Text>
-          </TouchableOpacity>
+
+          {/* 1st Place */}
+          <View style={[styles.top3Card, styles.firstPlace]}>
+            <View style={styles.crownIcon}>
+              <Ionicons name="trophy" size={24} color={colors.warning} />
+            </View>
+            <View style={[styles.top3Avatar, { backgroundColor: TOP_3_DATA[0].color }]}>
+              {TOP_3_DATA[0].avatar ? (
+                <Image source={{ uri: TOP_3_DATA[0].avatar }} style={styles.top3AvatarImage} />
+              ) : (
+                <Ionicons name="person" size={40} color={colors.text} />
+              )}
+              <View style={styles.rankBadge}>
+                <Text style={styles.rankBadgeText}>1</Text>
+              </View>
+            </View>
+            <Text style={styles.top3Name}>{TOP_3_DATA[0].name}</Text>
+            <Text style={[styles.top3Points, { color: TOP_3_DATA[0].color }]}>{TOP_3_DATA[0].points}</Text>
+            <Text style={styles.top3Username}>{TOP_3_DATA[0].username}</Text>
+          </View>
+
+          {/* 3rd Place */}
+          <View style={styles.top3Card}>
+            <View style={[styles.top3Avatar, { backgroundColor: TOP_3_DATA[2].color }]}>
+              {TOP_3_DATA[2].avatar ? (
+                <Image source={{ uri: TOP_3_DATA[2].avatar }} style={styles.top3AvatarImage} />
+              ) : (
+                <Ionicons name="person" size={32} color={colors.text} />
+              )}
+              <View style={styles.rankBadge}>
+                <Text style={styles.rankBadgeText}>3</Text>
+              </View>
+            </View>
+            <Text style={styles.top3Name}>{TOP_3_DATA[2].name}</Text>
+            <Text style={[styles.top3Points, { color: TOP_3_DATA[2].color }]}>{TOP_3_DATA[2].points}</Text>
+            <Text style={styles.top3Username}>{TOP_3_DATA[2].username}</Text>
+          </View>
         </View>
-        
-        <View style={styles.headerSubtitle}>
-          <Text style={styles.subtitleText}>Daily Workout Leaderboard</Text>
-          <TouchableOpacity style={styles.chatIcon}>
-            <Ionicons name="chatbubble-outline" size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
-        </View>
-        <Text style={styles.teamText}>Your Team</Text>
       </View>
 
       {/* Leaderboard List */}
@@ -137,34 +204,29 @@ export default function DashboardScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
       >
         {LEADERBOARD_DATA.map((user, index) => (
-          <TouchableOpacity key={user.id} style={styles.userCard}>
+          <View key={user.id} style={styles.userCard}>
             <View style={styles.userInfo}>
               <View style={styles.avatarContainer}>
                 {user.avatar ? (
                   <Image source={{ uri: user.avatar }} style={styles.avatar} />
                 ) : (
                   <View style={styles.avatarPlaceholder}>
-                    <Ionicons name="person" size={24} color={colors.text} />
+                    <Ionicons name="person" size={20} color={colors.text} />
                   </View>
                 )}
-                <View style={styles.rankBadge}>
-                  <Text style={styles.rankText}>{user.rank}</Text>
-                </View>
               </View>
               
               <View style={styles.userDetails}>
                 <Text style={styles.userName}>{user.name}</Text>
-                <View style={styles.ratingContainer}>
-                  {renderStars(user.rating)}
-                </View>
-                <Text style={styles.pointsText}>{user.points.toLocaleString()} points</Text>
+                <Text style={styles.username}>{user.username}</Text>
               </View>
             </View>
             
-            <View style={styles.userActions}>
-              {renderUserStatus(user.isOnline)}
+            <View style={styles.userStats}>
+              <Text style={styles.pointsText}>{user.points}</Text>
+              {renderTrendIcon(user.trend)}
             </View>
-          </TouchableOpacity>
+          </View>
         ))}
       </ScrollView>
     </View>
@@ -177,103 +239,129 @@ const createStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.background,
   },
   spacer: {
-    height: 60,
+    height: 30,
     backgroundColor: colors.background,
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 24,
-    backgroundColor: colors.surface,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 6,
+    paddingTop: 12,
+    paddingBottom: 16,
+    backgroundColor: colors.background,
   },
   headerTop: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    justifyContent: 'flex-start',
   },
-  pointsBadge: {
-    backgroundColor: colors.card,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
+  tabContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+    paddingHorizontal: 20,
+    marginBottom: 12,
   },
-  pointsLabel: {
-    fontSize: 12,
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  activeTab: {
+    borderBottomColor: colors.primary,
+  },
+  tabText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: colors.textSecondary,
+  },
+  activeTabText: {
+    color: colors.text,
     fontWeight: '600',
-    color: colors.text,
   },
-  pointsValue: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.text,
+  top3Section: {
+    paddingHorizontal: 20,
+    marginBottom: 32,
   },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: colors.text,
-    letterSpacing: -0.5,
-  },
-  proButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  proButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  headerSubtitle: {
+  top3Container: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  top3Card: {
     alignItems: 'center',
+    flex: 1,
+    paddingHorizontal: 8,
+  },
+  firstPlace: {
+    alignItems: 'center',
+  },
+  crownIcon: {
     marginBottom: 8,
   },
-  subtitleText: {
+  top3Avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    position: 'relative',
+  },
+  top3AvatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
+  rankBadge: {
+    position: 'absolute',
+    bottom: -8,
+    left: '50%',
+    marginLeft: -12,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.text,
+  },
+  rankBadgeText: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  top3Name: {
     fontSize: 16,
-    color: colors.textSecondary,
-    fontWeight: '500',
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 4,
+    textAlign: 'center',
   },
-  chatIcon: {
-    padding: 4,
+  top3Points: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 4,
   },
-  teamText: {
-    fontSize: 14,
+  top3Username: {
+    fontSize: 12,
     color: colors.textSecondary,
-    fontWeight: '500',
+    textAlign: 'center',
   },
   scrollView: {
     flex: 1,
   },
   leaderboardList: {
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
   },
   userCard: {
     backgroundColor: colors.card,
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 12,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
     borderWidth: 1,
     borderColor: colors.glassBorder,
   },
@@ -283,39 +371,20 @@ const createStyles = (colors) => StyleSheet.create({
     flex: 1,
   },
   avatarContainer: {
-    position: 'relative',
-    marginRight: 16,
+    marginRight: 12,
   },
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   avatarPlaceholder: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: colors.surfaceLight,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  rankBadge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    backgroundColor: colors.primary,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: colors.background,
-  },
-  rankText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '700',
   },
   userDetails: {
     flex: 1,
@@ -324,39 +393,20 @@ const createStyles = (colors) => StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: colors.text,
-    marginBottom: 4,
+    marginBottom: 2,
   },
-  ratingContainer: {
-    flexDirection: 'row',
-    marginBottom: 4,
-  },
-  pointsText: {
+  username: {
     fontSize: 12,
     color: colors.textSecondary,
-    fontWeight: '500',
   },
-  userActions: {
+  userStats: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 8,
   },
-  statusIndicator: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.surfaceLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.primary,
-  },
-  challengeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.surfaceLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
+  pointsText: {
+    fontSize: 16,
+    color: colors.text,
+    fontWeight: '600',
   },
 });

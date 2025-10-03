@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
+import NavigationButton from '../components/NavigationButton';
 
 const { width } = Dimensions.get('window');
 
@@ -139,7 +140,10 @@ export default function HomeScreen({ navigation }) {
           },
         ]}
       >
-        <View>
+        <View style={styles.headerTop}>
+          <NavigationButton navigation={navigation} currentScreen="Home" />
+        </View>
+        <View style={styles.headerText}>
           <Text style={styles.greeting}>{getGreeting()}</Text>
           <Text style={styles.subGreeting}>Ready to play?</Text>
         </View>
@@ -400,11 +404,20 @@ const createStyles = (colors) => StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 120,
+    paddingTop: 60,
     paddingBottom: 20,
   },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    marginBottom: 12,
+    paddingLeft: 48,
+  },
+  headerText: {
+    width: '100%',
+  },
   greeting: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '800',
     color: colors.text,
     marginBottom: 4,
