@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm start:*)",
+      "Bash(kill:*)",
+      "Bash(npm install)",
+      "Bash(find:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)",
+      "Bash(node:*)",
+      "Bash(for:*)",
+      "Bash(do echo \"Checking $file...\")",
+      "Bash(done)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
