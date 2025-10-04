@@ -226,6 +226,7 @@ export const profileService = {
 
   // Update profile
   updateProfile: async (userId, updates) => {
+    // First, try to update the existing profile
     const { data, error } = await supabase
       .from('profiles')
       .update(updates)
@@ -233,7 +234,35 @@ export const profileService = {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      // If profile doesn't exist (PGRST116), create it with the provided updates
+      if (error.code === 'PGRST116') {
+        console.log('Profile not found, creating new profile for user:', userId);
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert({
+            id: userId,
+            username: updates.username || `user_${userId.slice(0, 8)}`,
+            first_name: updates.first_name || 'User',
+            last_name: updates.last_name || '',
+            phone: updates.phone || '',
+            bio: updates.bio || '',
+            location: updates.location || '',
+            skill_level: updates.skill_level || 'Beginner',
+            total_matches: 0,
+            wins: 0,
+            losses: 0,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
+
+        if (createError) throw createError;
+        return newProfile;
+      }
+      throw error;
+    }
     return data;
   },
 
@@ -427,6 +456,17 @@ export const matchService = {
           payment_status,
           is_host,
           user:profiles(id, username, full_name, avatar_url)
+        ),
+        teams(
+          id,
+          team_name,
+          team_position,
+          team_color,
+          team_players(
+            id,
+            user_id,
+            user:profiles(id, username, full_name, avatar_url)
+          )
         )
       `)
       .eq('id', matchId)

@@ -59,12 +59,26 @@ export default function PadelMatchDetailScreen({ navigation, route }) {
         setMatch(matchData);
 
         // Load teams if match has teams
-        if (matchData.teams && matchData.teams.length > 0) {
+        if (matchData.teams && Array.isArray(matchData.teams) && matchData.teams.length > 0) {
           const teamsData = {
             teamA: matchData.teams.find(t => t.team_position === 'A'),
             teamB: matchData.teams.find(t => t.team_position === 'B'),
           };
           setTeams(teamsData);
+        } else {
+          // If no teams exist, try to load them separately
+          try {
+            const teamsData = await teamService.getMatchTeams(matchId);
+            if (teamsData && teamsData.length > 0) {
+              const teams = {
+                teamA: teamsData.find(t => t.team_position === 'A'),
+                teamB: teamsData.find(t => t.team_position === 'B'),
+              };
+              setTeams(teams);
+            }
+          } catch (teamsError) {
+            console.log('No teams found for match:', teamsError);
+          }
         }
       } catch (dbError) {
         // If match not found in database, create mock data as fallback
@@ -117,9 +131,54 @@ export default function PadelMatchDetailScreen({ navigation, route }) {
               },
             },
           ],
+          teams: [
+            {
+              id: 1,
+              team_name: 'Team A',
+              team_position: 'A',
+              team_color: '#FF6B6B',
+              team_players: [
+                {
+                  id: 1,
+                  user_id: 1,
+                  user: {
+                    id: 1,
+                    full_name: 'John Doe',
+                    username: 'johndoe',
+                  },
+                },
+              ],
+            },
+            {
+              id: 2,
+              team_name: 'Team B',
+              team_position: 'B',
+              team_color: '#4ECDC4',
+              team_players: [
+                {
+                  id: 2,
+                  user_id: 2,
+                  user: {
+                    id: 2,
+                    full_name: 'Jane Smith',
+                    username: 'janesmith',
+                  },
+                },
+              ],
+            },
+          ],
         };
 
         setMatch(mockMatch);
+
+        // Set teams data for mock match
+        if (mockMatch.teams && Array.isArray(mockMatch.teams) && mockMatch.teams.length > 0) {
+          const teamsData = {
+            teamA: mockMatch.teams.find(t => t.team_position === 'A'),
+            teamB: mockMatch.teams.find(t => t.team_position === 'B'),
+          };
+          setTeams(teamsData);
+        }
       }
     } catch (error) {
       console.error('Error loading match details:', error);

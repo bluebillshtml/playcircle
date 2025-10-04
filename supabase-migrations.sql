@@ -38,7 +38,7 @@ UPDATE profiles
 SET first_name = COALESCE(first_name, SPLIT_PART(full_name, ' ', 1)),
     last_name = COALESCE(last_name, CASE
         WHEN array_length(string_to_array(full_name, ' '), 1) > 1
-        THEN array_to_string(string_to_array(full_name, ' ')[2:], ' ')
+        THEN array_to_string(array_remove(string_to_array(full_name, ' '), SPLIT_PART(full_name, ' ', 1)), ' ')
         ELSE ''
     END)
 WHERE full_name IS NOT NULL AND (first_name IS NULL OR last_name IS NULL);

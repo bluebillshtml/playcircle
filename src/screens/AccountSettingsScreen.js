@@ -66,6 +66,15 @@ export default function AccountSettingsScreen({ navigation }) {
     } catch (error) {
       // Silent fail for auto-save, don't disturb user
       console.error('Auto-save error:', error);
+      // If it's a JSON coercion error, log more details
+      if (error.message && error.message.includes('coerce')) {
+        console.error('JSON coercion error details:', {
+          error: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
+      }
     }
   };
 
@@ -95,7 +104,22 @@ export default function AccountSettingsScreen({ navigation }) {
       navigation.goBack();
     } catch (error) {
       console.error('Error updating profile:', error);
-      Alert.alert('Error', error.message || 'Failed to update profile');
+      
+      // Provide more specific error messages
+      let errorMessage = 'Failed to update profile';
+      if (error.message && error.message.includes('coerce')) {
+        errorMessage = 'There was an issue processing your profile data. Please try again.';
+        console.error('JSON coercion error details:', {
+          error: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert('Error', errorMessage);
     } finally {
       setSaving(false);
     }
