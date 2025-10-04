@@ -17,6 +17,11 @@ import CreateMatchScreen from './src/screens/CreateMatchScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import MatchDetailScreen from './src/screens/MatchDetailScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
+import AccountSettingsScreen from './src/screens/AccountSettingsScreen';
+import PurchasesScreen from './src/screens/PurchasesScreen';
+import LanguagesScreen from './src/screens/LanguagesScreen';
+import AppSettingsScreen from './src/screens/AppSettingsScreen';
+import HelpCenterScreen from './src/screens/HelpCenterScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -98,6 +103,31 @@ function AppContent() {
                     fontWeight: '700',
                   },
                 }}
+              />
+              <Stack.Screen
+                name="AccountSettings"
+                component={AccountSettingsScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="Purchases"
+                component={PurchasesScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="Languages"
+                component={LanguagesScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="AppSettings"
+                component={AppSettingsScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="HelpCenter"
+                component={HelpCenterScreen}
+                options={{ headerShown: false }}
               />
             </>
           )}

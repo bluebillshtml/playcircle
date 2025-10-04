@@ -18,7 +18,8 @@ import { useAuth } from '../context/AuthContext';
 import EmailConfirmationOverlay from '../components/EmailConfirmationOverlay';
 
 export default function SignUpScreen({ navigation }) {
-  const [fullName, setFullName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -48,7 +49,7 @@ export default function SignUpScreen({ navigation }) {
   }, []);
 
   const handleSignUp = async () => {
-    if (!fullName || !email || !password || !confirmPassword) {
+    if (!firstName || !lastName || !email || !password || !confirmPassword) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
@@ -66,7 +67,8 @@ export default function SignUpScreen({ navigation }) {
     try {
       setLoading(true);
       await signUp(email, password, {
-        fullName: fullName,
+        firstName: firstName,
+        lastName: lastName,
         username: email.split('@')[0], // Use email prefix as username
         skillLevel: 'Beginner',
       });
@@ -127,17 +129,34 @@ export default function SignUpScreen({ navigation }) {
                 </Text>
               </TouchableOpacity>
 
-              {/* Full Name Input */}
+              {/* First Name Input */}
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Full Name</Text>
+                <Text style={styles.label}>First Name</Text>
                 <View style={styles.inputWrapper}>
                   <Ionicons name="person-outline" size={20} color="#999" style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
-                    placeholder="Enter your full name"
+                    placeholder="Enter your first name"
                     placeholderTextColor="#999"
-                    value={fullName}
-                    onChangeText={setFullName}
+                    value={firstName}
+                    onChangeText={setFirstName}
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                  />
+                </View>
+              </View>
+
+              {/* Last Name Input */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Last Name</Text>
+                <View style={styles.inputWrapper}>
+                  <Ionicons name="person-outline" size={20} color="#999" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter your last name"
+                    placeholderTextColor="#999"
+                    value={lastName}
+                    onChangeText={setLastName}
                     autoCapitalize="words"
                     autoCorrect={false}
                   />

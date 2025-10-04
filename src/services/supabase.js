@@ -24,7 +24,8 @@ export const authService = {
       options: {
         data: {
           username: userData.username,
-          full_name: userData.fullName,
+          first_name: userData.firstName,
+          last_name: userData.lastName,
           skill_level: userData.skillLevel || 'Beginner',
         }
       }
@@ -80,6 +81,104 @@ export const authService = {
 };
 
 // =====================================================
+// STORAGE / FILE UPLOADS
+// =====================================================
+
+export const storageService = {
+  // Upload profile picture
+  uploadProfilePicture: async (userId, file) => {
+    try {
+      const fileExt = file.uri.split('.').pop();
+      const fileName = `${userId}/${Date.now()}.${fileExt}`;
+
+      // Convert file to blob for upload
+      const response = await fetch(file.uri);
+      const blob = await response.blob();
+
+      const { data, error } = await supabase.storage
+        .from('profile-pictures')
+        .upload(fileName, blob, {
+          contentType: file.type || `image/${fileExt}`,
+          upsert: true,
+        });
+
+      if (error) throw error;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('profile-pictures')
+        .getPublicUrl(fileName);
+
+      return publicUrl;
+    } catch (error) {
+      console.error('Error uploading profile picture:', error);
+      throw error;
+    }
+  },
+
+  // Delete profile picture
+  deleteProfilePicture: async (userId, fileUrl) => {
+    try {
+      // Extract filename from URL
+      const fileName = fileUrl.split('/').slice(-2).join('/');
+
+      const { error } = await supabase.storage
+        .from('profile-pictures')
+        .remove([fileName]);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error deleting profile picture:', error);
+      throw error;
+    }
+  },
+
+  // Upload match photo
+  uploadMatchPhoto: async (userId, matchId, file) => {
+    try {
+      const fileExt = file.uri.split('.').pop();
+      const fileName = `${userId}/${matchId}_${Date.now()}.${fileExt}`;
+
+      const response = await fetch(file.uri);
+      const blob = await response.blob();
+
+      const { data, error } = await supabase.storage
+        .from('match-photos')
+        .upload(fileName, blob, {
+          contentType: file.type || `image/${fileExt}`,
+        });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('match-photos')
+        .getPublicUrl(fileName);
+
+      return publicUrl;
+    } catch (error) {
+      console.error('Error uploading match photo:', error);
+      throw error;
+    }
+  },
+
+  // Get storage usage for user
+  getStorageUsage: async (userId) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_storage_usage')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error getting storage usage:', error);
+      throw error;
+    }
+  },
+};
+
+// =====================================================
 // PROFILES
 // =====================================================
 
@@ -88,11 +187,7 @@ export const profileService = {
   getProfile: async (userId) => {
     const { data, error } = await supabase
       .from('profiles')
-      .select(`
-        *,
-        user_sport_profiles(*),
-        user_sport_stats(*)
-      `)
+      .select('*')
       .eq('id', userId)
       .single();
 
@@ -113,7 +208,8 @@ export const profileService = {
       .insert({
         id: userId,
         username: `user_${userId.slice(0, 8)}`,
-        full_name: 'User',
+        first_name: 'User',
+        last_name: '',
         skill_level: 'Beginner',
         total_matches: 0,
         wins: 0,
@@ -306,7 +402,6 @@ export const matchService = {
           full_name
         )
       `)
-      .eq('sport_id', sportId)
       .eq('status', 'open')
       .gte('match_date', today)
       .order('match_date', { ascending: true })

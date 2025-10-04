@@ -81,12 +81,14 @@ export const AuthProvider = ({ children }) => {
   const value = {
     user,
     profile,
+    setProfile,
     session,
     loading,
     signIn,
     signUp,
     signOut,
     resendConfirmation,
+    loadProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

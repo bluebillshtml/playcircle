@@ -13,6 +13,7 @@ import {
   Linking,
   ActionSheetIOS,
   Platform,
+  Share,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
@@ -258,8 +259,69 @@ export default function PadelMatchDetailScreen({ navigation, route }) {
     }
   };
 
-  const shareMatch = () => {
-    Alert.alert('Share', 'Share functionality coming soon!');
+  const shareMatch = async () => {
+    try {
+      const result = await Share.share({
+        message: `Check out this ${match.match_type} padel match at ${match.court?.name || 'Unknown Court'}! 🎾\n\nDate: ${formatDate(match.match_date)}\nTime: ${formatTime(match.match_time)}\nSkill Level: ${match.skill_level}\nPrice: $${match.price_per_player} per player\n\nJoin me on PlayCircle!`,
+        title: 'Join my Padel Match!',
+      });
+
+      if (result.action === Share.sharedAction) {
+        if (result.activityType) {
+          console.log('Shared with activity type:', result.activityType);
+        } else {
+          console.log('Match shared successfully');
+        }
+      } else if (result.action === Share.dismissedAction) {
+        console.log('Share dismissed');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Unable to share match');
+      console.error('Error sharing match:', error);
+    }
+  };
+
+  const saveMatch = async () => {
+    if (!user) {
+      Alert.alert('Login Required', 'Please log in to save matches');
+      return;
+    }
+
+    try {
+      // Check if user is already in this match
+      const isAlreadyJoined = match.match_players?.some(
+        player => player.user_id === user.id
+      );
+
+      if (isAlreadyJoined) {
+        Alert.alert('Already Joined', 'You are already part of this match!');
+        return;
+      }
+
+      // Join the match (which saves it to upcoming matches)
+      await matchService.joinMatch(match.id, user.id);
+
+      Alert.alert(
+        'Success!',
+        'Match saved to your upcoming matches',
+        [
+          {
+            text: 'View My Matches',
+            onPress: () => navigation.navigate('Matches')
+          },
+          {
+            text: 'OK',
+            style: 'cancel'
+          }
+        ]
+      );
+
+      // Reload match details to update player list
+      loadMatchDetails();
+    } catch (error) {
+      console.error('Error saving match:', error);
+      Alert.alert('Error', error.message || 'Failed to save match');
+    }
   };
 
   const styles = createStyles(colors);
@@ -386,7 +448,7 @@ export default function PadelMatchDetailScreen({ navigation, route }) {
               <Text style={styles.secondaryActionButtonText}>Share</Text>
             </BlurView>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.secondaryActionButton} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.secondaryActionButton} onPress={saveMatch} activeOpacity={0.7}>
             <BlurView intensity={colors.isDarkMode ? 30 : 40} tint={colors.isDarkMode ? 'dark' : 'light'} style={styles.secondaryActionBlur}>
               <Ionicons name="bookmark-outline" size={20} color={colors.primary} />
               <Text style={styles.secondaryActionButtonText}>Save</Text>

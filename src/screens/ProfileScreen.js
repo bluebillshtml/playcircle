@@ -22,8 +22,10 @@ export default function ProfileScreen() {
   const styles = createStyles(colors);
 
   const getUserName = () => {
-    if (profile?.full_name) {
-      return profile.full_name;
+    if (profile?.first_name && profile?.last_name) {
+      return `${profile.first_name} ${profile.last_name}`.trim();
+    } else if (profile?.first_name) {
+      return profile.first_name;
     } else if (profile?.username) {
       return profile.username;
     }
@@ -77,7 +79,10 @@ export default function ProfileScreen() {
         {/* Menu Items */}
         <View style={styles.menuContainer}>
           {/* Account Setting */}
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('AccountSettings')}
+          >
             <View style={styles.menuItemLeft}>
               <Ionicons name="person-outline" size={24} color={colors.text} />
               <Text style={styles.menuItemText}>Account Setting</Text>
@@ -86,7 +91,10 @@ export default function ProfileScreen() {
           </TouchableOpacity>
 
           {/* Purchases */}
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('Purchases')}
+          >
             <View style={styles.menuItemLeft}>
               <Ionicons name="cart-outline" size={24} color={colors.text} />
               <Text style={styles.menuItemText}>Purchases</Text>
@@ -95,7 +103,10 @@ export default function ProfileScreen() {
           </TouchableOpacity>
 
           {/* Languages */}
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('Languages')}
+          >
             <View style={styles.menuItemLeft}>
               <Ionicons name="globe-outline" size={24} color={colors.text} />
               <Text style={styles.menuItemText}>Languages</Text>
@@ -104,7 +115,10 @@ export default function ProfileScreen() {
           </TouchableOpacity>
 
           {/* Settings */}
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('AppSettings')}
+          >
             <View style={styles.menuItemLeft}>
               <Ionicons name="settings-outline" size={24} color={colors.text} />
               <Text style={styles.menuItemText}>Settings</Text>
@@ -113,7 +127,10 @@ export default function ProfileScreen() {
           </TouchableOpacity>
 
           {/* Help Center */}
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('HelpCenter')}
+          >
             <View style={styles.menuItemLeft}>
               <Ionicons name="help-circle-outline" size={24} color={colors.text} />
               <Text style={styles.menuItemText}>Help Center</Text>
