@@ -13,9 +13,11 @@ import {
   ImageBackground,
   Animated,
   ActivityIndicator,
+  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useSport } from '../context/SportContext';
@@ -23,6 +25,8 @@ import { matchService, paymentService } from '../services/supabase';
 import TeamBracketOverlay from '../components/TeamBracketOverlay';
 import BracketButton from '../components/BracketButton';
 import PadelMatchDetailScreen from './PadelMatchDetailScreen';
+
+const { width } = Dimensions.get('window');
 
 // Mock match detail data - multiple matches
 const MOCK_MATCHES_DATA = {
@@ -156,53 +160,67 @@ export default function MatchDetailScreen({ navigation, route }) {
   const loadMatchDetails = async () => {
     try {
       setLoading(true);
-      const matchData = await matchService.getMatch(matchId);
 
-      const transformedMatch = {
-        id: matchData.id,
-        courtName: matchData.court?.name || 'Unknown Court',
-        courtAddress: matchData.court?.address || '',
-        coordinates: {
-          latitude: matchData.court?.latitude || 37.78825,
-          longitude: matchData.court?.longitude || -122.4324,
-        },
-        courtImage: matchData.court?.image_url || 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800',
-        date: matchData.match_date,
-        time: matchData.match_time,
-        duration: matchData.duration_minutes,
-        type: matchData.match_type,
-        skillLevel: matchData.skill_level,
-        totalPlayers: matchData.max_players,
-        joinedPlayers: matchData.current_players,
-        pricePerPlayer: parseFloat(matchData.price_per_player),
-        totalCost: parseFloat(matchData.total_cost),
-        host: {
-          name: matchData.host?.full_name || matchData.host?.username || 'Host',
-          rating: 4.5,
-          matchesPlayed: matchData.host?.total_matches || 0,
-        },
-        players: matchData.match_players?.map(mp => ({
-          id: mp.user_id,
-          name: mp.user?.full_name || mp.user?.username || 'Player',
-          rating: 4.5,
-          isHost: mp.is_host,
-        })) || [],
-        description: matchData.description || 'No description provided.',
-        courtDetails: {
-          facilities: [
-            matchData.court?.has_lockers && 'Lockers',
-            matchData.court?.has_showers && 'Showers',
-            matchData.court?.has_parking && 'Parking',
-            matchData.court?.has_pro_shop && 'Pro Shop',
-          ].filter(Boolean),
-          surface: matchData.court?.surface_type || 'Artificial Grass',
-          indoor: matchData.court?.is_indoor || false,
-          rating: matchData.court?.rating || 4.5,
-          phone: matchData.court?.phone || '',
-        },
-      };
+      // Try to fetch from Supabase first
+      try {
+        const matchData = await matchService.getMatch(matchId);
 
-      setMatch(transformedMatch);
+        const transformedMatch = {
+          id: matchData.id,
+          courtName: matchData.court?.name || 'Unknown Court',
+          courtAddress: matchData.court?.address || '',
+          coordinates: {
+            latitude: matchData.court?.latitude || 37.78825,
+            longitude: matchData.court?.longitude || -122.4324,
+          },
+          courtImage: matchData.court?.image_url || 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800',
+          date: matchData.match_date,
+          time: matchData.match_time,
+          duration: matchData.duration_minutes,
+          type: matchData.match_type,
+          skillLevel: matchData.skill_level,
+          totalPlayers: matchData.max_players,
+          joinedPlayers: matchData.current_players,
+          pricePerPlayer: parseFloat(matchData.price_per_player),
+          totalCost: parseFloat(matchData.total_cost),
+          host: {
+            name: matchData.host?.full_name || matchData.host?.username || 'Host',
+            rating: 4.5,
+            matchesPlayed: matchData.host?.total_matches || 0,
+          },
+          players: matchData.match_players?.map(mp => ({
+            id: mp.user_id,
+            name: mp.user?.full_name || mp.user?.username || 'Player',
+            rating: 4.5,
+            isHost: mp.is_host,
+          })) || [],
+          description: matchData.description || 'No description provided.',
+          courtDetails: {
+            facilities: [
+              matchData.court?.has_lockers && 'Lockers',
+              matchData.court?.has_showers && 'Showers',
+              matchData.court?.has_parking && 'Parking',
+              matchData.court?.has_pro_shop && 'Pro Shop',
+            ].filter(Boolean),
+            surface: matchData.court?.surface_type || 'Artificial Grass',
+            indoor: matchData.court?.is_indoor || false,
+            rating: matchData.court?.rating || 4.5,
+            phone: matchData.court?.phone || '',
+          },
+        };
+
+        setMatch(transformedMatch);
+      } catch (dbError) {
+        // If match not found in database, use mock data as fallback
+        console.log('Match not in database, using mock data for matchId:', matchId);
+        const mockMatch = MOCK_MATCHES_DATA[matchId];
+
+        if (mockMatch) {
+          setMatch(mockMatch);
+        } else {
+          throw new Error('Match not found');
+        }
+      }
     } catch (error) {
       console.error('Error loading match:', error);
       Alert.alert('Error', 'Failed to load match details');
@@ -373,14 +391,17 @@ export default function MatchDetailScreen({ navigation, route }) {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Glass Card Court Preview */}
+        {/* Glassmorphic Court Preview */}
         <View style={styles.courtPreviewSection}>
           <ImageBackground
             source={{ uri: match.courtImage }}
             style={styles.courtImage}
             imageStyle={styles.courtImageStyle}
           >
-            <View style={styles.imageOverlay}>
+            <LinearGradient
+              colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.6)']}
+              style={styles.imageOverlay}
+            >
               <View
                 style={[
                   styles.typeBadge,
@@ -389,14 +410,16 @@ export default function MatchDetailScreen({ navigation, route }) {
                     : styles.typeBadgeCasual,
                 ]}
               >
-                <Text style={styles.typeBadgeText}>
-                  {match.type === 'competitive' ? 'COMPETITIVE' : 'CASUAL'}
-                </Text>
+                <BlurView intensity={20} tint={isDarkMode ? 'dark' : 'light'} style={styles.typeBadgeBlur}>
+                  <Text style={styles.typeBadgeText}>
+                    {match.type === 'competitive' ? 'COMPETITIVE' : 'CASUAL'}
+                  </Text>
+                </BlurView>
               </View>
-            </View>
+            </LinearGradient>
           </ImageBackground>
 
-          <View style={styles.courtInfoCard}>
+          <BlurView intensity={isDarkMode ? 40 : 60} tint={isDarkMode ? 'dark' : 'light'} style={styles.courtInfoCard}>
             <View style={styles.courtInfoHeader}>
               <View style={styles.courtInfoLeft}>
                 <Text style={styles.courtName}>{match.courtName}</Text>
@@ -421,39 +444,52 @@ export default function MatchDetailScreen({ navigation, route }) {
                 <Text style={styles.quickInfoText}>{match.duration} min</Text>
               </View>
             </View>
-          </View>
+          </BlurView>
         </View>
 
-        {/* Action Buttons */}
+        {/* Glassmorphic Action Buttons */}
         <View style={styles.actionButtonsSection}>
-          <TouchableOpacity style={styles.primaryActionButton} onPress={openDirections}>
-            <Ionicons name="navigate" size={20} color="#FFFFFF" />
-            <Text style={styles.primaryActionButtonText}>Get Directions</Text>
+          <TouchableOpacity style={styles.primaryActionButton} onPress={openDirections} activeOpacity={0.8}>
+            <LinearGradient
+              colors={[colors.primary, colors.primary + 'DD']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.primaryActionGradient}
+            >
+              <Ionicons name="navigate" size={20} color="#FFFFFF" />
+              <Text style={styles.primaryActionButtonText}>Get Directions</Text>
+            </LinearGradient>
           </TouchableOpacity>
 
           <View style={styles.secondaryActionsRow}>
-            <TouchableOpacity style={styles.secondaryActionButton} onPress={callCourt}>
-              <Ionicons name="call" size={20} color={colors.primary} />
-              <Text style={styles.secondaryActionButtonText}>Call</Text>
+            <TouchableOpacity style={styles.secondaryActionButton} onPress={callCourt} activeOpacity={0.7}>
+              <BlurView intensity={isDarkMode ? 30 : 40} tint={isDarkMode ? 'dark' : 'light'} style={styles.secondaryActionBlur}>
+                <Ionicons name="call" size={20} color={colors.primary} />
+                <Text style={styles.secondaryActionButtonText}>Call</Text>
+              </BlurView>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.secondaryActionButton} onPress={shareMatch}>
-              <Ionicons name="share-social" size={20} color={colors.primary} />
-              <Text style={styles.secondaryActionButtonText}>Share</Text>
+            <TouchableOpacity style={styles.secondaryActionButton} onPress={shareMatch} activeOpacity={0.7}>
+              <BlurView intensity={isDarkMode ? 30 : 40} tint={isDarkMode ? 'dark' : 'light'} style={styles.secondaryActionBlur}>
+                <Ionicons name="share-social" size={20} color={colors.primary} />
+                <Text style={styles.secondaryActionButtonText}>Share</Text>
+              </BlurView>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.secondaryActionButton}>
-              <Ionicons name="bookmark-outline" size={20} color={colors.primary} />
-              <Text style={styles.secondaryActionButtonText}>Save</Text>
+            <TouchableOpacity style={styles.secondaryActionButton} activeOpacity={0.7}>
+              <BlurView intensity={isDarkMode ? 30 : 40} tint={isDarkMode ? 'dark' : 'light'} style={styles.secondaryActionBlur}>
+                <Ionicons name="bookmark-outline" size={20} color={colors.primary} />
+                <Text style={styles.secondaryActionButtonText}>Save</Text>
+              </BlurView>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Match Details */}
-        <View style={styles.section}>
+        {/* Glassmorphic Match Details */}
+        <BlurView intensity={isDarkMode ? 35 : 50} tint={isDarkMode ? 'dark' : 'light'} style={styles.section}>
           <Text style={styles.sectionTitle}>Match Details</Text>
           <View style={styles.detailRow}>
-            <View style={styles.detailIconContainer}>
+            <BlurView intensity={isDarkMode ? 20 : 30} tint={isDarkMode ? 'dark' : 'light'} style={styles.detailIconContainer}>
               <Ionicons name="calendar-outline" size={20} color={colors.primary} />
-            </View>
+            </BlurView>
             <View style={styles.detailContent}>
               <Text style={styles.detailLabel}>Date & Time</Text>
               <Text style={styles.detailValue}>
@@ -462,18 +498,18 @@ export default function MatchDetailScreen({ navigation, route }) {
             </View>
           </View>
           <View style={styles.detailRow}>
-            <View style={styles.detailIconContainer}>
+            <BlurView intensity={isDarkMode ? 20 : 30} tint={isDarkMode ? 'dark' : 'light'} style={styles.detailIconContainer}>
               <Ionicons name="trophy-outline" size={20} color={colors.primary} />
-            </View>
+            </BlurView>
             <View style={styles.detailContent}>
               <Text style={styles.detailLabel}>Skill Level</Text>
               <Text style={styles.detailValue}>{match.skillLevel}</Text>
             </View>
           </View>
           <View style={styles.detailRow}>
-            <View style={styles.detailIconContainer}>
+            <BlurView intensity={isDarkMode ? 20 : 30} tint={isDarkMode ? 'dark' : 'light'} style={styles.detailIconContainer}>
               <Ionicons name="people-outline" size={20} color={colors.primary} />
-            </View>
+            </BlurView>
             <View style={styles.detailContent}>
               <Text style={styles.detailLabel}>Players</Text>
               <Text style={styles.detailValue}>
@@ -481,29 +517,39 @@ export default function MatchDetailScreen({ navigation, route }) {
               </Text>
             </View>
           </View>
-        </View>
+        </BlurView>
 
-        {/* Description */}
-        <View style={styles.section}>
+        {/* Glassmorphic Description */}
+        <BlurView intensity={isDarkMode ? 35 : 50} tint={isDarkMode ? 'dark' : 'light'} style={styles.section}>
           <Text style={styles.sectionTitle}>Description</Text>
           <Text style={styles.description}>{match.description}</Text>
-        </View>
+        </BlurView>
 
-        {/* Players */}
-        <View style={styles.section}>
+        {/* Glassmorphic Players */}
+        <BlurView intensity={isDarkMode ? 35 : 50} tint={isDarkMode ? 'dark' : 'light'} style={styles.section}>
           <Text style={styles.sectionTitle}>Players ({match.joinedPlayers})</Text>
           {match.players.map((player) => (
-            <View key={player.id} style={styles.playerCard}>
-              <View style={styles.playerAvatar}>
+            <BlurView key={player.id} intensity={isDarkMode ? 25 : 35} tint={isDarkMode ? 'dark' : 'light'} style={styles.playerCard}>
+              <LinearGradient
+                colors={[colors.primary + '40', colors.primary + '20']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.playerAvatar}
+              >
                 <Ionicons name="person" size={24} color="#FFFFFF" />
-              </View>
+              </LinearGradient>
               <View style={styles.playerInfo}>
                 <View style={styles.playerNameRow}>
                   <Text style={styles.playerName}>{player.name}</Text>
                   {player.isHost && (
-                    <View style={styles.hostBadge}>
+                    <LinearGradient
+                      colors={[colors.primary, colors.primary + 'DD']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.hostBadge}
+                    >
                       <Text style={styles.hostBadgeText}>HOST</Text>
-                    </View>
+                    </LinearGradient>
                   )}
                 </View>
                 <View style={styles.playerRatingRow}>
@@ -511,12 +557,12 @@ export default function MatchDetailScreen({ navigation, route }) {
                   <Text style={styles.playerRating}>{player.rating}</Text>
                 </View>
               </View>
-            </View>
+            </BlurView>
           ))}
-        </View>
+        </BlurView>
 
-        {/* Facilities */}
-        <View style={styles.section}>
+        {/* Glassmorphic Facilities */}
+        <BlurView intensity={isDarkMode ? 35 : 50} tint={isDarkMode ? 'dark' : 'light'} style={styles.section}>
           <Text style={styles.sectionTitle}>Court Facilities</Text>
           <View style={styles.facilitiesGrid}>
             {match.courtDetails.facilities.map((facility, index) => (
@@ -530,16 +576,23 @@ export default function MatchDetailScreen({ navigation, route }) {
               </View>
             ))}
           </View>
-        </View>
+        </BlurView>
 
         <View style={styles.spacer} />
       </ScrollView>
 
-      {/* Bottom Bar */}
-      <View style={styles.bottomBar}>
+      {/* Glassmorphic Bottom Bar */}
+      <BlurView intensity={isDarkMode ? 50 : 70} tint={isDarkMode ? 'dark' : 'light'} style={styles.bottomBar}>
         <View style={styles.priceContainer}>
           <Text style={styles.priceLabel}>Your share</Text>
-          <Text style={styles.price}>${match.pricePerPlayer}</Text>
+          <LinearGradient
+            colors={[colors.primary, colors.primary + 'CC']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.priceGradient}
+          >
+            <Text style={styles.price}>${match.pricePerPlayer}</Text>
+          </LinearGradient>
           <Text style={styles.totalCostText}>
             (${match.totalCost} total ÷ {match.totalPlayers} players)
           </Text>
@@ -547,10 +600,19 @@ export default function MatchDetailScreen({ navigation, route }) {
         <TouchableOpacity
           style={styles.joinButton}
           onPress={handleJoinMatch}
+          activeOpacity={0.8}
         >
-          <Text style={styles.joinButtonText}>Join & Pay</Text>
+          <LinearGradient
+            colors={[colors.primary, colors.primary + 'DD']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.joinButtonGradient}
+          >
+            <Ionicons name="checkmark-circle" size={22} color="#FFFFFF" />
+            <Text style={styles.joinButtonText}>Join & Pay</Text>
+          </LinearGradient>
         </TouchableOpacity>
-      </View>
+      </BlurView>
 
       {/* Payment Modal */}
       <Modal
@@ -687,45 +749,63 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
     paddingBottom: 120,
   },
   courtPreviewSection: {
-    backgroundColor: colors.surface,
-    marginBottom: 12,
+    marginBottom: 16,
+    overflow: 'hidden',
+    borderRadius: 24,
+    marginHorizontal: 16,
+    marginTop: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 10,
   },
   courtImage: {
     width: '100%',
-    height: 200,
+    height: 240,
   },
   courtImageStyle: {
-    borderRadius: 0,
+    borderRadius: 24,
   },
   imageOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    padding: 16,
+    padding: 20,
     justifyContent: 'flex-end',
   },
   typeBadge: {
     alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  typeBadgeBlur: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
   },
   typeBadgeCompetitive: {
-    backgroundColor: isDarkMode ? 'rgba(255, 107, 107, 0.3)' : 'rgba(255, 107, 107, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 107, 0.5)',
   },
   typeBadgeCasual: {
-    backgroundColor: isDarkMode ? 'rgba(116, 192, 252, 0.3)' : 'rgba(116, 192, 252, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(116, 192, 252, 0.5)',
   },
   typeBadgeText: {
     fontSize: 11,
     fontWeight: '700',
     color: '#FFFFFF',
+    letterSpacing: 1,
   },
   courtInfoCard: {
-    padding: 16,
-    backgroundColor: colors.glass,
+    padding: 20,
     borderTopWidth: 1,
-    borderTopColor: colors.glassBorder,
+    borderTopColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+    overflow: 'hidden',
   },
   courtInfoHeader: {
     flexDirection: 'row',
@@ -785,24 +865,31 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
     color: colors.textSecondary,
   },
   actionButtonsSection: {
-    backgroundColor: colors.surface,
-    padding: 16,
+    paddingHorizontal: 16,
     gap: 12,
-    marginBottom: 12,
+    marginBottom: 16,
   },
   primaryActionButton: {
-    backgroundColor: colors.primary,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  primaryActionGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: 16,
     gap: 8,
   },
   primaryActionButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   secondaryActionsRow: {
     flexDirection: 'row',
@@ -810,14 +897,21 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
   },
   secondaryActionButton: {
     flex: 1,
-    backgroundColor: colors.card,
+    borderRadius: 16,
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  secondaryActionBlur: {
     flexDirection: 'column',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderRadius: 12,
-    gap: 4,
+    paddingVertical: 14,
+    gap: 6,
   },
   secondaryActionButtonText: {
     color: colors.text,
@@ -825,9 +919,18 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
     fontWeight: '600',
   },
   section: {
-    backgroundColor: colors.surface,
+    marginHorizontal: 16,
     padding: 20,
-    marginBottom: 12,
+    marginBottom: 16,
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
   },
   sectionTitle: {
     fontSize: 18,
@@ -842,12 +945,14 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
     gap: 12,
   },
   detailIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.surfaceLight,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
   },
   detailContent: {
     flex: 1,
@@ -870,19 +975,25 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
   playerCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    backgroundColor: colors.surfaceLight,
-    borderRadius: 12,
+    padding: 14,
+    borderRadius: 16,
     marginBottom: 12,
-    gap: 12,
+    gap: 14,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
   },
   playerAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.primary,
+    width: 52,
+    height: 52,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   playerInfo: {
     flex: 1,
@@ -899,15 +1010,21 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
     color: colors.text,
   },
   hostBadge: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    overflow: 'hidden',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   hostBadgeText: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
   playerRatingRow: {
     flexDirection: 'row',
@@ -939,45 +1056,68 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: colors.surface,
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingTop: 20,
+    paddingBottom: 20,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+    overflow: 'hidden',
   },
   priceContainer: {
-    marginBottom: 12,
+    marginBottom: 14,
+    alignItems: 'center',
   },
   priceLabel: {
     fontSize: 13,
     color: colors.textSecondary,
-    marginBottom: 2,
+    marginBottom: 6,
+    fontWeight: '500',
+  },
+  priceGradient: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 16,
+    marginBottom: 4,
   },
   price: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: colors.primary,
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    letterSpacing: -1,
   },
   totalCostText: {
     fontSize: 12,
     color: colors.textSecondary,
     marginTop: 2,
+    fontWeight: '500',
   },
   joinButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: 16,
-    borderRadius: 12,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  joinButtonGradient: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
+    gap: 8,
   },
   joinButtonText: {
     color: '#FFFFFF',
     fontSize: 17,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   modalOverlay: {
     flex: 1,

@@ -213,24 +213,7 @@ export const courtService = {
   getCourts: async (sportId = 'padel') => {
     const { data, error } = await supabase
       .from('courts')
-      .select(`
-        *,
-        venue:venues(
-          id,
-          name,
-          address,
-          city,
-          state,
-          country,
-          latitude,
-          longitude,
-          image_url,
-          rating,
-          phone,
-          email,
-          website
-        )
-      `)
+      .select('*')
       .eq('sport_id', sportId)
       .eq('is_active', true)
       .order('created_at', { ascending: false });
@@ -316,18 +299,7 @@ export const matchService = {
       .from('matches')
       .select(`
         *,
-        court:courts(
-          id,
-          name,
-          venue:venues(
-            id,
-            name,
-            address,
-            city,
-            image_url,
-            rating
-          )
-        ),
+        court:courts(*),
         host:profiles!host_id(
           id,
           username,

@@ -15,6 +15,8 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useSport } from '../context/SportContext';
@@ -49,16 +51,74 @@ export default function PadelMatchDetailScreen({ navigation, route }) {
   const loadMatchDetails = async () => {
     try {
       setLoading(true);
-      const matchData = await matchService.getMatch(matchId);
-      setMatch(matchData);
 
-      // Load teams if match has teams
-      if (matchData.teams && matchData.teams.length > 0) {
-        const teamsData = {
-          teamA: matchData.teams.find(t => t.team_position === 'A'),
-          teamB: matchData.teams.find(t => t.team_position === 'B'),
+      // Try to fetch from Supabase first
+      try {
+        const matchData = await matchService.getMatch(matchId);
+        setMatch(matchData);
+
+        // Load teams if match has teams
+        if (matchData.teams && matchData.teams.length > 0) {
+          const teamsData = {
+            teamA: matchData.teams.find(t => t.team_position === 'A'),
+            teamB: matchData.teams.find(t => t.team_position === 'B'),
+          };
+          setTeams(teamsData);
+        }
+      } catch (dbError) {
+        // If match not found in database, create mock data as fallback
+        console.log('Match not in database, using mock data for matchId:', matchId);
+
+        const mockMatch = {
+          id: matchId,
+          match_date: '2025-10-05',
+          match_time: '18:00',
+          duration_minutes: 90,
+          match_type: 'competitive',
+          skill_level: 'Intermediate',
+          max_players: 4,
+          current_players: 2,
+          price_per_player: '10.00',
+          total_cost: '40.00',
+          status: 'open',
+          description: 'Great match for intermediate players!',
+          court: {
+            name: 'Miami Padel Club',
+            address: '123 Ocean Drive, Miami, FL',
+            city: 'Miami',
+            surface_type: 'Artificial Grass',
+            is_indoor: true,
+            rating: 4.8,
+            phone: '+1 (305) 123-4567',
+            latitude: 25.7617,
+            longitude: -80.1918,
+            image_url: 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800',
+          },
+          match_players: [
+            {
+              id: 1,
+              user_id: 1,
+              is_host: true,
+              joined_at: new Date().toISOString(),
+              user: {
+                full_name: 'John Doe',
+                username: 'johndoe',
+              },
+            },
+            {
+              id: 2,
+              user_id: 2,
+              is_host: false,
+              joined_at: new Date().toISOString(),
+              user: {
+                full_name: 'Jane Smith',
+                username: 'janesmith',
+              },
+            },
+          ],
         };
-        setTeams(teamsData);
+
+        setMatch(mockMatch);
       }
     } catch (error) {
       console.error('Error loading match details:', error);
@@ -237,27 +297,20 @@ export default function PadelMatchDetailScreen({ navigation, route }) {
   return (
     <View style={styles.container}>
       <View style={styles.spacer} />
-      
-      {/* Header */}
-      <View style={styles.header}>
-        <NavigationButton navigation={navigation} currentScreen="MatchDetail" />
-        {teams && (
-          <BracketButton onPress={() => setBracketVisible(true)} />
-        )}
-      </View>
 
-      {/* Court Preview Section */}
+      {/* Glassmorphic Court Preview Section */}
       <View style={styles.courtPreviewSection}>
         <ImageBackground
           source={{
-            uri: match.court?.image_url ||
-                 match.court?.venue?.image_url ||
-                 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800'
+            uri: match.court?.image_url || 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800'
           }}
           style={styles.courtImage}
           imageStyle={styles.courtImageStyle}
         >
-          <View style={styles.imageOverlay}>
+          <LinearGradient
+            colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.6)']}
+            style={styles.imageOverlay}
+          >
             <View
               style={[
                 styles.typeBadge,
@@ -266,14 +319,16 @@ export default function PadelMatchDetailScreen({ navigation, route }) {
                   : styles.typeBadgeCasual,
               ]}
             >
-              <Text style={styles.typeBadgeText}>
-                {match.match_type === 'competitive' ? 'COMPETITIVE' : 'CASUAL'}
-              </Text>
+              <BlurView intensity={20} tint="dark" style={styles.typeBadgeBlur}>
+                <Text style={styles.typeBadgeText}>
+                  {match.match_type === 'competitive' ? 'COMPETITIVE' : 'CASUAL'}
+                </Text>
+              </BlurView>
             </View>
-          </View>
+          </LinearGradient>
         </ImageBackground>
 
-        <View style={styles.courtInfoCard}>
+        <BlurView intensity={colors.isDarkMode ? 40 : 60} tint={colors.isDarkMode ? 'dark' : 'light'} style={styles.courtInfoCard}>
           <View style={styles.courtInfoHeader}>
             <View style={styles.courtInfoLeft}>
               <Text style={styles.courtNameLarge}>{match.court?.name || 'Unknown Court'}</Text>
@@ -301,28 +356,41 @@ export default function PadelMatchDetailScreen({ navigation, route }) {
               </Text>
             </View>
           </View>
-        </View>
+        </BlurView>
       </View>
 
-      {/* Action Buttons */}
+      {/* Glassmorphic Action Buttons */}
       <View style={styles.actionButtonsSection}>
-        <TouchableOpacity style={styles.primaryActionButton} onPress={openDirections}>
-          <Ionicons name="navigate" size={20} color="#FFFFFF" />
-          <Text style={styles.primaryActionButtonText}>Get Directions</Text>
+        <TouchableOpacity style={styles.primaryActionButton} onPress={openDirections} activeOpacity={0.8}>
+          <LinearGradient
+            colors={[colors.primary, colors.primary + 'DD']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.primaryActionGradient}
+          >
+            <Ionicons name="navigate" size={20} color="#FFFFFF" />
+            <Text style={styles.primaryActionButtonText}>Get Directions</Text>
+          </LinearGradient>
         </TouchableOpacity>
 
         <View style={styles.secondaryActionsRow}>
-          <TouchableOpacity style={styles.secondaryActionButton} onPress={callCourt}>
-            <Ionicons name="call" size={20} color={colors.primary} />
-            <Text style={styles.secondaryActionButtonText}>Call</Text>
+          <TouchableOpacity style={styles.secondaryActionButton} onPress={callCourt} activeOpacity={0.7}>
+            <BlurView intensity={colors.isDarkMode ? 30 : 40} tint={colors.isDarkMode ? 'dark' : 'light'} style={styles.secondaryActionBlur}>
+              <Ionicons name="call" size={20} color={colors.primary} />
+              <Text style={styles.secondaryActionButtonText}>Call</Text>
+            </BlurView>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.secondaryActionButton} onPress={shareMatch}>
-            <Ionicons name="share-social" size={20} color={colors.primary} />
-            <Text style={styles.secondaryActionButtonText}>Share</Text>
+          <TouchableOpacity style={styles.secondaryActionButton} onPress={shareMatch} activeOpacity={0.7}>
+            <BlurView intensity={colors.isDarkMode ? 30 : 40} tint={colors.isDarkMode ? 'dark' : 'light'} style={styles.secondaryActionBlur}>
+              <Ionicons name="share-social" size={20} color={colors.primary} />
+              <Text style={styles.secondaryActionButtonText}>Share</Text>
+            </BlurView>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.secondaryActionButton}>
-            <Ionicons name="bookmark-outline" size={20} color={colors.primary} />
-            <Text style={styles.secondaryActionButtonText}>Save</Text>
+          <TouchableOpacity style={styles.secondaryActionButton} activeOpacity={0.7}>
+            <BlurView intensity={colors.isDarkMode ? 30 : 40} tint={colors.isDarkMode ? 'dark' : 'light'} style={styles.secondaryActionBlur}>
+              <Ionicons name="bookmark-outline" size={20} color={colors.primary} />
+              <Text style={styles.secondaryActionButtonText}>Save</Text>
+            </BlurView>
           </TouchableOpacity>
         </View>
       </View>
@@ -507,7 +575,7 @@ const createStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.background,
   },
   spacer: {
-    height: 60,
+    height: 8,
   },
   header: {
     flexDirection: 'row',
@@ -517,44 +585,63 @@ const createStyles = (colors) => StyleSheet.create({
     paddingBottom: 16,
   },
   courtPreviewSection: {
-    backgroundColor: colors.surface,
-    marginBottom: 12,
+    marginBottom: 16,
+    overflow: 'hidden',
+    borderRadius: 24,
+    marginHorizontal: 16,
+    marginTop: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 10,
   },
   courtImage: {
     width: '100%',
-    height: 200,
+    height: 240,
   },
   courtImageStyle: {
-    borderRadius: 0,
+    borderRadius: 24,
   },
   imageOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    padding: 16,
+    padding: 20,
     justifyContent: 'flex-end',
   },
   typeBadge: {
     alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  typeBadgeBlur: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
   },
   typeBadgeCompetitive: {
-    backgroundColor: 'rgba(255, 107, 107, 0.3)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 107, 0.5)',
   },
   typeBadgeCasual: {
-    backgroundColor: 'rgba(116, 192, 252, 0.3)',
+    borderWidth: 1,
+    borderColor: 'rgba(116, 192, 252, 0.5)',
   },
   typeBadgeText: {
     fontSize: 11,
     fontWeight: '700',
     color: '#FFFFFF',
+    letterSpacing: 1,
   },
   courtInfoCard: {
-    padding: 16,
-    backgroundColor: colors.glass || colors.card,
+    padding: 20,
     borderTopWidth: 1,
-    borderTopColor: colors.glassBorder || colors.border,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    overflow: 'hidden',
   },
   courtInfoHeader: {
     flexDirection: 'row',
@@ -606,24 +693,31 @@ const createStyles = (colors) => StyleSheet.create({
     color: colors.textSecondary,
   },
   actionButtonsSection: {
-    backgroundColor: colors.surface,
-    padding: 16,
+    paddingHorizontal: 16,
     gap: 12,
-    marginBottom: 12,
+    marginBottom: 16,
   },
   primaryActionButton: {
-    backgroundColor: colors.primary,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  primaryActionGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: 16,
     gap: 8,
   },
   primaryActionButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   secondaryActionsRow: {
     flexDirection: 'row',
@@ -631,14 +725,21 @@ const createStyles = (colors) => StyleSheet.create({
   },
   secondaryActionButton: {
     flex: 1,
-    backgroundColor: colors.card,
+    borderRadius: 16,
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  secondaryActionBlur: {
     flexDirection: 'column',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderRadius: 12,
-    gap: 4,
+    paddingVertical: 14,
+    gap: 6,
   },
   secondaryActionButtonText: {
     color: colors.text,

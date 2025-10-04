@@ -113,7 +113,7 @@ export default function HomeScreen({ navigation }) {
       const matches = await matchService.getUpcomingMatches(20, selectedSport.id);
       const transformedMatches = matches.map(match => ({
         id: match.id,
-        courtName: match.court?.venue?.name || match.court?.name || 'Unknown Court',
+        courtName: match.court?.name || 'Unknown Court',
         date: match.match_date,
         time: match.match_time,
         duration: match.duration_minutes,
@@ -122,7 +122,7 @@ export default function HomeScreen({ navigation }) {
         joinedPlayers: match.current_players,
         totalPlayers: match.max_players,
         pricePerPlayer: parseFloat(match.price_per_player),
-        image: match.court?.venue?.image_url || match.court?.image_url || 'https://images.unsplash.com/photo-1554068865-24cd4e34b8?w=400&h=300&fit=crop',
+        image: match.court?.image_url || 'https://images.unsplash.com/photo-1554068865-24cd4e34b8?w=400&h=300&fit=crop',
       }));
       setUpcomingMatches(transformedMatches);
 
