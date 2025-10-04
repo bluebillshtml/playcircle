@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Padlo",
-    "slug": "padlo",
+    "name": "SportConnect",
+    "slug": "sportconnect",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -13,14 +13,14 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.padlo.app"
+      "bundleIdentifier": "com.sportconnect.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#3DD598"
       },
-      "package": "com.padlo.app",
+      "package": "com.sportconnect.app",
       "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"]
     },
     "web": {

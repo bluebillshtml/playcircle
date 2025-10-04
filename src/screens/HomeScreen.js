@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,11 +8,17 @@ import {
   Dimensions,
   Image,
   Animated,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
+import { useSport } from '../context/SportContext';
+import { matchService, profileService } from '../services/supabase';
 import NavigationButton from '../components/NavigationButton';
+import SportSelector from '../components/SportSelector';
+import PadelMatchHistory from '../components/PadelMatchHistory';
 
 const { width } = Dimensions.get('window');
 
@@ -87,13 +93,101 @@ const USER_STATS = {
 
 export default function HomeScreen({ navigation }) {
   const { colors } = useTheme();
+  const { user, profile } = useAuth();
+  const { selectedSport } = useSport();
   const scrollY = useRef(new Animated.Value(0)).current;
+  const [upcomingMatches, setUpcomingMatches] = useState([]);
+  const [pastMatches, setPastMatches] = useState([]);
+  const [userStats, setUserStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadData();
+  }, [user]);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+
+      // Load upcoming matches for selected sport
+      const matches = await matchService.getUpcomingMatches(20, selectedSport.id);
+      const transformedMatches = matches.map(match => ({
+        id: match.id,
+        courtName: match.court?.venue?.name || match.court?.name || 'Unknown Court',
+        date: match.match_date,
+        time: match.match_time,
+        duration: match.duration_minutes,
+        type: match.match_type,
+        skillLevel: match.skill_level,
+        joinedPlayers: match.current_players,
+        totalPlayers: match.max_players,
+        pricePerPlayer: parseFloat(match.price_per_player),
+        image: match.court?.venue?.image_url || match.court?.image_url || 'https://images.unsplash.com/photo-1554068865-24cd4e34b8?w=400&h=300&fit=crop',
+      }));
+      setUpcomingMatches(transformedMatches);
+
+      // Load user's past matches if logged in
+      if (user) {
+        const userMatches = await matchService.getUserMatches(user.id);
+        const completed = userMatches
+          .filter(um => um.match?.status === 'completed')
+          .map(um => ({
+            id: um.match.id,
+            courtName: um.match.court?.name || 'Unknown Court',
+            date: um.match.match_date,
+            time: um.match.match_time,
+            result: 'Win', // TODO: Calculate from team results
+            score: '6-4, 6-3', // TODO: Get from match games
+            partner: 'Partner', // TODO: Get from team
+          }))
+          .slice(0, 3);
+        setPastMatches(completed);
+
+        // Load user stats for selected sport
+        const stats = await profileService.getUserStats(user.id, selectedSport.id);
+        setUserStats({
+          totalMatches: stats?.total_matches || 0,
+          winRate: Math.round(stats?.win_rate || 0),
+          hoursPlayed: Math.round(stats?.total_hours_played || 0),
+          favoritePartner: 'Partner Name', // TODO: Calculate from matches
+        });
+      } else {
+        // Use default stats for non-logged in users
+        setUserStats({
+          totalMatches: 0,
+          winRate: 0,
+          hoursPlayed: 0,
+          favoritePartner: 'None',
+        });
+        setPastMatches([]);
+      }
+    } catch (error) {
+      console.error('Error loading data:', error);
+      // Set defaults on error
+      setUpcomingMatches([]);
+      setPastMatches([]);
+      setUserStats({
+        totalMatches: 0,
+        winRate: 0,
+        hoursPlayed: 0,
+        favoritePartner: 'None',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good Morning';
-    if (hour < 18) return 'Good Afternoon';
-    return 'Good Evening';
+    if (profile?.full_name) {
+      return `Welcome back, ${profile.full_name}`;
+    } else if (profile?.username) {
+      return `Welcome back, ${profile.username}`;
+    } else if (user?.email) {
+      // Fallback to email if no profile name is available
+      const emailName = user.email.split('@')[0];
+      return `Welcome back, ${emailName}`;
+    }
+    return 'Welcome back';
   };
 
   const formatDate = (dateString) => {
@@ -115,6 +209,14 @@ export default function HomeScreen({ navigation }) {
   };
 
   const styles = createStyles(colors);
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -142,10 +244,11 @@ export default function HomeScreen({ navigation }) {
       >
         <View style={styles.headerTop}>
           <NavigationButton navigation={navigation} currentScreen="Home" />
+          <SportSelector navigation={navigation} />
         </View>
         <View style={styles.headerText}>
           <Text style={styles.greeting}>{getGreeting()}</Text>
-          <Text style={styles.subGreeting}>Ready to play?</Text>
+          <Text style={styles.subGreeting}>Ready to play {selectedSport.name}?</Text>
         </View>
       </Animated.View>
 
@@ -163,18 +266,18 @@ export default function HomeScreen({ navigation }) {
         ]}
       >
         <View style={styles.statCard}>
-          <Ionicons name="tennisball" size={24} color={colors.primary} />
-          <Text style={styles.statNumber}>{USER_STATS.totalMatches}</Text>
+          <Ionicons name={selectedSport.icon} size={24} color={colors.primary} />
+          <Text style={styles.statNumber}>{userStats?.totalMatches || 0}</Text>
           <Text style={styles.statLabel}>Matches</Text>
         </View>
         <View style={styles.statCard}>
           <Ionicons name="trophy" size={24} color={colors.warning} />
-          <Text style={styles.statNumber}>{USER_STATS.winRate}%</Text>
+          <Text style={styles.statNumber}>{userStats?.winRate || 0}%</Text>
           <Text style={styles.statLabel}>Win Rate</Text>
         </View>
         <View style={styles.statCard}>
           <Ionicons name="time" size={24} color={colors.success} />
-          <Text style={styles.statNumber}>{USER_STATS.hoursPlayed}h</Text>
+          <Text style={styles.statNumber}>{userStats?.hoursPlayed || 0}h</Text>
           <Text style={styles.statLabel}>Played</Text>
         </View>
       </Animated.View>
@@ -191,15 +294,15 @@ export default function HomeScreen({ navigation }) {
           }}
         >
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Upcoming Matches</Text>
+            <Text style={styles.sectionTitle}>Upcoming {selectedSport.name} Matches</Text>
             <TouchableOpacity onPress={() => navigation.navigate('Matches')}>
               <Text style={styles.seeAllText}>See All</Text>
             </TouchableOpacity>
           </View>
         </Animated.View>
 
-        {UPCOMING_MATCHES.length > 0 ? (
-          UPCOMING_MATCHES.map((match, index) => (
+        {upcomingMatches.length > 0 ? (
+          upcomingMatches.map((match, index) => (
             <Animated.View
               key={match.id}
               style={{
@@ -289,7 +392,7 @@ export default function HomeScreen({ navigation }) {
         ) : (
            <View style={styles.emptyState}>
              <Ionicons name="calendar-outline" size={48} color={colors.textSecondary} />
-             <Text style={styles.emptyStateText}>No upcoming matches</Text>
+             <Text style={styles.emptyStateText}>No upcoming {selectedSport.name.toLowerCase()} matches</Text>
              <TouchableOpacity
                style={styles.createButton}
                onPress={() => navigation.navigate('Create')}
@@ -313,57 +416,69 @@ export default function HomeScreen({ navigation }) {
         >
           <Text style={styles.sectionTitle}>Recent Activity</Text>
         </Animated.View>
-        {PAST_MATCHES.map((match, index) => (
-          <Animated.View
-            key={match.id}
-            style={{
-              opacity: scrollY.interpolate({
-                inputRange: [400 + (index * 80), 550 + (index * 80)],
-                outputRange: [1, 0.15],
-                extrapolate: 'clamp',
-              }),
-            }}
-          >
-            <TouchableOpacity style={styles.pastMatchCard}>
-            <View style={styles.pastMatchLeft}>
-              <View
-                style={[
-                  styles.resultBadge,
-                  match.result === 'Win'
-                    ? styles.resultBadgeWin
-                    : styles.resultBadgeLoss,
-                ]}
-              >
-                <Text
+        {selectedSport.id === 'padel' && user ? (
+          <View style={styles.padelHistoryContainer}>
+            <PadelMatchHistory
+              userId={user.id}
+              onMatchSelect={(match) => {
+                // Navigate to match detail
+                navigation.navigate('MatchDetail', { matchId: match.id });
+              }}
+            />
+          </View>
+        ) : (
+          pastMatches.map((match, index) => (
+            <Animated.View
+              key={match.id}
+              style={{
+                opacity: scrollY.interpolate({
+                  inputRange: [400 + (index * 80), 550 + (index * 80)],
+                  outputRange: [1, 0.15],
+                  extrapolate: 'clamp',
+                }),
+              }}
+            >
+              <TouchableOpacity style={styles.pastMatchCard}>
+              <View style={styles.pastMatchLeft}>
+                <View
                   style={[
-                    styles.resultText,
+                    styles.resultBadge,
                     match.result === 'Win'
-                      ? styles.resultTextWin
-                      : styles.resultTextLoss,
+                      ? styles.resultBadgeWin
+                      : styles.resultBadgeLoss,
                   ]}
                 >
-                  {match.result}
-                </Text>
+                  <Text
+                    style={[
+                      styles.resultText,
+                      match.result === 'Win'
+                        ? styles.resultTextWin
+                        : styles.resultTextLoss,
+                    ]}
+                  >
+                    {match.result}
+                  </Text>
+                </View>
+                <View style={styles.pastMatchInfo}>
+                  <Text style={styles.pastCourtName}>{match.courtName}</Text>
+                  <Text style={styles.pastMatchDetails}>
+                    {formatDate(match.date)} • {match.time}
+                  </Text>
+                   <View style={styles.partnerRow}>
+                     <Ionicons
+                       name="person-outline"
+                       size={12}
+                       color={colors.textSecondary}
+                     />
+                     <Text style={styles.partnerText}>with {match.partner}</Text>
+                   </View>
+                </View>
               </View>
-              <View style={styles.pastMatchInfo}>
-                <Text style={styles.pastCourtName}>{match.courtName}</Text>
-                <Text style={styles.pastMatchDetails}>
-                  {formatDate(match.date)} • {match.time}
-                </Text>
-                 <View style={styles.partnerRow}>
-                   <Ionicons
-                     name="person-outline"
-                     size={12}
-                     color={colors.textSecondary}
-                   />
-                   <Text style={styles.partnerText}>with {match.partner}</Text>
-                 </View>
-              </View>
-            </View>
-            <Text style={styles.scoreText}>{match.score}</Text>
-            </TouchableOpacity>
-          </Animated.View>
-        ))}
+              <Text style={styles.scoreText}>{match.score}</Text>
+              </TouchableOpacity>
+            </Animated.View>
+          ))
+        )}
       </View>
 
       {/* Quick Action */}
@@ -384,7 +499,7 @@ export default function HomeScreen({ navigation }) {
            onPress={() => navigation.navigate('Matches')}
          >
            <Ionicons name="search" size={26} color={colors.white} />
-           <Text style={styles.actionButtonText}>Find Players Near You</Text>
+           <Text style={styles.actionButtonText}>Find {selectedSport.name} Players Near You</Text>
          </TouchableOpacity>
       </Animated.View>
 
@@ -409,9 +524,9 @@ const createStyles = (colors) => StyleSheet.create({
   },
   headerTop: {
     flexDirection: 'row',
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 12,
-    paddingLeft: 48,
   },
   headerText: {
     width: '100%',
@@ -752,5 +867,8 @@ const createStyles = (colors) => StyleSheet.create({
   },
   bottomPadding: {
     height: 20,
+  },
+  padelHistoryContainer: {
+    height: 300, // Fixed height for the padel history component
   },
 });

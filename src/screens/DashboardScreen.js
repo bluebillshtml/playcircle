@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,9 +6,12 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import { useSport } from '../context/SportContext';
+import { leaderboardService } from '../services/supabase';
 import NavigationButton from '../components/NavigationButton';
 
 // Mock leaderboard data
@@ -92,7 +95,40 @@ const LEADERBOARD_DATA = [
 
 export default function DashboardScreen({ navigation }) {
   const { colors } = useTheme();
+  const { selectedSport } = useSport();
   const [activeTab, setActiveTab] = useState('Region');
+  const [leaderboardData, setLeaderboardData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadLeaderboard();
+  }, [activeTab]);
+
+  const loadLeaderboard = async () => {
+    try {
+      setLoading(true);
+      const region = activeTab.toLowerCase();
+      const data = await leaderboardService.getLeaderboard(region, 'all_time', 100);
+
+      const transformed = data.map(entry => ({
+        id: entry.user_id,
+        name: entry.user?.full_name || entry.user?.username || 'Player',
+        username: `@${entry.user?.username || 'player'}`,
+        points: entry.points,
+        rank: entry.rank,
+        avatar: entry.user?.avatar_url,
+        trend: entry.trend,
+        color: entry.rank <= 3 ? ['#FF6B35', '#4A90E2', '#7ED321'][entry.rank - 1] : null,
+      }));
+
+      setLeaderboardData(transformed);
+    } catch (error) {
+      console.error('Error loading leaderboard:', error);
+      setLeaderboardData([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const renderTrendIcon = (trend) => {
     if (trend === 'up') {
@@ -105,6 +141,9 @@ export default function DashboardScreen({ navigation }) {
 
   const styles = createStyles(colors);
 
+  const top3Data = leaderboardData.slice(0, 3);
+  const restData = leaderboardData.slice(3);
+
   return (
     <View style={styles.container}>
       <View style={styles.spacer} />
@@ -113,6 +152,9 @@ export default function DashboardScreen({ navigation }) {
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <NavigationButton navigation={navigation} currentScreen="Dashboard" />
+        </View>
+        <View style={styles.headerTitle}>
+          <Text style={styles.title}>{selectedSport.name} Leaderboard</Text>
         </View>
       </View>
 
@@ -139,13 +181,18 @@ export default function DashboardScreen({ navigation }) {
       </View>
 
       {/* Top 3 Section */}
+      {loading ? (
+        <View style={[styles.top3Section, { justifyContent: 'center', alignItems: 'center', paddingVertical: 60 }]}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : top3Data.length >= 3 ? (
       <View style={styles.top3Section}>
         <View style={styles.top3Container}>
           {/* 2nd Place */}
           <View style={styles.top3Card}>
-            <View style={[styles.top3Avatar, { backgroundColor: TOP_3_DATA[1].color }]}>
-              {TOP_3_DATA[1].avatar ? (
-                <Image source={{ uri: TOP_3_DATA[1].avatar }} style={styles.top3AvatarImage} />
+            <View style={[styles.top3Avatar, { backgroundColor: top3Data[1]?.color || '#4A90E2' }]}>
+              {top3Data[1]?.avatar ? (
+                <Image source={{ uri: top3Data[1].avatar }} style={styles.top3AvatarImage} />
               ) : (
                 <Ionicons name="person" size={32} color={colors.text} />
               )}
@@ -153,9 +200,9 @@ export default function DashboardScreen({ navigation }) {
                 <Text style={styles.rankBadgeText}>2</Text>
               </View>
             </View>
-            <Text style={styles.top3Name}>{TOP_3_DATA[1].name}</Text>
-            <Text style={[styles.top3Points, { color: TOP_3_DATA[1].color }]}>{TOP_3_DATA[1].points}</Text>
-            <Text style={styles.top3Username}>{TOP_3_DATA[1].username}</Text>
+            <Text style={styles.top3Name}>{top3Data[1]?.name}</Text>
+            <Text style={[styles.top3Points, { color: top3Data[1]?.color || '#4A90E2' }]}>{top3Data[1]?.points}</Text>
+            <Text style={styles.top3Username}>{top3Data[1]?.username}</Text>
           </View>
 
           {/* 1st Place */}
@@ -163,9 +210,9 @@ export default function DashboardScreen({ navigation }) {
             <View style={styles.crownIcon}>
               <Ionicons name="trophy" size={24} color={colors.warning} />
             </View>
-            <View style={[styles.top3Avatar, { backgroundColor: TOP_3_DATA[0].color }]}>
-              {TOP_3_DATA[0].avatar ? (
-                <Image source={{ uri: TOP_3_DATA[0].avatar }} style={styles.top3AvatarImage} />
+            <View style={[styles.top3Avatar, { backgroundColor: top3Data[0]?.color || '#FF6B35' }]}>
+              {top3Data[0]?.avatar ? (
+                <Image source={{ uri: top3Data[0].avatar }} style={styles.top3AvatarImage} />
               ) : (
                 <Ionicons name="person" size={40} color={colors.text} />
               )}
@@ -173,16 +220,16 @@ export default function DashboardScreen({ navigation }) {
                 <Text style={styles.rankBadgeText}>1</Text>
               </View>
             </View>
-            <Text style={styles.top3Name}>{TOP_3_DATA[0].name}</Text>
-            <Text style={[styles.top3Points, { color: TOP_3_DATA[0].color }]}>{TOP_3_DATA[0].points}</Text>
-            <Text style={styles.top3Username}>{TOP_3_DATA[0].username}</Text>
+            <Text style={styles.top3Name}>{top3Data[0]?.name}</Text>
+            <Text style={[styles.top3Points, { color: top3Data[0]?.color || '#FF6B35' }]}>{top3Data[0]?.points}</Text>
+            <Text style={styles.top3Username}>{top3Data[0]?.username}</Text>
           </View>
 
           {/* 3rd Place */}
           <View style={styles.top3Card}>
-            <View style={[styles.top3Avatar, { backgroundColor: TOP_3_DATA[2].color }]}>
-              {TOP_3_DATA[2].avatar ? (
-                <Image source={{ uri: TOP_3_DATA[2].avatar }} style={styles.top3AvatarImage} />
+            <View style={[styles.top3Avatar, { backgroundColor: top3Data[2]?.color || '#7ED321' }]}>
+              {top3Data[2]?.avatar ? (
+                <Image source={{ uri: top3Data[2].avatar }} style={styles.top3AvatarImage} />
               ) : (
                 <Ionicons name="person" size={32} color={colors.text} />
               )}
@@ -190,12 +237,13 @@ export default function DashboardScreen({ navigation }) {
                 <Text style={styles.rankBadgeText}>3</Text>
               </View>
             </View>
-            <Text style={styles.top3Name}>{TOP_3_DATA[2].name}</Text>
-            <Text style={[styles.top3Points, { color: TOP_3_DATA[2].color }]}>{TOP_3_DATA[2].points}</Text>
-            <Text style={styles.top3Username}>{TOP_3_DATA[2].username}</Text>
+            <Text style={styles.top3Name}>{top3Data[2]?.name}</Text>
+            <Text style={[styles.top3Points, { color: top3Data[2]?.color || '#7ED321' }]}>{top3Data[2]?.points}</Text>
+            <Text style={styles.top3Username}>{top3Data[2]?.username}</Text>
           </View>
         </View>
       </View>
+      ) : null}
 
       {/* Leaderboard List */}
       <ScrollView 
@@ -203,7 +251,7 @@ export default function DashboardScreen({ navigation }) {
         contentContainerStyle={styles.leaderboardList}
         showsVerticalScrollIndicator={false}
       >
-        {LEADERBOARD_DATA.map((user, index) => (
+        {restData.map((user, index) => (
           <View key={user.id} style={styles.userCard}>
             <View style={styles.userInfo}>
               <View style={styles.avatarContainer}>
@@ -229,6 +277,7 @@ export default function DashboardScreen({ navigation }) {
           </View>
         ))}
       </ScrollView>
+
     </View>
   );
 }
@@ -252,6 +301,16 @@ const createStyles = (colors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-start',
+    marginBottom: 12,
+  },
+  headerTitle: {
+    alignItems: 'flex-start',
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: colors.text,
+    letterSpacing: -0.5,
   },
   tabContainer: {
     flexDirection: 'row',

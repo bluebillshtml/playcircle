@@ -23,10 +23,16 @@ export default function NavigationButton({ navigation, currentScreen }) {
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
 
+  // Safety check for navigation prop
+  if (!navigation) {
+    console.error('NavigationButton: navigation prop is undefined');
+    return null;
+  }
+
   const navItems = [
     { name: 'Home', icon: 'home', screen: 'Home' },
     { name: 'Leaderboard', icon: 'trophy', screen: 'Dashboard' },
-    { name: 'Matches', icon: 'tennisball', screen: 'Matches' },
+    { name: 'Matches', icon: 'calendar', screen: 'Matches' },
     { name: 'Create Match', icon: 'add-circle', screen: 'Create' },
     { name: 'Profile', icon: 'person', screen: 'Profile' },
   ];
@@ -36,24 +42,26 @@ export default function NavigationButton({ navigation, currentScreen }) {
     Animated.parallel([
       Animated.spring(slideAnim, {
         toValue: 0,
-        tension: 100,
-        friction: 8,
+        damping: 20,
+        stiffness: 90,
+        mass: 1,
         useNativeDriver: true,
       }),
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 300,
+        duration: 350,
         useNativeDriver: true,
       }),
       Animated.spring(scaleAnim, {
         toValue: 1,
-        tension: 100,
-        friction: 8,
+        damping: 15,
+        stiffness: 100,
+        mass: 1,
         useNativeDriver: true,
       }),
       Animated.timing(rotateAnim, {
         toValue: 1,
-        duration: 400,
+        duration: 350,
         useNativeDriver: true,
       }),
     ]).start();
@@ -63,19 +71,21 @@ export default function NavigationButton({ navigation, currentScreen }) {
     Animated.parallel([
       Animated.spring(slideAnim, {
         toValue: -width,
-        tension: 100,
-        friction: 8,
+        damping: 20,
+        stiffness: 90,
+        mass: 1,
         useNativeDriver: true,
       }),
       Animated.timing(fadeAnim, {
         toValue: 0,
-        duration: 250,
+        duration: 300,
         useNativeDriver: true,
       }),
       Animated.spring(scaleAnim, {
         toValue: 0.8,
-        tension: 100,
-        friction: 8,
+        damping: 15,
+        stiffness: 100,
+        mass: 1,
         useNativeDriver: true,
       }),
       Animated.timing(rotateAnim, {
@@ -176,8 +186,8 @@ export default function NavigationButton({ navigation, currentScreen }) {
                     <Ionicons name="tennisball" size={28} color={colors.primary} />
                   </View>
                   <View style={styles.appInfo}>
-                    <Text style={styles.appName}>Padlo</Text>
-                    <Text style={styles.appSubtitle}>Padel Community</Text>
+                    <Text style={styles.appName}>PlayCircle</Text>
+                    <Text style={styles.appSubtitle}>Sport Community</Text>
                   </View>
                 </View>
                 <TouchableOpacity
@@ -269,11 +279,15 @@ const createStyles = (colors) => StyleSheet.create({
     position: 'relative',
   },
   navButton: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 12,
+    padding: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   hamburgerContainer: {
     width: 24,
@@ -282,15 +296,11 @@ const createStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
   },
   hamburgerLine: {
-    height: 4,
+    height: 2,
     backgroundColor: colors.text,
-    borderRadius: 2,
+    borderRadius: 1,
     width: '100%',
-    shadowColor: colors.text,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
-    elevation: 2,
+    opacity: 0.8,
   },
   hamburgerLine1: {
     transformOrigin: 'center',

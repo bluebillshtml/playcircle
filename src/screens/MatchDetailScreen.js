@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,9 +11,18 @@ import {
   ActionSheetIOS,
   Platform,
   ImageBackground,
+  Animated,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
+import { useSport } from '../context/SportContext';
+import { matchService, paymentService } from '../services/supabase';
+import TeamBracketOverlay from '../components/TeamBracketOverlay';
+import BracketButton from '../components/BracketButton';
+import PadelMatchDetailScreen from './PadelMatchDetailScreen';
 
 // Mock match detail data - multiple matches
 const MOCK_MATCHES_DATA = {
@@ -121,11 +130,118 @@ const MOCK_MATCHES_DATA = {
 
 export default function MatchDetailScreen({ navigation, route }) {
   const { colors, isDarkMode } = useTheme();
-  const [modalVisible, setModalVisible] = useState(false);
+  const { user } = useAuth();
+  const { selectedSport } = useSport();
 
-  // Get the matchId from navigation params, default to 1
-  const matchId = route.params?.matchId || 1;
-  const match = MOCK_MATCHES_DATA[matchId] || MOCK_MATCHES_DATA[1];
+  // Use sport-specific match detail screen
+  if (selectedSport.id === 'padel') {
+    return <PadelMatchDetailScreen navigation={navigation} route={route} />;
+  }
+  const [modalVisible, setModalVisible] = useState(false);
+  const [bracketVisible, setBracketVisible] = useState(false);
+  const [match, setMatch] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+
+  // Get the matchId from navigation params
+  const matchId = route.params?.matchId;
+
+  useEffect(() => {
+    if (matchId) {
+      loadMatchDetails();
+    }
+  }, [matchId]);
+
+  const loadMatchDetails = async () => {
+    try {
+      setLoading(true);
+      const matchData = await matchService.getMatch(matchId);
+
+      const transformedMatch = {
+        id: matchData.id,
+        courtName: matchData.court?.name || 'Unknown Court',
+        courtAddress: matchData.court?.address || '',
+        coordinates: {
+          latitude: matchData.court?.latitude || 37.78825,
+          longitude: matchData.court?.longitude || -122.4324,
+        },
+        courtImage: matchData.court?.image_url || 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800',
+        date: matchData.match_date,
+        time: matchData.match_time,
+        duration: matchData.duration_minutes,
+        type: matchData.match_type,
+        skillLevel: matchData.skill_level,
+        totalPlayers: matchData.max_players,
+        joinedPlayers: matchData.current_players,
+        pricePerPlayer: parseFloat(matchData.price_per_player),
+        totalCost: parseFloat(matchData.total_cost),
+        host: {
+          name: matchData.host?.full_name || matchData.host?.username || 'Host',
+          rating: 4.5,
+          matchesPlayed: matchData.host?.total_matches || 0,
+        },
+        players: matchData.match_players?.map(mp => ({
+          id: mp.user_id,
+          name: mp.user?.full_name || mp.user?.username || 'Player',
+          rating: 4.5,
+          isHost: mp.is_host,
+        })) || [],
+        description: matchData.description || 'No description provided.',
+        courtDetails: {
+          facilities: [
+            matchData.court?.has_lockers && 'Lockers',
+            matchData.court?.has_showers && 'Showers',
+            matchData.court?.has_parking && 'Parking',
+            matchData.court?.has_pro_shop && 'Pro Shop',
+          ].filter(Boolean),
+          surface: matchData.court?.surface_type || 'Artificial Grass',
+          indoor: matchData.court?.is_indoor || false,
+          rating: matchData.court?.rating || 4.5,
+          phone: matchData.court?.phone || '',
+        },
+      };
+
+      setMatch(transformedMatch);
+    } catch (error) {
+      console.error('Error loading match:', error);
+      Alert.alert('Error', 'Failed to load match details');
+      navigation.goBack();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (modalVisible) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          tension: 50,
+          friction: 7,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 0.9,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [modalVisible]);
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -137,22 +253,61 @@ export default function MatchDetailScreen({ navigation, route }) {
     });
   };
 
-  const handleJoinMatch = () => {
-    setModalVisible(true);
+  const handleJoinMatch = async () => {
+    if (!user) {
+      Alert.alert('Error', 'You must be logged in to join a match');
+      return;
+    }
+
+    try {
+      // Join the match
+      await matchService.joinMatch(matchId, user.id);
+
+      // Reload match details
+      await loadMatchDetails();
+
+      // Show payment modal
+      setModalVisible(true);
+    } catch (error) {
+      console.error('Error joining match:', error);
+      Alert.alert('Error', error.message || 'Failed to join match');
+    }
   };
 
-  const confirmPayment = () => {
-    setModalVisible(false);
-    Alert.alert(
-      'Success!',
-      'You have successfully joined the match. Payment will be processed.',
-      [
-        {
-          text: 'OK',
-          onPress: () => navigation.goBack(),
-        },
-      ]
-    );
+  const confirmPayment = async () => {
+    if (!user) {
+      Alert.alert('Error', 'You must be logged in to join a match');
+      return;
+    }
+
+    try {
+      // Create payment record
+      const payment = await paymentService.createPayment(
+        matchId,
+        user.id,
+        match.pricePerPlayer,
+        'card'
+      );
+
+      // TODO: Integrate with Stripe here
+      // For now, mark as succeeded
+      await paymentService.updatePaymentStatus(payment.id, 'succeeded');
+
+      setModalVisible(false);
+      Alert.alert(
+        'Success!',
+        'You have successfully joined the match. Payment will be processed.',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.goBack(),
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Payment error:', error);
+      Alert.alert('Error', 'Payment failed. Please try again.');
+    }
   };
 
   const openDirections = () => {
@@ -203,6 +358,14 @@ export default function MatchDetailScreen({ navigation, route }) {
 
   const styles = createStyles(colors, isDarkMode);
 
+  if (loading || !match) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -242,13 +405,7 @@ export default function MatchDetailScreen({ navigation, route }) {
                   <Text style={styles.ratingText}>{match.courtDetails.rating}</Text>
                 </View>
               </View>
-              <View style={styles.courtTypeIcon}>
-                <Ionicons
-                  name={match.courtDetails.indoor ? 'home' : 'sunny'}
-                  size={24}
-                  color={colors.primary}
-                />
-              </View>
+              <BracketButton onPress={() => setBracketVisible(true)} />
             </View>
             <View style={styles.locationRow}>
               <Ionicons name="location" size={14} color={colors.textSecondary} />
@@ -397,45 +554,123 @@ export default function MatchDetailScreen({ navigation, route }) {
 
       {/* Payment Modal */}
       <Modal
-        animationType="slide"
+        animationType="none"
         transparent={true}
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
+        statusBarTranslucent={true}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Confirm Payment</Text>
-            <Text style={styles.modalText}>
-              You're about to join this match and pay your share of the court
-              rental.
-            </Text>
-            <View style={styles.modalPriceRow}>
-              <Text style={styles.modalPriceLabel}>Amount to pay:</Text>
-              <Text style={styles.modalPrice}>${match.pricePerPlayer}</Text>
-            </View>
-            <Text style={styles.modalNote}>
-              Payment will be processed immediately. You can cancel up to 24
-              hours before the match for a full refund.
-            </Text>
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.modalButtonCancel}
-                onPress={() => setModalVisible(false)}
-              >
-                <Text style={styles.modalButtonCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.modalButtonConfirm}
-                onPress={confirmPayment}
-              >
-                <Text style={styles.modalButtonConfirmText}>
-                  Confirm & Pay
+        <Animated.View
+          style={[
+            styles.modalOverlay,
+            {
+              opacity: fadeAnim,
+            },
+          ]}
+        >
+          <BlurView intensity={20} style={styles.blurContainer}>
+            <TouchableOpacity
+              style={styles.modalBackdrop}
+              activeOpacity={1}
+              onPress={() => setModalVisible(false)}
+            />
+            <Animated.View
+              style={[
+                styles.modalContent,
+                {
+                  opacity: fadeAnim,
+                  transform: [{ scale: scaleAnim }],
+                },
+              ]}
+            >
+              {/* Header with Icon */}
+              <View style={styles.modalHeader}>
+                <View style={styles.modalIconContainer}>
+                  <Ionicons name="card" size={32} color={colors.primary} />
+                </View>
+                <TouchableOpacity
+                  style={styles.modalCloseButton}
+                  onPress={() => setModalVisible(false)}
+                >
+                  <Ionicons name="close" size={24} color={colors.text} />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.modalTitle}>Confirm Payment</Text>
+              <Text style={styles.modalText}>
+                You're about to join this match and pay your share of the court
+                rental.
+              </Text>
+
+              {/* Match Summary */}
+              <View style={styles.modalMatchSummary}>
+                <View style={styles.modalMatchRow}>
+                  <Ionicons name="location" size={16} color={colors.textSecondary} />
+                  <Text style={styles.modalMatchText}>{match.courtName}</Text>
+                </View>
+                <View style={styles.modalMatchRow}>
+                  <Ionicons name="calendar" size={16} color={colors.textSecondary} />
+                  <Text style={styles.modalMatchText}>
+                    {formatDate(match.date)} at {match.time}
+                  </Text>
+                </View>
+                <View style={styles.modalMatchRow}>
+                  <Ionicons name="time" size={16} color={colors.textSecondary} />
+                  <Text style={styles.modalMatchText}>{match.duration} minutes</Text>
+                </View>
+              </View>
+
+              {/* Price Breakdown */}
+              <View style={styles.modalPriceRow}>
+                <View>
+                  <Text style={styles.modalPriceLabel}>Your share</Text>
+                  <Text style={styles.modalPriceSubtext}>
+                    ${match.totalCost} ÷ {match.totalPlayers} players
+                  </Text>
+                </View>
+                <Text style={styles.modalPrice}>${match.pricePerPlayer}</Text>
+              </View>
+
+              <View style={styles.modalNoticeBox}>
+                <Ionicons name="information-circle" size={20} color={colors.primary} />
+                <Text style={styles.modalNote}>
+                  Payment will be processed immediately. Cancel up to 24 hours before
+                  for a full refund.
                 </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+              </View>
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={styles.modalButtonCancel}
+                  onPress={() => setModalVisible(false)}
+                >
+                  <Text style={styles.modalButtonCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.modalButtonConfirm}
+                  onPress={confirmPayment}
+                >
+                  <Ionicons name="card" size={20} color="#FFFFFF" />
+                  <Text style={styles.modalButtonConfirmText}>
+                    Confirm & Pay
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </Animated.View>
+          </BlurView>
+        </Animated.View>
       </Modal>
+
+      {/* Team Bracket Overlay */}
+      <TeamBracketOverlay
+        visible={bracketVisible}
+        onClose={() => setBracketVisible(false)}
+        matchData={match}
+        onConfirm={(selectedTeams) => {
+          // User confirmed their team selection, proceed to payment
+          setModalVisible(true);
+        }}
+      />
     </View>
   );
 }
@@ -746,23 +981,65 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  },
+  blurContainer: {
+    flex: 1,
+  },
+  modalBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   modalContent: {
-    backgroundColor: colors.surface,
-    borderRadius: 20,
+    position: 'absolute',
+    top: '50%',
+    left: 20,
+    right: 20,
+    transform: [{ translateY: -250 }],
+    backgroundColor: colors.card,
+    borderRadius: 24,
     padding: 24,
-    width: '100%',
     maxWidth: 400,
+    alignSelf: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 10,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primary + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCloseButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.surfaceLight,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   modalTitle: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700',
     color: colors.text,
-    marginBottom: 12,
+    marginBottom: 8,
+    letterSpacing: -0.5,
   },
   modalText: {
     fontSize: 15,
@@ -770,30 +1047,64 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
     lineHeight: 22,
     marginBottom: 20,
   },
+  modalMatchSummary: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    gap: 10,
+  },
+  modalMatchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  modalMatchText: {
+    fontSize: 14,
+    color: colors.text,
+    fontWeight: '500',
+  },
   modalPriceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: colors.surfaceLight,
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: colors.primary + '15',
+    padding: 20,
+    borderRadius: 16,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: colors.primary + '30',
   },
   modalPriceLabel: {
-    fontSize: 15,
+    fontSize: 14,
     color: colors.text,
-    fontWeight: '500',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  modalPriceSubtext: {
+    fontSize: 12,
+    color: colors.textSecondary,
   },
   modalPrice: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 32,
+    fontWeight: '800',
     color: colors.primary,
+    letterSpacing: -1,
+  },
+  modalNoticeBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: colors.surfaceLight,
+    padding: 12,
+    borderRadius: 12,
+    gap: 10,
+    marginBottom: 24,
   },
   modalNote: {
     fontSize: 13,
     color: colors.textSecondary,
     lineHeight: 18,
-    marginBottom: 24,
+    flex: 1,
   },
   modalButtons: {
     flexDirection: 'row',
@@ -801,11 +1112,12 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
   },
   modalButtonCancel: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 10,
+    paddingVertical: 16,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
+    backgroundColor: colors.surface,
   },
   modalButtonCancelText: {
     fontSize: 16,
@@ -813,11 +1125,19 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
     color: colors.text,
   },
   modalButtonConfirm: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 10,
-    backgroundColor: colors.primary,
+    flex: 1.2,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+    gap: 8,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   modalButtonConfirmText: {
     fontSize: 16,

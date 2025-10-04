@@ -10,29 +10,44 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import { useSport } from '../context/SportContext';
 import NavigationButton from '../components/NavigationButton';
+import SportSelector from '../components/SportSelector';
 
 const COURTS = [
-  { id: 1, name: 'Downtown Padel Club', pricePerHour: 40 },
-  { id: 2, name: 'Sunset Sports Center', pricePerHour: 35 },
-  { id: 3, name: 'Elite Padel Academy', pricePerHour: 50 },
+  { id: 1, name: 'Downtown Sports Club', pricePerHour: 40, sports: ['padel', 'tennis', 'pickleball'] },
+  { id: 2, name: 'Sunset Sports Center', pricePerHour: 35, sports: ['tennis', 'basketball', 'volleyball'] },
+  { id: 3, name: 'Elite Sports Academy', pricePerHour: 50, sports: ['padel', 'tennis', 'squash', 'badminton'] },
+  { id: 4, name: 'City Basketball Arena', pricePerHour: 30, sports: ['basketball'] },
+  { id: 5, name: 'Soccer Fields Complex', pricePerHour: 25, sports: ['soccer'] },
 ];
 
 const DURATIONS = [60, 90, 120];
 
 export default function CreateMatchScreen({ navigation }) {
   const { colors } = useTheme();
+  const { selectedSport } = useSport();
   const [selectedCourt, setSelectedCourt] = useState(null);
   const [matchType, setMatchType] = useState('casual');
   const [duration, setDuration] = useState(90);
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
   const [description, setDescription] = useState('');
-  const [totalPlayers, setTotalPlayers] = useState(4);
+  const [totalPlayers, setTotalPlayers] = useState(selectedSport.maxPlayers);
+
+  // Update total players when sport changes
+  React.useEffect(() => {
+    setTotalPlayers(selectedSport.maxPlayers);
+  }, [selectedSport]);
+
+  // Filter courts based on selected sport
+  const availableCourts = COURTS.filter(court => 
+    court.sports.includes(selectedSport.id)
+  );
 
   const calculateCost = () => {
     if (!selectedCourt) return 0;
-    const court = COURTS.find((c) => c.id === selectedCourt);
+    const court = availableCourts.find((c) => c.id === selectedCourt);
     return (court.pricePerHour * duration) / 60;
   };
 
@@ -66,20 +81,24 @@ export default function CreateMatchScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.spacer} />
+      {/* Invisible Header Spacer */}
+      <View style={styles.invisibleHeader} />
       {/* Header */}
       <View style={styles.header}>
         <NavigationButton navigation={navigation} currentScreen="Create" />
         <Text style={styles.headerTitle}>Create Match</Text>
       </View>
+      
+      {/* Sport Selector */}
+      <SportSelector navigation={navigation} />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Select Court</Text>
-          {COURTS.map((court) => (
+        <Text style={styles.sectionTitle}>Select {selectedSport.name} Court</Text>
+        {availableCourts.map((court) => (
             <TouchableOpacity
               key={court.id}
               style={[
@@ -197,28 +216,31 @@ export default function CreateMatchScreen({ navigation }) {
           <View style={styles.playerSelector}>
             <TouchableOpacity
               style={styles.playerButton}
-              onPress={() => totalPlayers > 2 && setTotalPlayers(totalPlayers - 1)}
-              disabled={totalPlayers <= 2}
+              onPress={() => totalPlayers > selectedSport.minPlayers && setTotalPlayers(totalPlayers - 1)}
+              disabled={totalPlayers <= selectedSport.minPlayers}
             >
               <Ionicons
                 name="remove-circle"
                 size={32}
-                color={totalPlayers <= 2 ? colors.border : colors.primary}
+                color={totalPlayers <= selectedSport.minPlayers ? colors.border : colors.primary}
               />
             </TouchableOpacity>
             <Text style={styles.playerCount}>{totalPlayers}</Text>
             <TouchableOpacity
               style={styles.playerButton}
-              onPress={() => totalPlayers < 8 && setTotalPlayers(totalPlayers + 1)}
-              disabled={totalPlayers >= 8}
+              onPress={() => totalPlayers < selectedSport.maxPlayers && setTotalPlayers(totalPlayers + 1)}
+              disabled={totalPlayers >= selectedSport.maxPlayers}
             >
               <Ionicons
                 name="add-circle"
                 size={32}
-                color={totalPlayers >= 8 ? colors.border : colors.primary}
+                color={totalPlayers >= selectedSport.maxPlayers ? colors.border : colors.primary}
               />
             </TouchableOpacity>
           </View>
+          <Text style={styles.helperText}>
+            {selectedSport.minPlayers}-{selectedSport.maxPlayers} players allowed for {selectedSport.name}
+          </Text>
         </View>
 
         <View style={styles.section}>
@@ -273,8 +295,12 @@ const createStyles = (colors) => StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  invisibleHeader: {
+    height: 80,
+    backgroundColor: colors.background,
+  },
   spacer: {
-    height: 60,
+    height: 20,
     backgroundColor: colors.background,
   },
   header: {
@@ -485,6 +511,12 @@ const createStyles = (colors) => StyleSheet.create({
     color: colors.text,
     minWidth: 50,
     textAlign: 'center',
+  },
+  helperText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 8,
   },
   costSummary: {
     backgroundColor: colors.card,

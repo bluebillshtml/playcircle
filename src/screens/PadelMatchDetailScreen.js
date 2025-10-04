@@ -1,0 +1,919 @@
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  Modal,
+  ActivityIndicator,
+  Dimensions,
+  ImageBackground,
+  Linking,
+  ActionSheetIOS,
+  Platform,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
+import { useSport } from '../context/SportContext';
+import { matchService, teamService, scoringService } from '../services/supabase';
+import NavigationButton from '../components/NavigationButton';
+import TeamBracketOverlay from '../components/TeamBracketOverlay';
+import BracketButton from '../components/BracketButton';
+import PadelScoring from '../components/PadelScoring';
+import PadelStats from '../components/PadelStats';
+
+const { width, height } = Dimensions.get('window');
+
+export default function PadelMatchDetailScreen({ navigation, route }) {
+  const { colors } = useTheme();
+  const { user } = useAuth();
+  const { selectedSport } = useSport();
+  const [match, setMatch] = useState(null);
+  const [teams, setTeams] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [bracketVisible, setBracketVisible] = useState(false);
+  const [scoringVisible, setScoringVisible] = useState(false);
+  const [activeTab, setActiveTab] = useState('details'); // 'details', 'scoring', 'stats'
+
+  const matchId = route.params?.matchId;
+
+  useEffect(() => {
+    if (matchId) {
+      loadMatchDetails();
+    }
+  }, [matchId]);
+
+  const loadMatchDetails = async () => {
+    try {
+      setLoading(true);
+      const matchData = await matchService.getMatch(matchId);
+      setMatch(matchData);
+
+      // Load teams if match has teams
+      if (matchData.teams && matchData.teams.length > 0) {
+        const teamsData = {
+          teamA: matchData.teams.find(t => t.team_position === 'A'),
+          teamB: matchData.teams.find(t => t.team_position === 'B'),
+        };
+        setTeams(teamsData);
+      }
+    } catch (error) {
+      console.error('Error loading match details:', error);
+      Alert.alert('Error', 'Failed to load match details');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleJoinMatch = async () => {
+    if (!user) {
+      Alert.alert('Login Required', 'Please log in to join matches');
+      return;
+    }
+
+    try {
+      await matchService.joinMatch(matchId, user.id);
+      Alert.alert('Success', 'You have joined the match!');
+      loadMatchDetails(); // Reload to update player count
+    } catch (error) {
+      console.error('Error joining match:', error);
+      Alert.alert('Error', error.message || 'Failed to join match');
+    }
+  };
+
+  const handleLeaveMatch = async () => {
+    try {
+      await matchService.leaveMatch(matchId, user.id);
+      Alert.alert('Success', 'You have left the match');
+      loadMatchDetails();
+    } catch (error) {
+      console.error('Error leaving match:', error);
+      Alert.alert('Error', 'Failed to leave match');
+    }
+  };
+
+  const startMatch = async () => {
+    if (!teams || !teams.teamA || !teams.teamB) {
+      Alert.alert('Teams Required', 'Please set up teams before starting the match');
+      return;
+    }
+
+    try {
+      await scoringService.startMatch(matchId, teams.teamA.id, teams.teamB.id);
+      setScoringVisible(true);
+      setActiveTab('scoring');
+      Alert.alert('Match Started', 'The match has begun! Good luck!');
+    } catch (error) {
+      console.error('Error starting match:', error);
+      Alert.alert('Error', 'Failed to start match');
+    }
+  };
+
+  const isUserInMatch = () => {
+    if (!user || !match) return false;
+    return match.match_players?.some(mp => mp.user_id === user.id);
+  };
+
+  const isUserHost = () => {
+    if (!user || !match) return false;
+    return match.host_id === user.id;
+  };
+
+  const canStartMatch = () => {
+    return isUserHost() && 
+           match?.current_players === match?.max_players && 
+           teams?.teamA && 
+           teams?.teamB &&
+           match?.status === 'open';
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
+  const formatTime = (timeString) => {
+    return new Date(`2000-01-01T${timeString}`).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+  };
+
+  const openDirections = () => {
+    if (!match?.court?.latitude || !match?.court?.longitude) {
+      Alert.alert('Error', 'Court location not available');
+      return;
+    }
+
+    const { latitude, longitude } = match.court;
+    const address = encodeURIComponent(match.court.address || '');
+
+    const options = [
+      { name: 'Apple Maps', url: `http://maps.apple.com/?daddr=${latitude},${longitude}` },
+      { name: 'Google Maps', url: `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}` },
+      { name: 'Waze', url: `https://waze.com/ul?ll=${latitude},${longitude}&navigate=yes` },
+    ];
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: [...options.map(o => o.name), 'Cancel'],
+          cancelButtonIndex: options.length,
+        },
+        (buttonIndex) => {
+          if (buttonIndex < options.length) {
+            Linking.openURL(options[buttonIndex].url);
+          }
+        }
+      );
+    } else {
+      Alert.alert(
+        'Choose Navigation App',
+        'Select your preferred navigation service',
+        [
+          ...options.map(option => ({
+            text: option.name,
+            onPress: () => Linking.openURL(option.url),
+          })),
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
+    }
+  };
+
+  const callCourt = () => {
+    if (match?.court?.phone) {
+      Linking.openURL(`tel:${match.court.phone}`);
+    } else {
+      Alert.alert('Error', 'Court phone number not available');
+    }
+  };
+
+  const shareMatch = () => {
+    Alert.alert('Share', 'Share functionality coming soon!');
+  };
+
+  const styles = createStyles(colors);
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.spacer} />
+        <View style={styles.header}>
+          <NavigationButton navigation={navigation} currentScreen="MatchDetail" />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Loading match details...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (!match) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.spacer} />
+        <View style={styles.header}>
+          <NavigationButton navigation={navigation} currentScreen="MatchDetail" />
+        </View>
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle" size={48} color={colors.error} />
+          <Text style={styles.errorText}>Match not found</Text>
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.spacer} />
+      
+      {/* Header */}
+      <View style={styles.header}>
+        <NavigationButton navigation={navigation} currentScreen="MatchDetail" />
+        {teams && (
+          <BracketButton onPress={() => setBracketVisible(true)} />
+        )}
+      </View>
+
+      {/* Court Preview Section */}
+      <View style={styles.courtPreviewSection}>
+        <ImageBackground
+          source={{
+            uri: match.court?.image_url ||
+                 match.court?.venue?.image_url ||
+                 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800'
+          }}
+          style={styles.courtImage}
+          imageStyle={styles.courtImageStyle}
+        >
+          <View style={styles.imageOverlay}>
+            <View
+              style={[
+                styles.typeBadge,
+                match.match_type === 'competitive'
+                  ? styles.typeBadgeCompetitive
+                  : styles.typeBadgeCasual,
+              ]}
+            >
+              <Text style={styles.typeBadgeText}>
+                {match.match_type === 'competitive' ? 'COMPETITIVE' : 'CASUAL'}
+              </Text>
+            </View>
+          </View>
+        </ImageBackground>
+
+        <View style={styles.courtInfoCard}>
+          <View style={styles.courtInfoHeader}>
+            <View style={styles.courtInfoLeft}>
+              <Text style={styles.courtNameLarge}>{match.court?.name || 'Unknown Court'}</Text>
+              <View style={styles.ratingRow}>
+                <Ionicons name="star" size={16} color={colors.warning} />
+                <Text style={styles.ratingText}>{match.court?.rating || 4.5}</Text>
+              </View>
+            </View>
+          </View>
+          <View style={styles.locationRow}>
+            <Ionicons name="location" size={14} color={colors.textSecondary} />
+            <Text style={styles.courtAddress}>
+              {match.court?.address || 'Address not available'}
+            </Text>
+          </View>
+          <View style={styles.courtQuickInfo}>
+            <View style={styles.quickInfoItem}>
+              <Ionicons name="calendar" size={14} color={colors.textSecondary} />
+              <Text style={styles.quickInfoText}>{formatDate(match.match_date)}</Text>
+            </View>
+            <View style={styles.quickInfoItem}>
+              <Ionicons name="time" size={14} color={colors.textSecondary} />
+              <Text style={styles.quickInfoText}>
+                {formatTime(match.match_time)} • {match.duration_minutes} min
+              </Text>
+            </View>
+          </View>
+        </View>
+      </View>
+
+      {/* Action Buttons */}
+      <View style={styles.actionButtonsSection}>
+        <TouchableOpacity style={styles.primaryActionButton} onPress={openDirections}>
+          <Ionicons name="navigate" size={20} color="#FFFFFF" />
+          <Text style={styles.primaryActionButtonText}>Get Directions</Text>
+        </TouchableOpacity>
+
+        <View style={styles.secondaryActionsRow}>
+          <TouchableOpacity style={styles.secondaryActionButton} onPress={callCourt}>
+            <Ionicons name="call" size={20} color={colors.primary} />
+            <Text style={styles.secondaryActionButtonText}>Call</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.secondaryActionButton} onPress={shareMatch}>
+            <Ionicons name="share-social" size={20} color={colors.primary} />
+            <Text style={styles.secondaryActionButtonText}>Share</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.secondaryActionButton}>
+            <Ionicons name="bookmark-outline" size={20} color={colors.primary} />
+            <Text style={styles.secondaryActionButtonText}>Save</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Tab Navigation */}
+      <View style={styles.tabContainer}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'details' && styles.activeTab]}
+          onPress={() => setActiveTab('details')}
+        >
+          <Text style={[styles.tabText, activeTab === 'details' && styles.activeTabText]}>
+            Details
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'scoring' && styles.activeTab]}
+          onPress={() => setActiveTab('scoring')}
+        >
+          <Text style={[styles.tabText, activeTab === 'scoring' && styles.activeTabText]}>
+            Scoring
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'stats' && styles.activeTab]}
+          onPress={() => setActiveTab('stats')}
+        >
+          <Text style={[styles.tabText, activeTab === 'stats' && styles.activeTabText]}>
+            Stats
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Tab Content */}
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {activeTab === 'details' && (
+          <View style={styles.detailsTab}>
+            {/* Players Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Players ({match.current_players}/{match.max_players})</Text>
+              <View style={styles.playersList}>
+                {match.match_players?.map((player) => (
+                  <View key={player.id} style={styles.playerItem}>
+                    <View style={styles.playerInfo}>
+                      <Text style={styles.playerName}>
+                        {player.user?.full_name || player.user?.username || 'Unknown Player'}
+                      </Text>
+                      {player.is_host && (
+                        <Text style={styles.hostBadge}>Host</Text>
+                      )}
+                    </View>
+                    <Text style={styles.playerJoined}>
+                      Joined {new Date(player.joined_at).toLocaleDateString()}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            {/* Description */}
+            {match.description && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Description</Text>
+                <Text style={styles.description}>{match.description}</Text>
+              </View>
+            )}
+
+            {/* Court Details */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Court Information</Text>
+              <View style={styles.courtDetails}>
+                <Text style={styles.courtAddress}>{match.court?.address}</Text>
+                <Text style={styles.courtCity}>{match.court?.city}</Text>
+                <Text style={styles.courtSurface}>Surface: {match.court?.surface_type}</Text>
+                <Text style={styles.courtIndoor}>
+                  {match.court?.is_indoor ? 'Indoor' : 'Outdoor'} Court
+                </Text>
+              </View>
+            </View>
+
+            {/* Pricing */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Pricing</Text>
+              <View style={styles.pricingContainer}>
+                <Text style={styles.pricePerPlayer}>${match.price_per_player} per player</Text>
+                <Text style={styles.totalCost}>Total: ${match.total_cost}</Text>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {activeTab === 'scoring' && (
+          <View style={styles.scoringTab}>
+            {teams ? (
+              <PadelScoring
+                matchId={matchId}
+                teams={teams}
+                onScoreUpdate={loadMatchDetails}
+              />
+            ) : (
+              <View style={styles.noTeamsContainer}>
+                <Ionicons name="people" size={48} color={colors.textSecondary} />
+                <Text style={styles.noTeamsText}>Teams not set up yet</Text>
+                <Text style={styles.noTeamsSubtext}>
+                  The host needs to organize teams before scoring can begin
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {activeTab === 'stats' && (
+          <View style={styles.statsTab}>
+            {teams ? (
+              <PadelStats
+                matchId={matchId}
+                teams={teams}
+              />
+            ) : (
+              <View style={styles.noTeamsContainer}>
+                <Ionicons name="people" size={48} color={colors.textSecondary} />
+                <Text style={styles.noTeamsText}>Teams not set up yet</Text>
+                <Text style={styles.noTeamsSubtext}>
+                  Statistics will be available once teams are organized
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+      </ScrollView>
+
+      {/* Action Buttons */}
+      <View style={styles.actionButtons}>
+        {isUserInMatch() ? (
+          <TouchableOpacity
+            style={styles.leaveButton}
+            onPress={handleLeaveMatch}
+          >
+            <Ionicons name="exit" size={20} color={colors.error} />
+            <Text style={styles.leaveButtonText}>Leave Match</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={styles.joinButton}
+            onPress={handleJoinMatch}
+            disabled={match.current_players >= match.max_players}
+          >
+            <Ionicons name="add" size={20} color={colors.white} />
+            <Text style={styles.joinButtonText}>
+              {match.current_players >= match.max_players ? 'Match Full' : 'Join Match'}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {canStartMatch() && (
+          <TouchableOpacity
+            style={styles.startButton}
+            onPress={startMatch}
+          >
+            <Ionicons name="play" size={20} color={colors.white} />
+            <Text style={styles.startButtonText}>Start Match</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Team Bracket Modal */}
+      <TeamBracketOverlay
+        visible={bracketVisible}
+        onClose={() => setBracketVisible(false)}
+        matchData={match}
+        onConfirm={() => {
+          setBracketVisible(false);
+          loadMatchDetails();
+        }}
+      />
+    </View>
+  );
+}
+
+const createStyles = (colors) => StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  spacer: {
+    height: 60,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  courtPreviewSection: {
+    backgroundColor: colors.surface,
+    marginBottom: 12,
+  },
+  courtImage: {
+    width: '100%',
+    height: 200,
+  },
+  courtImageStyle: {
+    borderRadius: 0,
+  },
+  imageOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    padding: 16,
+    justifyContent: 'flex-end',
+  },
+  typeBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  typeBadgeCompetitive: {
+    backgroundColor: 'rgba(255, 107, 107, 0.3)',
+  },
+  typeBadgeCasual: {
+    backgroundColor: 'rgba(116, 192, 252, 0.3)',
+  },
+  typeBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  courtInfoCard: {
+    padding: 16,
+    backgroundColor: colors.glass || colors.card,
+    borderTopWidth: 1,
+    borderTopColor: colors.glassBorder || colors.border,
+  },
+  courtInfoHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  courtInfoLeft: {
+    flex: 1,
+  },
+  courtNameLarge: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  ratingText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 12,
+  },
+  courtAddress: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    flex: 1,
+  },
+  courtQuickInfo: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  quickInfoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  quickInfoText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  actionButtonsSection: {
+    backgroundColor: colors.surface,
+    padding: 16,
+    gap: 12,
+    marginBottom: 12,
+  },
+  primaryActionButton: {
+    backgroundColor: colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+  },
+  primaryActionButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  secondaryActionsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  secondaryActionButton: {
+    flex: 1,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    flexDirection: 'column',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 4,
+  },
+  secondaryActionButtonText: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: colors.textSecondary,
+    marginTop: 12,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: 18,
+    marginTop: 12,
+  },
+  matchHeader: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    alignItems: 'center',
+  },
+  courtName: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 8,
+  },
+  matchDate: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    marginBottom: 4,
+  },
+  matchTime: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 12,
+  },
+  matchMeta: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  matchDuration: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    backgroundColor: colors.card,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  matchType: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    backgroundColor: colors.card,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  skillLevel: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    backgroundColor: colors.card,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  activeTab: {
+    borderBottomColor: colors.primary,
+  },
+  tabText: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  activeTabText: {
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  detailsTab: {
+    paddingBottom: 20,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 12,
+  },
+  playersList: {
+    gap: 12,
+  },
+  playerItem: {
+    backgroundColor: colors.card,
+    padding: 16,
+    borderRadius: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  playerInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  playerName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: colors.text,
+  },
+  hostBadge: {
+    fontSize: 12,
+    color: colors.primary,
+    backgroundColor: colors.primary + '20',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  playerJoined: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  description: {
+    fontSize: 16,
+    color: colors.text,
+    lineHeight: 24,
+  },
+  courtDetails: {
+    backgroundColor: colors.card,
+    padding: 16,
+    borderRadius: 12,
+  },
+  courtAddress: {
+    fontSize: 16,
+    color: colors.text,
+    marginBottom: 4,
+  },
+  courtCity: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginBottom: 8,
+  },
+  courtSurface: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginBottom: 4,
+  },
+  courtIndoor: {
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  pricingContainer: {
+    backgroundColor: colors.card,
+    padding: 16,
+    borderRadius: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  pricePerPlayer: {
+    fontSize: 16,
+    color: colors.text,
+  },
+  totalCost: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  scoringTab: {
+    flex: 1,
+  },
+  noTeamsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  noTeamsText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
+    marginTop: 12,
+  },
+  noTeamsSubtext: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  statsTab: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  comingSoon: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    marginTop: 12,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    gap: 12,
+  },
+  joinButton: {
+    flex: 1,
+    backgroundColor: colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 12,
+    gap: 8,
+  },
+  joinButtonText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  leaveButton: {
+    flex: 1,
+    backgroundColor: colors.error + '20',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 12,
+    gap: 8,
+  },
+  leaveButtonText: {
+    color: colors.error,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  startButton: {
+    flex: 1,
+    backgroundColor: colors.success,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 12,
+    gap: 8,
+  },
+  startButtonText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});
