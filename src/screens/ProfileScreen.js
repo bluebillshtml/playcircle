@@ -170,7 +170,7 @@ const createStyles = (colors) => StyleSheet.create({
     paddingBottom: 40,
   },
   header: {
-    backgroundColor: colors.surface,
+    backgroundColor: 'transparent',
     paddingTop: 60,
     paddingBottom: 40,
     paddingHorizontal: 20,
