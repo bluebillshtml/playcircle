@@ -15,6 +15,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
+import AnimatedBackground from '../components/AnimatedBackground';
 
 export default function SignInScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -60,11 +61,7 @@ export default function SignInScreen({ navigation }) {
   };
 
   return (
-    <LinearGradient
-      colors={['#1B3C53', '#234C6A', '#456882', '#D2C1B6']}
-      locations={[0, 0.3, 0.6, 1]}
-      style={styles.gradient}
-    >
+    <AnimatedBackground>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
@@ -175,7 +172,7 @@ export default function SignInScreen({ navigation }) {
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </LinearGradient>
+    </AnimatedBackground>
   );
 }
 

@@ -380,5 +380,156 @@ WHERE id NOT IN (SELECT user_id FROM profile_visibility)
 ON CONFLICT (user_id) DO NOTHING;
 
 -- =====================================================
+-- 3. ADD MISSING RLS POLICIES
+-- =====================================================
+
+-- User Sport Stats: Users can read all sport stats, but only update their own
+DROP POLICY IF EXISTS "User sport stats are viewable by everyone" ON user_sport_stats;
+CREATE POLICY "User sport stats are viewable by everyone"
+    ON user_sport_stats FOR SELECT
+    USING (true);
+
+DROP POLICY IF EXISTS "Users can update own sport stats" ON user_sport_stats;
+CREATE POLICY "Users can update own sport stats"
+    ON user_sport_stats FOR UPDATE
+    USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can insert own sport stats" ON user_sport_stats;
+CREATE POLICY "Users can insert own sport stats"
+    ON user_sport_stats FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+-- User Sport Profiles: Users can read all sport profiles, but only update their own
+DROP POLICY IF EXISTS "User sport profiles are viewable by everyone" ON user_sport_profiles;
+CREATE POLICY "User sport profiles are viewable by everyone"
+    ON user_sport_profiles FOR SELECT
+    USING (true);
+
+DROP POLICY IF EXISTS "Users can update own sport profiles" ON user_sport_profiles;
+CREATE POLICY "Users can update own sport profiles"
+    ON user_sport_profiles FOR UPDATE
+    USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can insert own sport profiles" ON user_sport_profiles;
+CREATE POLICY "Users can insert own sport profiles"
+    ON user_sport_profiles FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+-- =====================================================
+-- 4. FIX USER STATS FUNCTIONS
+-- =====================================================
+
+-- Fix the update_user_stats_after_match function to handle missing user_sport_stats records
+CREATE OR REPLACE FUNCTION update_user_stats_after_match()
+RETURNS TRIGGER AS $$
+DECLARE
+    winner_team UUID;
+    match_duration DECIMAL;
+    player_record RECORD;
+BEGIN
+    IF NEW.status = 'completed' AND OLD.status != 'completed' THEN
+        -- Calculate match duration in hours
+        match_duration := NEW.duration_minutes / 60.0;
+
+        -- Get winning team (if any)
+        SELECT winner_team_id INTO winner_team
+        FROM match_games
+        WHERE match_id = NEW.id
+        GROUP BY winner_team_id
+        HAVING COUNT(*) > (SELECT COUNT(*) / 2 FROM match_games WHERE match_id = NEW.id)
+        LIMIT 1;
+
+        -- Update stats for all players in the match
+        FOR player_record IN 
+            SELECT user_id FROM match_players WHERE match_id = NEW.id
+        LOOP
+            -- Update profiles table
+            UPDATE profiles p
+            SET
+                total_matches = total_matches + 1,
+                wins = wins + (
+                    CASE WHEN EXISTS (
+                        SELECT 1 FROM team_players tp
+                        WHERE tp.user_id = p.id AND tp.team_id = winner_team
+                    ) THEN 1 ELSE 0 END
+                ),
+                losses = losses + (
+                    CASE WHEN NOT EXISTS (
+                        SELECT 1 FROM team_players tp
+                        WHERE tp.user_id = p.id AND tp.team_id = winner_team
+                    ) AND winner_team IS NOT NULL THEN 1 ELSE 0 END
+                )
+            WHERE p.id = player_record.user_id;
+
+            -- Insert or update user_sport_stats
+            INSERT INTO user_sport_stats (
+                user_id, 
+                sport_id, 
+                total_hours_played, 
+                win_rate,
+                created_at,
+                updated_at
+            )
+            VALUES (
+                player_record.user_id,
+                NEW.sport_id,
+                match_duration,
+                (
+                    SELECT (wins::DECIMAL / NULLIF(total_matches, 0) * 100)
+                    FROM profiles WHERE id = player_record.user_id
+                ),
+                NOW(),
+                NOW()
+            )
+            ON CONFLICT (user_id, sport_id)
+            DO UPDATE SET
+                total_hours_played = user_sport_stats.total_hours_played + match_duration,
+                win_rate = (
+                    SELECT (wins::DECIMAL / NULLIF(total_matches, 0) * 100)
+                    FROM profiles WHERE id = player_record.user_id
+                ),
+                updated_at = NOW();
+        END LOOP;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Implement the create_user_sport_stats function
+CREATE OR REPLACE FUNCTION create_user_sport_stats()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Create default user_sport_stats for padel (default sport)
+    INSERT INTO user_sport_stats (
+        user_id,
+        sport_id,
+        total_hours_played,
+        win_rate,
+        average_score,
+        longest_win_streak,
+        current_win_streak,
+        sport_specific_stats,
+        created_at,
+        updated_at
+    )
+    VALUES (
+        NEW.id,
+        'padel',
+        0,
+        0,
+        0,
+        0,
+        0,
+        '{}'::jsonb,
+        NOW(),
+        NOW()
+    )
+    ON CONFLICT (user_id, sport_id) DO NOTHING;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- =====================================================
 -- MIGRATION COMPLETE
 -- =====================================================

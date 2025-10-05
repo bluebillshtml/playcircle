@@ -25,6 +25,7 @@ import { matchService, paymentService } from '../services/supabase';
 import TeamBracketOverlay from '../components/TeamBracketOverlay';
 import BracketButton from '../components/BracketButton';
 import PadelMatchDetailScreen from './PadelMatchDetailScreen';
+import AnimatedBackground from '../components/AnimatedBackground';
 
 const { width } = Dimensions.get('window');
 
@@ -385,8 +386,9 @@ export default function MatchDetailScreen({ navigation, route }) {
   }
 
   return (
-    <View style={styles.container}>
-      <ScrollView
+    <AnimatedBackground>
+      <View style={styles.container}>
+        <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -733,14 +735,15 @@ export default function MatchDetailScreen({ navigation, route }) {
           setModalVisible(true);
         }}
       />
-    </View>
+      </View>
+    </AnimatedBackground>
   );
 }
 
 const createStyles = (colors, isDarkMode) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   scrollView: {
     flex: 1,

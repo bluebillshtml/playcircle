@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { profileService } from '../services/supabase';
+import AnimatedBackground from '../components/AnimatedBackground';
 
 export default function AccountSettingsScreen({ navigation }) {
   const { colors } = useTheme();
@@ -23,15 +24,41 @@ export default function AccountSettingsScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Form state
-  const [firstName, setFirstName] = useState(profile?.first_name || '');
-  const [lastName, setLastName] = useState(profile?.last_name || '');
-  const [username, setUsername] = useState(profile?.username || '');
-  const [email, setEmail] = useState(user?.email || '');
-  const [phone, setPhone] = useState(profile?.phone || '');
-  const [bio, setBio] = useState(profile?.bio || '');
-  const [location, setLocation] = useState(profile?.location || '');
-  const [skillLevel, setSkillLevel] = useState(profile?.skill_level || 'Beginner');
+  // Form state - parse full_name into first and last name
+  const parseFullName = (fullName) => {
+    if (!fullName) return { first: '', last: '' };
+    const parts = fullName.trim().split(' ');
+    return {
+      first: parts[0] || '',
+      last: parts.slice(1).join(' ') || ''
+    };
+  };
+
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [bio, setBio] = useState('');
+  const [location, setLocation] = useState('');
+  const [skillLevel, setSkillLevel] = useState('Beginner');
+
+  // Update form state when profile changes
+  useEffect(() => {
+    if (profile) {
+      const { first, last } = parseFullName(profile.full_name);
+      setFirstName(first);
+      setLastName(last);
+      setUsername(profile.username || '');
+      setPhone(profile.phone || '');
+      setBio(profile.bio || '');
+      setLocation(profile.location || '');
+      setSkillLevel(profile.skill_level || 'Beginner');
+    }
+    if (user) {
+      setEmail(user.email || '');
+    }
+  }, [profile, user]);
 
   const styles = createStyles(colors);
 
@@ -50,6 +77,12 @@ export default function AccountSettingsScreen({ navigation }) {
 
   const handleAutoSave = async () => {
     try {
+      // Ensure we have a user and profile before attempting to save
+      if (!user || !user.id) {
+        console.log('No user found, skipping auto-save');
+        return;
+      }
+
       const updates = {
         first_name: firstName,
         last_name: lastName,
@@ -58,11 +91,14 @@ export default function AccountSettingsScreen({ navigation }) {
         bio: bio,
         location: location,
         skill_level: skillLevel,
+        full_name: `${firstName} ${lastName}`.trim() || 'User',
         updated_at: new Date().toISOString(),
       };
 
+      console.log('Auto-saving profile updates:', updates);
       const updatedProfile = await profileService.updateProfile(user.id, updates);
       setProfile(updatedProfile);
+      console.log('Auto-save successful');
     } catch (error) {
       // Silent fail for auto-save, don't disturb user
       console.error('Auto-save error:', error);
@@ -84,6 +120,11 @@ export default function AccountSettingsScreen({ navigation }) {
       return;
     }
 
+    if (!user || !user.id) {
+      Alert.alert('Error', 'User not found. Please try logging in again.');
+      return;
+    }
+
     setSaving(true);
     try {
       const updates = {
@@ -94,9 +135,11 @@ export default function AccountSettingsScreen({ navigation }) {
         bio: bio.trim(),
         location: location.trim(),
         skill_level: skillLevel,
+        full_name: `${firstName.trim()} ${lastName.trim()}`.trim() || 'User',
         updated_at: new Date().toISOString(),
       };
 
+      console.log('Manually saving profile updates:', updates);
       const updatedProfile = await profileService.updateProfile(user.id, updates);
       setProfile(updatedProfile);
 
@@ -126,10 +169,11 @@ export default function AccountSettingsScreen({ navigation }) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <AnimatedBackground>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -301,13 +345,14 @@ export default function AccountSettingsScreen({ navigation }) {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+    </AnimatedBackground>
   );
 }
 
 const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   header: {
     flexDirection: 'row',

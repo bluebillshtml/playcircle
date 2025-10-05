@@ -13,6 +13,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useSport } from '../context/SportContext';
 import { leaderboardService } from '../services/supabase';
 import NavigationButton from '../components/NavigationButton';
+import AnimatedBackground from '../components/AnimatedBackground';
 
 // Mock leaderboard data
 const TOP_3_DATA = [
@@ -145,8 +146,9 @@ export default function DashboardScreen({ navigation }) {
   const restData = leaderboardData.slice(3);
 
   return (
-    <View style={styles.container}>
-      <View style={styles.spacer} />
+    <AnimatedBackground>
+      <View style={styles.container}>
+        <View style={styles.spacer} />
       
       {/* Header */}
       <View style={styles.header}>
@@ -279,13 +281,14 @@ export default function DashboardScreen({ navigation }) {
       </ScrollView>
 
     </View>
+    </AnimatedBackground>
   );
 }
 
 const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   spacer: {
     height: 30,

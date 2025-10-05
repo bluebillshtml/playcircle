@@ -16,6 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import EmailConfirmationOverlay from '../components/EmailConfirmationOverlay';
+import AnimatedBackground from '../components/AnimatedBackground';
 
 export default function SignUpScreen({ navigation }) {
   const [firstName, setFirstName] = useState('');
@@ -88,11 +89,7 @@ export default function SignUpScreen({ navigation }) {
   };
 
   return (
-    <LinearGradient
-      colors={['#1B3C53', '#234C6A', '#456882', '#D2C1B6']}
-      locations={[0, 0.3, 0.6, 1]}
-      style={styles.gradient}
-    >
+    <AnimatedBackground>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
@@ -260,14 +257,14 @@ export default function SignUpScreen({ navigation }) {
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
-      
+
       {/* Email Confirmation Overlay */}
       <EmailConfirmationOverlay
         visible={showConfirmationOverlay}
         onClose={handleCloseConfirmation}
         email={email}
       />
-    </LinearGradient>
+    </AnimatedBackground>
   );
 }
 
