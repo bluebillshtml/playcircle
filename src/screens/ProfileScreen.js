@@ -137,11 +137,11 @@ export default function ProfileScreen() {
               />
             )}
             <View style={styles.headerBackgroundDarkOverlay} />
-            <BlurView intensity={80} tint="dark" style={styles.headerBackgroundBlur} />
+            <BlurView intensity={60} tint="dark" style={styles.headerBackgroundBlur} />
             <LinearGradient
-              colors={['transparent', 'rgba(184, 230, 213, 0.05)', 'rgba(184, 230, 213, 0.15)', 'rgba(184, 230, 213, 0.3)', 'rgba(184, 230, 213, 0.5)', 'rgba(184, 230, 213, 0.7)', 'rgba(184, 230, 213, 0.85)', 'rgba(184, 230, 213, 0.95)', '#B8E6D5']}
+              colors={['transparent', 'rgba(184, 230, 213, 0.3)', 'rgba(184, 230, 213, 0.7)', '#B8E6D5']}
               style={styles.headerEdgeFade}
-              locations={[0, 0.1, 0.2, 0.35, 0.5, 0.65, 0.8, 0.92, 1]}
+              locations={[0, 0.4, 0.7, 1]}
             />
           </View>
 
@@ -278,7 +278,7 @@ const createStyles = (colors) => StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 600,
+    height: 500,
     overflow: 'hidden',
   },
   headerBackground: {
@@ -312,7 +312,7 @@ const createStyles = (colors) => StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    height: 350,
+    height: 200,
     zIndex: 3,
   },
   header: {
