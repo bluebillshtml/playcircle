@@ -35,7 +35,9 @@
       "Read(//var/folders/zh/mgnlh1hn21b0xgd16v22vh140000gn/T/TemporaryItems/NSIRD_screencaptureui_Xyng2q/**)",
       "Read(//var/folders/zh/mgnlh1hn21b0xgd16v22vh140000gn/T/TemporaryItems/NSIRD_screencaptureui_CgbY0g/**)",
       "Bash(nc localhost 8081)",
-      "Read(//var/folders/zh/mgnlh1hn21b0xgd16v22vh140000gn/T/TemporaryItems/NSIRD_screencaptureui_RbCQD4/**)"
+      "Read(//var/folders/zh/mgnlh1hn21b0xgd16v22vh140000gn/T/TemporaryItems/NSIRD_screencaptureui_RbCQD4/**)",
+      "Read(//var/folders/zh/mgnlh1hn21b0xgd16v22vh140000gn/T/TemporaryItems/NSIRD_screencaptureui_a7EwIL/**)",
+      "Bash(ls:*)"
     ],
     "deny": [],
     "ask": []
