@@ -37,7 +37,10 @@
       "Bash(nc localhost 8081)",
       "Read(//var/folders/zh/mgnlh1hn21b0xgd16v22vh140000gn/T/TemporaryItems/NSIRD_screencaptureui_RbCQD4/**)",
       "Read(//var/folders/zh/mgnlh1hn21b0xgd16v22vh140000gn/T/TemporaryItems/NSIRD_screencaptureui_a7EwIL/**)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Read(//var/folders/zh/mgnlh1hn21b0xgd16v22vh140000gn/T/TemporaryItems/NSIRD_screencaptureui_p44ajx/**)",
+      "Bash(rm:*)",
+      "Read(//var/folders/zh/mgnlh1hn21b0xgd16v22vh140000gn/T/TemporaryItems/NSIRD_screencaptureui_KbPd8L/**)"
     ],
     "deny": [],
     "ask": []

@@ -36,9 +36,9 @@ function AppContent() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#1B3C53' }}>
+    <View style={{ flex: 1, backgroundColor: '#B8E6D5' }}>
       <NavigationContainer>
-        <StatusBar style="light" backgroundColor="#1B3C53" />
+        <StatusBar style="light" backgroundColor="#B8E6D5" />
         <Stack.Navigator>
           {!user ? (
             // Auth Stack - Show when user is not logged in

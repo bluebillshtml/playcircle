@@ -69,12 +69,18 @@ export default function ProfileScreen() {
 
         try {
           const fileName = `profile_${user.id}_${Date.now()}.jpg`;
-          const response = await fetch(imageUri);
-          const blob = await response.blob();
+
+          // Create FormData for React Native
+          const formData = new FormData();
+          formData.append('file', {
+            uri: imageUri,
+            type: 'image/jpeg',
+            name: fileName,
+          });
 
           const { data: uploadData, error: uploadError } = await supabase.storage
             .from('profile-pictures')
-            .upload(fileName, blob, {
+            .upload(fileName, formData, {
               contentType: 'image/jpeg',
               upsert: true,
             });
@@ -138,11 +144,7 @@ export default function ProfileScreen() {
             )}
             <View style={styles.headerBackgroundDarkOverlay} />
             <BlurView intensity={60} tint="dark" style={styles.headerBackgroundBlur} />
-            <LinearGradient
-              colors={['transparent', 'rgba(184, 230, 213, 0.3)', 'rgba(184, 230, 213, 0.7)', '#B8E6D5']}
-              style={styles.headerEdgeFade}
-              locations={[0, 0.4, 0.7, 1]}
-            />
+            <View style={styles.headerEdgeFade} />
           </View>
 
           <View style={styles.header}>
@@ -313,6 +315,7 @@ const createStyles = (colors) => StyleSheet.create({
     right: 0,
     bottom: 0,
     height: 200,
+    backgroundColor: 'transparent',
     zIndex: 3,
   },
   header: {
