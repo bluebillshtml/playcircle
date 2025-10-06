@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { profileService } from '../services/supabase';
+import AnimatedBackground from '../components/AnimatedBackground';
 
 export default function AccountSettingsScreen({ navigation }) {
   const { colors } = useTheme();
@@ -126,7 +127,8 @@ export default function AccountSettingsScreen({ navigation }) {
   };
 
   return (
-    <KeyboardAvoidingView
+    <AnimatedBackground>
+      <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
@@ -301,13 +303,14 @@ export default function AccountSettingsScreen({ navigation }) {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+    </AnimatedBackground>
   );
 }
 
 const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   header: {
     flexDirection: 'row',

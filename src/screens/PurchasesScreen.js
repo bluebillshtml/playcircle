@@ -11,6 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import AnimatedBackground from '../components/AnimatedBackground';
 import { paymentService } from '../services/supabase';
 
 export default function PurchasesScreen({ navigation }) {
@@ -163,6 +164,7 @@ export default function PurchasesScreen({ navigation }) {
   );
 
   return (
+    <AnimatedBackground>
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
@@ -221,13 +223,14 @@ export default function PurchasesScreen({ navigation }) {
         </ScrollView>
       )}
     </View>
+    </AnimatedBackground>
   );
 }
 
 const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   header: {
     flexDirection: 'row',

@@ -10,6 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import AnimatedBackground from '../components/AnimatedBackground';
 import { profileService } from '../services/supabase';
 
 export default function LanguagesScreen({ navigation }) {
@@ -80,6 +81,7 @@ export default function LanguagesScreen({ navigation }) {
   );
 
   return (
+    <AnimatedBackground>
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
@@ -148,13 +150,14 @@ export default function LanguagesScreen({ navigation }) {
         </View>
       </ScrollView>
     </View>
+    </AnimatedBackground>
   );
 }
 
 const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   header: {
     flexDirection: 'row',

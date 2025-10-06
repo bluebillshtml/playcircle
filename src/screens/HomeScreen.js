@@ -19,6 +19,7 @@ import { matchService, profileService } from '../services/supabase';
 import NavigationButton from '../components/NavigationButton';
 import SportSelector from '../components/SportSelector';
 import PadelMatchHistory from '../components/PadelMatchHistory';
+import AnimatedBackground from '../components/AnimatedBackground';
 
 const { width } = Dimensions.get('window');
 
@@ -219,7 +220,8 @@ export default function HomeScreen({ navigation }) {
   }
 
   return (
-    <View style={styles.container}>
+    <AnimatedBackground>
+      <View style={styles.container}>
       <Animated.ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
@@ -506,13 +508,14 @@ export default function HomeScreen({ navigation }) {
       <View style={styles.bottomPadding} />
       </Animated.ScrollView>
     </View>
+    </AnimatedBackground>
   );
 }
 
 const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   scrollView: {
     flex: 1,

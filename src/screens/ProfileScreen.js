@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,18 +6,27 @@ import {
   ScrollView,
   TouchableOpacity,
   Switch,
+  ImageBackground,
+  Image,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { supabase, supabaseService } from '../services/supabase';
 import NavigationButton from '../components/NavigationButton';
+import AnimatedBackground from '../components/AnimatedBackground';
 
 
 export default function ProfileScreen() {
   const { colors } = useTheme();
   const { user, profile, signOut } = useAuth();
   const navigation = useNavigation();
+  const [profileImage, setProfileImage] = useState(profile?.profile_picture_url || null);
 
   const styles = createStyles(colors);
 
@@ -36,6 +45,75 @@ export default function ProfileScreen() {
     return user?.email || 'user@email.com';
   };
 
+  const handlePickImage = async () => {
+    try {
+      // Request permission
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Please grant photo library access to change your profile picture.'
+        );
+        return;
+      }
+
+      // Launch image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const imageUri = result.assets[0].uri;
+        setProfileImage(imageUri);
+
+        // Upload to Supabase storage
+        try {
+          const fileName = `profile_${user.id}_${Date.now()}.jpg`;
+
+          // Fetch the image and convert to blob for React Native
+          const response = await fetch(imageUri);
+          const blob = await response.blob();
+
+          // Upload to Supabase storage bucket
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('profile-pictures')
+            .upload(fileName, blob, {
+              contentType: 'image/jpeg',
+              upsert: true,
+            });
+
+          if (uploadError) {
+            console.error('Upload error:', uploadError);
+            Alert.alert('Error', `Failed to upload image: ${uploadError.message}`);
+            return;
+          }
+
+          // Get public URL
+          const { data: { publicUrl } } = supabase.storage
+            .from('profile-pictures')
+            .getPublicUrl(fileName);
+
+          // Update profile in database
+          await supabaseService.updateProfile(user.id, {
+            profile_picture_url: publicUrl,
+          });
+
+          Alert.alert('Success', 'Profile picture updated successfully!');
+        } catch (uploadError) {
+          console.error('Error uploading:', uploadError);
+          Alert.alert('Error', `Failed to save profile picture: ${uploadError.message}`);
+        }
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image. Please try again.');
+    }
+  };
+
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -45,120 +123,158 @@ export default function ProfileScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <AnimatedBackground>
+      <View style={styles.container}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <NavigationButton navigation={navigation} currentScreen="Profile" />
-          <Text style={styles.headerTitle}>Profile</Text>
-        </View>
-          
-          {/* Profile Picture and Edit Button */}
-          <View style={styles.profileSection}>
-            <View style={styles.avatarContainer}>
-              <Ionicons name="person" size={48} color="#FFFFFF" />
-            </View>
-            <TouchableOpacity style={styles.editButton}>
-              <Ionicons name="pencil" size={16} color={colors.textSecondary} />
-              <Text style={styles.editButtonText}>Edit Profile</Text>
-            </TouchableOpacity>
+        <View style={styles.headerWrapper}>
+          {/* Zoomed and Blurred Profile Background */}
+          <View style={styles.headerBackgroundContainer}>
+            {profileImage ? (
+              <Image
+                source={{ uri: profileImage }}
+                style={styles.headerBackground}
+                blurRadius={0}
+              />
+            ) : (
+              <LinearGradient
+                colors={['#667eea', '#764ba2', '#f093fb']}
+                style={styles.headerBackground}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              />
+            )}
+            <View style={styles.headerBackgroundDarkOverlay} />
+            <BlurView intensity={80} tint="dark" style={styles.headerBackgroundBlur} />
+            <LinearGradient
+              colors={['transparent', 'rgba(184, 230, 213, 0.05)', 'rgba(184, 230, 213, 0.15)', 'rgba(184, 230, 213, 0.3)', 'rgba(184, 230, 213, 0.5)', 'rgba(184, 230, 213, 0.7)', 'rgba(184, 230, 213, 0.85)', 'rgba(184, 230, 213, 0.95)', '#B8E6D5']}
+              style={styles.headerEdgeFade}
+              locations={[0, 0.1, 0.2, 0.35, 0.5, 0.65, 0.8, 0.92, 1]}
+            />
           </View>
-          
-          {/* User Info */}
-          <View style={styles.userInfoContainer}>
-            <Text style={styles.userName}>{getUserName()}</Text>
-            <Text style={styles.userEmail}>{getUserEmail()}</Text>
+
+          <View style={styles.header}>
+            <View style={styles.headerTop}>
+              <NavigationButton navigation={navigation} currentScreen="Profile" />
+              <Text style={styles.headerTitle}>Profile</Text>
+            </View>
+
+            {/* Profile Picture and Edit Button */}
+            <View style={styles.profileSection}>
+              <TouchableOpacity style={styles.avatarContainer} onPress={handlePickImage}>
+                {profileImage ? (
+                  <Image source={{ uri: profileImage }} style={styles.avatarImage} />
+                ) : (
+                  <Ionicons name="person" size={48} color="#FFFFFF" />
+                )}
+                <View style={styles.cameraIconContainer}>
+                  <Ionicons name="camera" size={20} color="#FFFFFF" />
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.editButton}>
+                <Ionicons name="pencil" size={16} color="#FFFFFF" />
+                <Text style={styles.editButtonText}>Edit Profile</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* User Info */}
+            <View style={styles.userInfoContainer}>
+              <Text style={styles.userName}>{getUserName()}</Text>
+              <Text style={styles.userEmail}>{getUserEmail()}</Text>
+            </View>
           </View>
         </View>
 
         {/* Menu Items */}
         <View style={styles.menuContainer}>
-          {/* Account Setting */}
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => navigation.navigate('AccountSettings')}
-          >
-            <View style={styles.menuItemLeft}>
-              <Ionicons name="person-outline" size={24} color={colors.text} />
-              <Text style={styles.menuItemText}>Account Setting</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
+          <BlurView intensity={40} tint="dark" style={styles.blurContainer}>
+            {/* Account Setting */}
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => navigation.navigate('AccountSettings')}
+            >
+              <View style={styles.menuItemLeft}>
+                <Ionicons name="person-outline" size={24} color={colors.text} />
+                <Text style={styles.menuItemText}>Account Setting</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
 
-          {/* Purchases */}
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => navigation.navigate('Purchases')}
-          >
-            <View style={styles.menuItemLeft}>
-              <Ionicons name="cart-outline" size={24} color={colors.text} />
-              <Text style={styles.menuItemText}>Purchases</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
+            {/* Purchases */}
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => navigation.navigate('Purchases')}
+            >
+              <View style={styles.menuItemLeft}>
+                <Ionicons name="cart-outline" size={24} color={colors.text} />
+                <Text style={styles.menuItemText}>Purchases</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
 
-          {/* Languages */}
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => navigation.navigate('Languages')}
-          >
-            <View style={styles.menuItemLeft}>
-              <Ionicons name="globe-outline" size={24} color={colors.text} />
-              <Text style={styles.menuItemText}>Languages</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
+            {/* Languages */}
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => navigation.navigate('Languages')}
+            >
+              <View style={styles.menuItemLeft}>
+                <Ionicons name="globe-outline" size={24} color={colors.text} />
+                <Text style={styles.menuItemText}>Languages</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
 
-          {/* Settings */}
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => navigation.navigate('AppSettings')}
-          >
-            <View style={styles.menuItemLeft}>
-              <Ionicons name="settings-outline" size={24} color={colors.text} />
-              <Text style={styles.menuItemText}>Settings</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
+            {/* Settings */}
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => navigation.navigate('AppSettings')}
+            >
+              <View style={styles.menuItemLeft}>
+                <Ionicons name="settings-outline" size={24} color={colors.text} />
+                <Text style={styles.menuItemText}>Settings</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
 
-          {/* Help Center */}
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => navigation.navigate('HelpCenter')}
-          >
-            <View style={styles.menuItemLeft}>
-              <Ionicons name="help-circle-outline" size={24} color={colors.text} />
-              <Text style={styles.menuItemText}>Help Center</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
+            {/* Help Center */}
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => navigation.navigate('HelpCenter')}
+            >
+              <View style={styles.menuItemLeft}>
+                <Ionicons name="help-circle-outline" size={24} color={colors.text} />
+                <Text style={styles.menuItemText}>Help Center</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
 
-          {/* Sign Out */}
-          <TouchableOpacity style={styles.menuItem} onPress={handleSignOut}>
-            <View style={styles.menuItemLeft}>
-              <Ionicons name="log-out-outline" size={24} color={colors.error} />
-              <Text style={[styles.menuItemText, { color: colors.error }]}>Sign Out</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
+            {/* Sign Out */}
+            <TouchableOpacity style={styles.menuItem} onPress={handleSignOut}>
+              <View style={styles.menuItemLeft}>
+                <Ionicons name="log-out-outline" size={24} color={colors.error} />
+                <Text style={[styles.menuItemText, { color: colors.error }]}>Sign Out</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </BlurView>
         </View>
 
         {/* Version */}
         <Text style={styles.versionText}>Version 1.0.0</Text>
       </ScrollView>
     </View>
+    </AnimatedBackground>
   );
 }
 
 const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   scrollView: {
     flex: 1,
@@ -166,8 +282,53 @@ const createStyles = (colors) => StyleSheet.create({
   content: {
     paddingBottom: 40,
   },
+  headerWrapper: {
+    overflow: 'hidden',
+  },
+  headerBackgroundContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 600,
+    overflow: 'hidden',
+  },
+  headerBackground: {
+    position: 'absolute',
+    top: -100,
+    left: -100,
+    right: -100,
+    bottom: -100,
+    transform: [{ scale: 1.5 }],
+    resizeMode: 'cover',
+  },
+  headerBackgroundDarkOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    zIndex: 1,
+  },
+  headerBackgroundBlur: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 2,
+  },
+  headerEdgeFade: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 350,
+    zIndex: 3,
+  },
   header: {
-    backgroundColor: colors.surface,
+    backgroundColor: 'transparent',
     paddingTop: 60,
     paddingBottom: 40,
     paddingHorizontal: 20,
@@ -181,7 +342,7 @@ const createStyles = (colors) => StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: colors.text,
+    color: '#FFFFFF',
     flex: 1,
   },
   profileSection: {
@@ -202,25 +363,41 @@ const createStyles = (colors) => StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
+    position: 'relative',
+  },
+  avatarImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+  },
+  cameraIconContainer: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#667eea',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
   editButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 25,
     gap: 8,
     marginTop: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   editButtonText: {
     fontSize: 16,
-    color: colors.textSecondary,
+    color: '#FFFFFF',
     fontWeight: '600',
   },
   userInfoContainer: {
@@ -229,28 +406,33 @@ const createStyles = (colors) => StyleSheet.create({
   userName: {
     fontSize: 32,
     fontWeight: '800',
-    color: colors.text,
+    color: '#FFFFFF',
     marginBottom: 8,
     letterSpacing: -0.5,
   },
   userEmail: {
     fontSize: 18,
-    color: colors.textSecondary,
+    color: '#FFFFFF',
     fontWeight: '400',
     opacity: 0.8,
   },
   menuContainer: {
-    backgroundColor: colors.surface,
     marginTop: 16,
     marginHorizontal: 16,
-    borderRadius: 16,
+    borderRadius: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 5,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+    overflow: 'hidden',
+  },
+  blurContainer: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(0, 0, 0, 0.25)',
   },
   menuItem: {
     flexDirection: 'row',
@@ -259,7 +441,8 @@ const createStyles = (colors) => StyleSheet.create({
     paddingVertical: 20,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'transparent',
   },
   menuItemLeft: {
     flexDirection: 'row',
