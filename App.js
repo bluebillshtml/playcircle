@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
 import { NavigationContainer, DarkTheme, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createDrawerNavigator } from '@react-navigation/drawer';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
@@ -27,76 +27,144 @@ import AppSettingsScreen from './src/screens/AppSettingsScreen';
 import HelpCenterScreen from './src/screens/HelpCenterScreen';
 
 const Stack = createNativeStackNavigator();
-const Tab = createBottomTabNavigator();
+const Drawer = createDrawerNavigator();
 
-// Bottom Tab Navigator for main app screens
-function MainTabNavigator() {
+// Drawer Navigator for main app screens
+function MainDrawerNavigator() {
   const { colors } = useTheme();
 
   return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName;
-
-          if (route.name === 'Home') {
-            iconName = focused ? 'home' : 'home-outline';
-          } else if (route.name === 'Matches') {
-            iconName = focused ? 'search' : 'search-outline';
-          } else if (route.name === 'Create') {
-            iconName = focused ? 'add-circle' : 'add-circle-outline';
-          } else if (route.name === 'Dashboard') {
-            iconName = focused ? 'trophy' : 'trophy-outline';
-          } else if (route.name === 'Profile') {
-            iconName = focused ? 'person' : 'person-outline';
-          }
-
-          return <Ionicons name={iconName} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textSecondary,
-        tabBarStyle: {
+    <Drawer.Navigator
+      screenOptions={{
+        drawerStyle: {
           backgroundColor: colors.card,
-          borderTopWidth: 1,
-          borderTopColor: colors.glassBorder,
-          paddingBottom: 8,
-          paddingTop: 8,
-          height: 70,
+          width: 280,
         },
-        tabBarLabelStyle: {
-          fontSize: 12,
+        drawerActiveTintColor: colors.primary,
+        drawerInactiveTintColor: colors.textSecondary,
+        drawerLabelStyle: {
+          fontSize: 16,
           fontWeight: '600',
-          marginTop: 4,
+          marginLeft: -10,
         },
-        headerShown: false,
-      })}
+        headerStyle: {
+          backgroundColor: colors.card,
+          elevation: 0,
+          shadowOpacity: 0,
+        },
+        headerTintColor: colors.text,
+        headerTitleStyle: {
+          fontSize: 20,
+          fontWeight: '700',
+        },
+        drawerType: 'slide',
+        overlayColor: 'rgba(0, 0, 0, 0.5)',
+        edgeWidth: 80,
+      }}
     >
-      <Tab.Screen 
-        name="Home" 
+      <Drawer.Screen
+        name="Home"
         component={HomeScreen}
-        options={{ tabBarLabel: 'Home' }}
+        options={({ navigation }) => ({
+          title: 'Home',
+          drawerLabel: 'Home',
+          drawerIcon: ({ color, size }) => (
+            <Ionicons name="home" size={size} color={color} />
+          ),
+          headerShown: true,
+          headerTransparent: true,
+          headerTitle: '',
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => navigation.toggleDrawer()}
+              style={{ marginLeft: 15 }}
+            >
+              <Ionicons name="menu" size={28} color={colors.text} />
+            </TouchableOpacity>
+          ),
+        })}
       />
-      <Tab.Screen 
-        name="Matches" 
+      <Drawer.Screen
+        name="Matches"
         component={MatchesScreen}
-        options={{ tabBarLabel: 'Find' }}
+        options={({ navigation }) => ({
+          title: 'Find Matches',
+          drawerLabel: 'Find Matches',
+          drawerIcon: ({ color, size }) => (
+            <Ionicons name="search" size={size} color={color} />
+          ),
+          headerShown: true,
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => navigation.toggleDrawer()}
+              style={{ marginLeft: 15 }}
+            >
+              <Ionicons name="menu" size={28} color={colors.text} />
+            </TouchableOpacity>
+          ),
+        })}
       />
-      <Tab.Screen 
-        name="Create" 
+      <Drawer.Screen
+        name="Create"
         component={CreateMatchScreen}
-        options={{ tabBarLabel: 'Create' }}
+        options={({ navigation }) => ({
+          title: 'Create Match',
+          drawerLabel: 'Create Match',
+          drawerIcon: ({ color, size }) => (
+            <Ionicons name="add-circle" size={size} color={color} />
+          ),
+          headerShown: true,
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => navigation.toggleDrawer()}
+              style={{ marginLeft: 15 }}
+            >
+              <Ionicons name="menu" size={28} color={colors.text} />
+            </TouchableOpacity>
+          ),
+        })}
       />
-      <Tab.Screen 
-        name="Dashboard" 
+      <Drawer.Screen
+        name="Dashboard"
         component={DashboardScreen}
-        options={{ tabBarLabel: 'Stats' }}
+        options={({ navigation }) => ({
+          title: 'Statistics',
+          drawerLabel: 'Statistics',
+          drawerIcon: ({ color, size }) => (
+            <Ionicons name="trophy" size={size} color={color} />
+          ),
+          headerShown: true,
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => navigation.toggleDrawer()}
+              style={{ marginLeft: 15 }}
+            >
+              <Ionicons name="menu" size={28} color={colors.text} />
+            </TouchableOpacity>
+          ),
+        })}
       />
-      <Tab.Screen 
-        name="Profile" 
+      <Drawer.Screen
+        name="Profile"
         component={ProfileScreen}
-        options={{ tabBarLabel: 'Profile' }}
+        options={({ navigation }) => ({
+          title: 'Profile',
+          drawerLabel: 'Profile',
+          drawerIcon: ({ color, size }) => (
+            <Ionicons name="person" size={size} color={color} />
+          ),
+          headerShown: true,
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => navigation.toggleDrawer()}
+              style={{ marginLeft: 15 }}
+            >
+              <Ionicons name="menu" size={28} color={colors.text} />
+            </TouchableOpacity>
+          ),
+        })}
       />
-    </Tab.Navigator>
+    </Drawer.Navigator>
   );
 }
 
@@ -148,8 +216,8 @@ function AppContent() {
             // Main App Stack - Show when user is logged in
             <>
               <Stack.Screen
-                name="MainTabs"
-                component={MainTabNavigator}
+                name="MainDrawer"
+                component={MainDrawerNavigator}
                 options={{ headerShown: false }}
               />
               <Stack.Screen
