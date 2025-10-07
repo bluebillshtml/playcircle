@@ -276,18 +276,26 @@ export default function NavigationButton({ navigation, currentScreen }) {
 
 const createStyles = (colors) => StyleSheet.create({
   navButtonContainer: {
-    position: 'relative',
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    zIndex: 1000,
   },
   navButton: {
-    width: 44,
-    height: 44,
+    width: 50,
+    height: 50,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 12,
+    backgroundColor: colors.card,
+    borderRadius: 25,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.glassBorder,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   hamburgerContainer: {
     width: 24,

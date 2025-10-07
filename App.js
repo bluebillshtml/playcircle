@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { View, TouchableOpacity } from 'react-native';
 import { NavigationContainer, DarkTheme, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createDrawerNavigator } from '@react-navigation/drawer';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
@@ -25,147 +24,23 @@ import PurchasesScreen from './src/screens/PurchasesScreen';
 import LanguagesScreen from './src/screens/LanguagesScreen';
 import AppSettingsScreen from './src/screens/AppSettingsScreen';
 import HelpCenterScreen from './src/screens/HelpCenterScreen';
+import NavigationButton from './src/components/NavigationButton';
 
 const Stack = createNativeStackNavigator();
-const Drawer = createDrawerNavigator();
 
-// Drawer Navigator for main app screens
-function MainDrawerNavigator() {
-  const { colors } = useTheme();
-
-  return (
-    <Drawer.Navigator
-      screenOptions={{
-        drawerStyle: {
-          backgroundColor: colors.card,
-          width: 280,
-        },
-        drawerActiveTintColor: colors.primary,
-        drawerInactiveTintColor: colors.textSecondary,
-        drawerLabelStyle: {
-          fontSize: 16,
-          fontWeight: '600',
-          marginLeft: -10,
-        },
-        headerStyle: {
-          backgroundColor: colors.card,
-          elevation: 0,
-          shadowOpacity: 0,
-        },
-        headerTintColor: colors.text,
-        headerTitleStyle: {
-          fontSize: 20,
-          fontWeight: '700',
-        },
-        drawerType: 'slide',
-        overlayColor: 'rgba(0, 0, 0, 0.5)',
-        edgeWidth: 80,
-      }}
-    >
-      <Drawer.Screen
-        name="Home"
-        component={HomeScreen}
-        options={({ navigation }) => ({
-          title: 'Home',
-          drawerLabel: 'Home',
-          drawerIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
-          ),
-          headerShown: true,
-          headerTransparent: true,
-          headerTitle: '',
-          headerLeft: () => (
-            <TouchableOpacity
-              onPress={() => navigation.toggleDrawer()}
-              style={{ marginLeft: 15 }}
-            >
-              <Ionicons name="menu" size={28} color={colors.text} />
-            </TouchableOpacity>
-          ),
-        })}
-      />
-      <Drawer.Screen
-        name="Matches"
-        component={MatchesScreen}
-        options={({ navigation }) => ({
-          title: 'Find Matches',
-          drawerLabel: 'Find Matches',
-          drawerIcon: ({ color, size }) => (
-            <Ionicons name="search" size={size} color={color} />
-          ),
-          headerShown: true,
-          headerLeft: () => (
-            <TouchableOpacity
-              onPress={() => navigation.toggleDrawer()}
-              style={{ marginLeft: 15 }}
-            >
-              <Ionicons name="menu" size={28} color={colors.text} />
-            </TouchableOpacity>
-          ),
-        })}
-      />
-      <Drawer.Screen
-        name="Create"
-        component={CreateMatchScreen}
-        options={({ navigation }) => ({
-          title: 'Create Match',
-          drawerLabel: 'Create Match',
-          drawerIcon: ({ color, size }) => (
-            <Ionicons name="add-circle" size={size} color={color} />
-          ),
-          headerShown: true,
-          headerLeft: () => (
-            <TouchableOpacity
-              onPress={() => navigation.toggleDrawer()}
-              style={{ marginLeft: 15 }}
-            >
-              <Ionicons name="menu" size={28} color={colors.text} />
-            </TouchableOpacity>
-          ),
-        })}
-      />
-      <Drawer.Screen
-        name="Dashboard"
-        component={DashboardScreen}
-        options={({ navigation }) => ({
-          title: 'Statistics',
-          drawerLabel: 'Statistics',
-          drawerIcon: ({ color, size }) => (
-            <Ionicons name="trophy" size={size} color={color} />
-          ),
-          headerShown: true,
-          headerLeft: () => (
-            <TouchableOpacity
-              onPress={() => navigation.toggleDrawer()}
-              style={{ marginLeft: 15 }}
-            >
-              <Ionicons name="menu" size={28} color={colors.text} />
-            </TouchableOpacity>
-          ),
-        })}
-      />
-      <Drawer.Screen
-        name="Profile"
-        component={ProfileScreen}
-        options={({ navigation }) => ({
-          title: 'Profile',
-          drawerLabel: 'Profile',
-          drawerIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} />
-          ),
-          headerShown: true,
-          headerLeft: () => (
-            <TouchableOpacity
-              onPress={() => navigation.toggleDrawer()}
-              style={{ marginLeft: 15 }}
-            >
-              <Ionicons name="menu" size={28} color={colors.text} />
-            </TouchableOpacity>
-          ),
-        })}
-      />
-    </Drawer.Navigator>
-  );
+// Helper component to add NavigationButton to screens
+function ScreenWithNavButton({ component: Component, currentScreen, ...rest }) {
+  return (props) => {
+    return (
+      <View style={{ flex: 1 }}>
+        <Component {...props} {...rest} />
+        <NavigationButton 
+          navigation={props.navigation} 
+          currentScreen={currentScreen}
+        />
+      </View>
+    );
+  };
 }
 
 function AppContent() {
@@ -216,8 +91,28 @@ function AppContent() {
             // Main App Stack - Show when user is logged in
             <>
               <Stack.Screen
-                name="MainDrawer"
-                component={MainDrawerNavigator}
+                name="Home"
+                component={ScreenWithNavButton({ component: HomeScreen, currentScreen: 'Home' })}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="Matches"
+                component={ScreenWithNavButton({ component: MatchesScreen, currentScreen: 'Matches' })}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="Create"
+                component={ScreenWithNavButton({ component: CreateMatchScreen, currentScreen: 'Create' })}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="Dashboard"
+                component={ScreenWithNavButton({ component: DashboardScreen, currentScreen: 'Dashboard' })}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="Profile"
+                component={ScreenWithNavButton({ component: ProfileScreen, currentScreen: 'Profile' })}
                 options={{ headerShown: false }}
               />
               <Stack.Screen

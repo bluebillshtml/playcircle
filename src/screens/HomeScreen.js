@@ -480,7 +480,7 @@ const createStyles = (colors) => StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 110,
     paddingBottom: 16,
   },
 
