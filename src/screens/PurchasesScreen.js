@@ -13,6 +13,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import AnimatedBackground from '../components/AnimatedBackground';
 import { paymentService } from '../services/supabase';
+import AnimatedBackground from '../components/AnimatedBackground';
 
 export default function PurchasesScreen({ navigation }) {
   const { colors } = useTheme();
@@ -165,7 +166,7 @@ export default function PurchasesScreen({ navigation }) {
 
   return (
     <AnimatedBackground>
-    <View style={styles.container}>
+      <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>

@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
 import NavigationButton from '../components/NavigationButton';
+import AnimatedBackground from '../components/AnimatedBackground';
 
 // Mock data for available matches
 const MOCK_MATCHES = [
@@ -122,8 +123,9 @@ export default function MatchesScreen({ navigation }) {
   const styles = createStyles(colors);
 
   return (
-    <View style={styles.container}>
-      <View style={styles.spacer} />
+    <AnimatedBackground>
+      <View style={styles.container}>
+        <View style={styles.spacer} />
       {/* Header */}
       <View style={styles.header}>
         <NavigationButton navigation={navigation} currentScreen="Matches" />
@@ -277,18 +279,19 @@ export default function MatchesScreen({ navigation }) {
           </TouchableOpacity>
         ))}
       </ScrollView>
-    </View>
+      </View>
+    </AnimatedBackground>
   );
 }
 
 const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   spacer: {
     height: 60,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   header: {
     flexDirection: 'row',

@@ -181,7 +181,7 @@ export default function HelpCenterScreen({ navigation }) {
 
   return (
     <AnimatedBackground>
-    <View style={styles.container}>
+      <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>

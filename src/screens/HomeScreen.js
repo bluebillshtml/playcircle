@@ -111,47 +111,67 @@ export default function HomeScreen({ navigation }) {
       setLoading(true);
 
       // Load upcoming matches for selected sport
-      const matches = await matchService.getUpcomingMatches(20, selectedSport.id);
-      const transformedMatches = matches.map(match => ({
-        id: match.id,
-        courtName: match.court?.name || 'Unknown Court',
-        date: match.match_date,
-        time: match.match_time,
-        duration: match.duration_minutes,
-        type: match.match_type,
-        skillLevel: match.skill_level,
-        joinedPlayers: match.current_players,
-        totalPlayers: match.max_players,
-        pricePerPlayer: parseFloat(match.price_per_player),
-        image: match.court?.image_url || 'https://images.unsplash.com/photo-1554068865-24cd4e34b8?w=400&h=300&fit=crop',
-      }));
-      setUpcomingMatches(transformedMatches);
+      try {
+        const matches = await matchService.getUpcomingMatches(20, selectedSport.id);
+        const transformedMatches = matches.map(match => ({
+          id: match.id,
+          courtName: match.court?.name || 'Unknown Court',
+          date: match.match_date,
+          time: match.match_time,
+          duration: match.duration_minutes,
+          type: match.match_type,
+          skillLevel: match.skill_level,
+          joinedPlayers: match.current_players,
+          totalPlayers: match.max_players,
+          pricePerPlayer: parseFloat(match.price_per_player),
+          image: match.court?.image_url || 'https://images.unsplash.com/photo-1554068865-24cd4e34b8?w=400&h=300&fit=crop',
+        }));
+        setUpcomingMatches(transformedMatches);
+      } catch (matchError) {
+        console.error('Error loading matches:', matchError);
+        setUpcomingMatches([]);
+      }
 
       // Load user's past matches if logged in
       if (user) {
-        const userMatches = await matchService.getUserMatches(user.id);
-        const completed = userMatches
-          .filter(um => um.match?.status === 'completed')
-          .map(um => ({
-            id: um.match.id,
-            courtName: um.match.court?.name || 'Unknown Court',
-            date: um.match.match_date,
-            time: um.match.match_time,
-            result: 'Win', // TODO: Calculate from team results
-            score: '6-4, 6-3', // TODO: Get from match games
-            partner: 'Partner', // TODO: Get from team
-          }))
-          .slice(0, 3);
-        setPastMatches(completed);
+        try {
+          const userMatches = await matchService.getUserMatches(user.id);
+          const completed = userMatches
+            .filter(um => um.match?.status === 'completed')
+            .map(um => ({
+              id: um.match.id,
+              courtName: um.match.court?.name || 'Unknown Court',
+              date: um.match.match_date,
+              time: um.match.match_time,
+              result: 'Win', // TODO: Calculate from team results
+              score: '6-4, 6-3', // TODO: Get from match games
+              partner: 'Partner', // TODO: Get from team
+            }))
+            .slice(0, 3);
+          setPastMatches(completed);
+        } catch (userMatchError) {
+          console.error('Error loading user matches:', userMatchError);
+          setPastMatches([]);
+        }
 
         // Load user stats for selected sport
-        const stats = await profileService.getUserStats(user.id, selectedSport.id);
-        setUserStats({
-          totalMatches: stats?.total_matches || 0,
-          winRate: Math.round(stats?.win_rate || 0),
-          hoursPlayed: Math.round(stats?.total_hours_played || 0),
-          favoritePartner: 'Partner Name', // TODO: Calculate from matches
-        });
+        try {
+          const stats = await profileService.getUserStats(user.id, selectedSport.id);
+          setUserStats({
+            totalMatches: stats?.total_matches || 0,
+            winRate: Math.round(stats?.win_rate || 0),
+            hoursPlayed: Math.round(stats?.total_hours_played || 0),
+            favoritePartner: 'Partner Name', // TODO: Calculate from matches
+          });
+        } catch (statsError) {
+          console.error('Error loading user stats:', statsError);
+          setUserStats({
+            totalMatches: 0,
+            winRate: 0,
+            hoursPlayed: 0,
+            favoritePartner: 'None',
+          });
+        }
       } else {
         // Use default stats for non-logged in users
         setUserStats({
@@ -181,6 +201,8 @@ export default function HomeScreen({ navigation }) {
   const getGreeting = () => {
     if (profile?.full_name) {
       return `Welcome back, ${profile.full_name}`;
+    } else if (profile?.first_name) {
+      return `Welcome back, ${profile.first_name}`;
     } else if (profile?.username) {
       return `Welcome back, ${profile.username}`;
     } else if (user?.email) {
@@ -222,7 +244,7 @@ export default function HomeScreen({ navigation }) {
   return (
     <AnimatedBackground>
       <View style={styles.container}>
-      <Animated.ScrollView
+        <Animated.ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         onScroll={Animated.event(
@@ -507,7 +529,7 @@ export default function HomeScreen({ navigation }) {
 
       <View style={styles.bottomPadding} />
       </Animated.ScrollView>
-    </View>
+      </View>
     </AnimatedBackground>
   );
 }

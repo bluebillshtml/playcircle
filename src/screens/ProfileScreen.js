@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Switch,
-  ImageBackground,
   Image,
   Alert,
 } from 'react-native';
@@ -17,7 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
-import { supabase, supabaseService } from '../services/supabase';
+import { supabase, profileService } from '../services/supabase';
 import NavigationButton from '../components/NavigationButton';
 import AnimatedBackground from '../components/AnimatedBackground';
 
@@ -26,7 +25,7 @@ export default function ProfileScreen() {
   const { colors } = useTheme();
   const { user, profile, signOut } = useAuth();
   const navigation = useNavigation();
-  const [profileImage, setProfileImage] = useState(profile?.profile_picture_url || null);
+  const [profileImage, setProfileImage] = useState(profile?.avatar_url || null);
 
   const styles = createStyles(colors);
 
@@ -47,7 +46,6 @@ export default function ProfileScreen() {
 
   const handlePickImage = async () => {
     try {
-      // Request permission
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (status !== 'granted') {
@@ -58,9 +56,8 @@ export default function ProfileScreen() {
         return;
       }
 
-      // Launch image picker
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
@@ -70,18 +67,15 @@ export default function ProfileScreen() {
         const imageUri = result.assets[0].uri;
         setProfileImage(imageUri);
 
-        // Upload to Supabase storage
         try {
           const fileName = `profile_${user.id}_${Date.now()}.jpg`;
 
-          // Fetch the image and convert to blob for React Native
-          const response = await fetch(imageUri);
-          const blob = await response.blob();
+          // Read file as base64 for Supabase upload
+          const base64 = await fetch(imageUri).then(res => res.text());
 
-          // Upload to Supabase storage bucket
           const { data: uploadData, error: uploadError } = await supabase.storage
             .from('profile-pictures')
-            .upload(fileName, blob, {
+            .upload(fileName, base64, {
               contentType: 'image/jpeg',
               upsert: true,
             });
@@ -92,14 +86,12 @@ export default function ProfileScreen() {
             return;
           }
 
-          // Get public URL
           const { data: { publicUrl } } = supabase.storage
             .from('profile-pictures')
             .getPublicUrl(fileName);
 
-          // Update profile in database
-          await supabaseService.updateProfile(user.id, {
-            profile_picture_url: publicUrl,
+          await profileService.updateProfile(user.id, {
+            avatar_url: publicUrl,
           });
 
           Alert.alert('Success', 'Profile picture updated successfully!');
@@ -125,7 +117,7 @@ export default function ProfileScreen() {
   return (
     <AnimatedBackground>
       <View style={styles.container}>
-      <ScrollView
+        <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -138,23 +130,16 @@ export default function ProfileScreen() {
               <Image
                 source={{ uri: profileImage }}
                 style={styles.headerBackground}
-                blurRadius={0}
               />
             ) : (
-              <LinearGradient
-                colors={['#667eea', '#764ba2', '#f093fb']}
+              <Image
+                source={require('../../background1.jpg')}
                 style={styles.headerBackground}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
               />
             )}
             <View style={styles.headerBackgroundDarkOverlay} />
-            <BlurView intensity={80} tint="dark" style={styles.headerBackgroundBlur} />
-            <LinearGradient
-              colors={['transparent', 'rgba(184, 230, 213, 0.05)', 'rgba(184, 230, 213, 0.15)', 'rgba(184, 230, 213, 0.3)', 'rgba(184, 230, 213, 0.5)', 'rgba(184, 230, 213, 0.7)', 'rgba(184, 230, 213, 0.85)', 'rgba(184, 230, 213, 0.95)', '#B8E6D5']}
-              style={styles.headerEdgeFade}
-              locations={[0, 0.1, 0.2, 0.35, 0.5, 0.65, 0.8, 0.92, 1]}
-            />
+            <BlurView intensity={60} tint="dark" style={styles.headerBackgroundBlur} />
+            <View style={styles.headerEdgeFade} />
           </View>
 
           <View style={styles.header}>
@@ -252,21 +237,21 @@ export default function ProfileScreen() {
               <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
 
-            {/* Sign Out */}
-            <TouchableOpacity style={styles.menuItem} onPress={handleSignOut}>
-              <View style={styles.menuItemLeft}>
-                <Ionicons name="log-out-outline" size={24} color={colors.error} />
-                <Text style={[styles.menuItemText, { color: colors.error }]}>Sign Out</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
+          {/* Sign Out */}
+          <TouchableOpacity style={styles.menuItem} onPress={handleSignOut}>
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="log-out-outline" size={24} color={colors.error} />
+              <Text style={[styles.menuItemText, { color: colors.error }]}>Sign Out</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
           </BlurView>
         </View>
 
         {/* Version */}
         <Text style={styles.versionText}>Version 1.0.0</Text>
       </ScrollView>
-    </View>
+      </View>
     </AnimatedBackground>
   );
 }
@@ -290,7 +275,7 @@ const createStyles = (colors) => StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 600,
+    height: 500,
     overflow: 'hidden',
   },
   headerBackground: {
@@ -324,7 +309,8 @@ const createStyles = (colors) => StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    height: 350,
+    height: 200,
+    backgroundColor: 'transparent',
     zIndex: 3,
   },
   header: {

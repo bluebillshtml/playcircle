@@ -1,10 +1,16 @@
+<<<<<<< HEAD
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated, Dimensions, Easing } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+=======
+import React, { useEffect, useRef, memo } from 'react';
+import { View, StyleSheet, Animated, Dimensions, ImageBackground, Easing, AppState } from 'react-native';
+>>>>>>> background
 import { BlurView } from 'expo-blur';
 
 const { width, height } = Dimensions.get('window');
 
+<<<<<<< HEAD
 export default function AnimatedBackground({ children }) {
   // Create multiple animated values for different wave layers
   const wave1 = useRef(new Animated.Value(0)).current;
@@ -59,11 +65,33 @@ export default function AnimatedBackground({ children }) {
       Animated.sequence([
         Animated.timing(wave3, {
           toValue: 1,
+=======
+const AnimatedBackground = memo(({ children }) => {
+  // Animated values - start with zoomed in state
+  const wave1 = useRef(new Animated.Value(0)).current;
+  const wave2 = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(1.2)).current;
+  const appState = useRef(AppState.currentState);
+  const wave1AnimRef = useRef(null);
+  const wave2AnimRef = useRef(null);
+  const scaleAnimRef = useRef(null);
+
+  useEffect(() => {
+    // Slow horizontal movement
+    wave1AnimRef.current = Animated.loop(
+      Animated.sequence([
+        Animated.timing(wave1, {
+          toValue: 1,
+>>>>>>> background
           duration: 40000,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
+<<<<<<< HEAD
         Animated.timing(wave3, {
+=======
+        Animated.timing(wave1, {
+>>>>>>> background
           toValue: 0,
           duration: 40000,
           easing: Easing.inOut(Easing.ease),
@@ -72,6 +100,7 @@ export default function AnimatedBackground({ children }) {
       ])
     );
 
+<<<<<<< HEAD
     // Wave animation 4 - Opposite horizontal drift
     const wave4Animation = Animated.loop(
       Animated.sequence([
@@ -85,11 +114,27 @@ export default function AnimatedBackground({ children }) {
           toValue: 0,
           duration: 25000,
           easing: Easing.inOut(Easing.circle),
+=======
+    // Slow vertical movement
+    wave2AnimRef.current = Animated.loop(
+      Animated.sequence([
+        Animated.timing(wave2, {
+          toValue: 1,
+          duration: 35000,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(wave2, {
+          toValue: 0,
+          duration: 35000,
+          easing: Easing.inOut(Easing.ease),
+>>>>>>> background
           useNativeDriver: true,
         }),
       ])
     );
 
+<<<<<<< HEAD
     // Wave animation 5 - Complex diagonal movement
     const wave5Animation = Animated.loop(
       Animated.sequence([
@@ -138,12 +183,27 @@ export default function AnimatedBackground({ children }) {
         Animated.timing(scale2, {
           toValue: 1,
           duration: 18000,
+=======
+    // Slow zoom animation - always zoomed in
+    scaleAnimRef.current = Animated.loop(
+      Animated.sequence([
+        Animated.timing(scale, {
+          toValue: 1.3,
+          duration: 30000,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(scale, {
+          toValue: 1.2,
+          duration: 30000,
+>>>>>>> background
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
       ])
     );
 
+<<<<<<< HEAD
     // Opacity breathing effect
     const opacity1Animation = Animated.loop(
       Animated.sequence([
@@ -207,6 +267,41 @@ export default function AnimatedBackground({ children }) {
   const wave1TranslateX = wave1.interpolate({
     inputRange: [0, 1],
     outputRange: [-25, 25],
+=======
+    // Start animations
+    wave1AnimRef.current.start();
+    wave2AnimRef.current.start();
+    scaleAnimRef.current.start();
+
+    // Listen to app state changes to pause/resume animations
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        // App has come to foreground - resume animations
+        wave1AnimRef.current?.start();
+        wave2AnimRef.current?.start();
+        scaleAnimRef.current?.start();
+      } else if (nextAppState.match(/inactive|background/)) {
+        // App has gone to background - stop animations to save resources
+        wave1AnimRef.current?.stop();
+        wave2AnimRef.current?.stop();
+        scaleAnimRef.current?.stop();
+      }
+      appState.current = nextAppState;
+    });
+
+    return () => {
+      wave1AnimRef.current?.stop();
+      wave2AnimRef.current?.stop();
+      scaleAnimRef.current?.stop();
+      subscription?.remove();
+    };
+  }, []);
+
+  // Slow movement interpolations
+  const wave1TranslateX = wave1.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-30, 30],
+>>>>>>> background
   });
 
   const wave2TranslateY = wave2.interpolate({
@@ -214,6 +309,7 @@ export default function AnimatedBackground({ children }) {
     outputRange: [-30, 30],
   });
 
+<<<<<<< HEAD
   const wave3TranslateX = wave3.interpolate({
     inputRange: [0, 1],
     outputRange: [20, -20],
@@ -247,6 +343,11 @@ export default function AnimatedBackground({ children }) {
   return (
     <View style={styles.container}>
       {/* Gradient Background Layer 1 - Base layer with main movement */}
+=======
+  return (
+    <View style={styles.container}>
+      {/* Single animated layer */}
+>>>>>>> background
       <Animated.View
         style={[
           styles.backgroundLayer,
@@ -256,6 +357,7 @@ export default function AnimatedBackground({ children }) {
               { translateY: wave2TranslateY },
               { scale: scale },
             ],
+<<<<<<< HEAD
             opacity: 0.9,
           },
         ]}
@@ -343,11 +445,32 @@ export default function AnimatedBackground({ children }) {
       {/* Subtle blur effect for glass morphism */}
       <BlurView intensity={2} tint="light" style={styles.blurOverlay} />
 
+=======
+          },
+        ]}
+      >
+        <ImageBackground
+          source={require('../../background1.jpg')}
+          style={styles.backgroundImage}
+          resizeMode="cover"
+        />
+      </Animated.View>
+
+      {/* Soft overlay */}
+      <View style={styles.gradientOverlay} />
+
+>>>>>>> background
       {/* Content */}
       <View style={styles.content}>{children}</View>
     </View>
   );
+<<<<<<< HEAD
 }
+=======
+});
+
+export default AnimatedBackground;
+>>>>>>> background
 
 const styles = StyleSheet.create({
   container: {

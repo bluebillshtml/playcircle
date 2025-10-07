@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { profileService } from '../services/supabase';
+import AnimatedBackground from '../components/AnimatedBackground';
 
 export default function AppSettingsScreen({ navigation }) {
   const { colors, isDarkMode, toggleTheme } = useTheme();
@@ -116,7 +117,8 @@ export default function AppSettingsScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
+    <AnimatedBackground>
+      <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -342,13 +344,14 @@ export default function AppSettingsScreen({ navigation }) {
         </View>
       </ScrollView>
     </View>
+    </AnimatedBackground>
   );
 }
 
 const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   header: {
     flexDirection: 'row',

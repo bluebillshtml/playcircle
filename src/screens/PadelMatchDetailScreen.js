@@ -27,6 +27,7 @@ import TeamBracketOverlay from '../components/TeamBracketOverlay';
 import BracketButton from '../components/BracketButton';
 import PadelScoring from '../components/PadelScoring';
 import PadelStats from '../components/PadelStats';
+import AnimatedBackground from '../components/AnimatedBackground';
 
 const { width, height } = Dimensions.get('window');
 
@@ -387,36 +388,41 @@ export default function PadelMatchDetailScreen({ navigation, route }) {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <View style={styles.spacer} />
-        <View style={styles.header}>
-          <NavigationButton navigation={navigation} currentScreen="MatchDetail" />
+      <AnimatedBackground>
+        <View style={styles.container}>
+          <View style={styles.spacer} />
+          <View style={styles.header}>
+            <NavigationButton navigation={navigation} currentScreen="MatchDetail" />
+          </View>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.loadingText}>Loading match details...</Text>
+          </View>
         </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Loading match details...</Text>
-        </View>
-      </View>
+      </AnimatedBackground>
     );
   }
 
   if (!match) {
     return (
-      <View style={styles.container}>
-        <View style={styles.spacer} />
-        <View style={styles.header}>
-          <NavigationButton navigation={navigation} currentScreen="MatchDetail" />
+      <AnimatedBackground>
+        <View style={styles.container}>
+          <View style={styles.spacer} />
+          <View style={styles.header}>
+            <NavigationButton navigation={navigation} currentScreen="MatchDetail" />
+          </View>
+          <View style={styles.errorContainer}>
+            <Ionicons name="alert-circle" size={48} color={colors.error} />
+            <Text style={styles.errorText}>Match not found</Text>
+          </View>
         </View>
-        <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle" size={48} color={colors.error} />
-          <Text style={styles.errorText}>Match not found</Text>
-        </View>
-      </View>
+      </AnimatedBackground>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <AnimatedBackground>
+      <View style={styles.container}>
       <View style={styles.spacer} />
 
       {/* Glassmorphic Court Preview Section */}
@@ -687,13 +693,14 @@ export default function PadelMatchDetailScreen({ navigation, route }) {
         }}
       />
     </View>
+    </AnimatedBackground>
   );
 }
 
 const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   spacer: {
     height: 8,

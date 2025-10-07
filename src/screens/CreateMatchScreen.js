@@ -13,6 +13,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useSport } from '../context/SportContext';
 import NavigationButton from '../components/NavigationButton';
 import SportSelector from '../components/SportSelector';
+import AnimatedBackground from '../components/AnimatedBackground';
 
 const COURTS = [
   { id: 1, name: 'Downtown Sports Club', pricePerHour: 40, sports: ['padel', 'tennis', 'pickleball'] },
@@ -80,9 +81,10 @@ export default function CreateMatchScreen({ navigation }) {
   const styles = createStyles(colors);
 
   return (
-    <View style={styles.container}>
-      {/* Invisible Header Spacer */}
-      <View style={styles.invisibleHeader} />
+    <AnimatedBackground>
+      <View style={styles.container}>
+        {/* Invisible Header Spacer */}
+        <View style={styles.invisibleHeader} />
       {/* Header */}
       <View style={styles.header}>
         <NavigationButton navigation={navigation} currentScreen="Create" />
@@ -286,22 +288,23 @@ export default function CreateMatchScreen({ navigation }) {
           <Text style={styles.createButtonText}>Create Match</Text>
         </TouchableOpacity>
       </View>
-    </View>
+      </View>
+    </AnimatedBackground>
   );
 }
 
 const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   invisibleHeader: {
     height: 80,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   spacer: {
     height: 20,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   header: {
     flexDirection: 'row',
