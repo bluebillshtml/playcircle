@@ -315,6 +315,58 @@ export const profileService = {
       updated_at: new Date().toISOString(),
     };
   },
+
+  // Create user sport profile (with upsert capability)
+  createUserSportProfile: async (userId, sportData) => {
+    const profileData = {
+      user_id: userId,
+      sport_id: sportData.sport_id,
+      skill_level: sportData.skill_level,
+      preferred_position: sportData.preferred_position,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await supabase
+      .from('user_sport_profiles')
+      .upsert(profileData, {
+        onConflict: 'user_id,sport_id',
+        ignoreDuplicates: false,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  // Get user sport profiles
+  getUserSportProfiles: async (userId) => {
+    const { data, error } = await supabase
+      .from('user_sport_profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      // If table doesn't exist or other database error, return empty array
+      if (error.code === 'PGRST116' || error.code === '42P01') {
+        return [];
+      }
+      throw error;
+    }
+    
+    return data || [];
+  },
+
+  // Delete user sport profiles
+  deleteUserSportProfiles: async (userId) => {
+    const { error } = await supabase
+      .from('user_sport_profiles')
+      .delete()
+      .eq('user_id', userId);
+
+    if (error) throw error;
+  },
 };
 
 // =====================================================

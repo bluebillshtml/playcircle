@@ -12,6 +12,8 @@ import { SportProvider } from './src/context/SportContext';
 import SplashScreen from './src/screens/SplashScreen';
 import SignInScreen from './src/screens/SignInScreen';
 import SignUpScreen from './src/screens/SignUpScreen';
+import OnboardingScreen from './src/screens/OnboardingScreen';
+import PreferencesScreen from './src/screens/PreferencesScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import MatchesScreen from './src/screens/MatchesScreen';
 import CreateMatchScreen from './src/screens/CreateMatchScreen';
@@ -100,13 +102,21 @@ function MainTabNavigator() {
 
 function AppContent() {
   const { colors } = useTheme();
-  const { user } = useAuth();
+  const { user, profile, loading } = useAuth();
   const [showSplash, setShowSplash] = useState(true);
 
   // Show splash screen for initial load
   if (showSplash) {
     return <SplashScreen onComplete={() => setShowSplash(false)} />;
   }
+
+  // Show loading while auth is initializing
+  if (loading) {
+    return <SplashScreen onComplete={() => {}} />;
+  }
+
+  // Check if user needs onboarding
+  const needsOnboarding = user && (!profile?.onboarding_completed);
 
   return (
     <View style={{ flex: 1, backgroundColor: '#1a1a1a' }}>
@@ -127,6 +137,13 @@ function AppContent() {
                 options={{ headerShown: false }}
               />
             </>
+          ) : needsOnboarding ? (
+            // Onboarding Stack - Show when user needs onboarding
+            <Stack.Screen
+              name="Onboarding"
+              component={OnboardingScreen}
+              options={{ headerShown: false }}
+            />
           ) : (
             // Main App Stack - Show when user is logged in
             <>
@@ -180,6 +197,11 @@ function AppContent() {
               <Stack.Screen
                 name="HelpCenter"
                 component={HelpCenterScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="Preferences"
+                component={PreferencesScreen}
                 options={{ headerShown: false }}
               />
             </>

@@ -82,6 +82,8 @@ export const AuthProvider = ({ children }) => {
         last_name: profileData.last_name || (profileData.full_name ? profileData.full_name.split(' ').slice(1).join(' ') : ''),
         // Ensure skill_level exists (it might be in user_sport_profiles)
         skill_level: profileData.skill_level || 'Beginner',
+        // Ensure onboarding_completed exists
+        onboarding_completed: profileData.onboarding_completed || false,
       };
 
       console.log('Profile loaded successfully:', mappedProfile);
@@ -98,6 +100,7 @@ export const AuthProvider = ({ children }) => {
           first_name: userMetadata.first_name || null,
           last_name: userMetadata.last_name || null,
           skill_level: 'Beginner',
+          onboarding_completed: false,
         });
       } else {
         console.error('Error loading profile:', error);
