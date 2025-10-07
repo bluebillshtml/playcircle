@@ -14,6 +14,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSport } from '../context/SportContext';
 import { profileService } from '../services/supabase';
 import AnimatedBackground from '../components/AnimatedBackground';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SPORTS = [
     { id: 'padel', name: 'Padel', icon: 'tennisball' },
@@ -49,6 +50,34 @@ export default function PreferencesScreen({ navigation }) {
         loadData();
     }, [user, profile]);
 
+    // Local storage functions for fallback when Supabase isn't available
+    const saveToLocalStorage = async (sportProfiles) => {
+        try {
+            const key = `sport_profiles_${user.id}`;
+            await AsyncStorage.setItem(key, JSON.stringify(sportProfiles));
+            console.log('💾 Successfully saved sport profiles to local storage:', sportProfiles);
+        } catch (error) {
+            console.log('❌ Error saving to local storage:', error);
+        }
+    };
+
+    const loadFromLocalStorage = async () => {
+        try {
+            const key = `sport_profiles_${user.id}`;
+            const data = await AsyncStorage.getItem(key);
+            if (data) {
+                const sportProfiles = JSON.parse(data);
+                console.log('💾 Successfully loaded sport profiles from local storage:', sportProfiles);
+                return sportProfiles;
+            } else {
+                console.log('📭 No data found in local storage for key:', key);
+            }
+        } catch (error) {
+            console.log('❌ Error loading from local storage:', error);
+        }
+        return [];
+    };
+
     const loadData = async () => {
         console.log('Loading preferences data...');
         console.log('User:', user?.id);
@@ -62,17 +91,33 @@ export default function PreferencesScreen({ navigation }) {
         try {
             setLoading(true);
 
-            // Try to load sport profiles from database
+            // Try to load sport profiles from database first
             let sportProfiles = [];
+            let dataSource = 'none';
+
             try {
                 sportProfiles = await profileService.getUserSportProfiles(user.id);
-                console.log('Loaded sport profiles from DB:', sportProfiles);
+                if (sportProfiles && sportProfiles.length > 0) {
+                    console.log('✅ Loaded sport profiles from Supabase DB:', sportProfiles);
+                    dataSource = 'database';
+                } else {
+                    console.log('📭 No sport profiles found in Supabase DB');
+                    throw new Error('No data in database');
+                }
             } catch (error) {
-                console.log('Error loading sport profiles (expected if no Supabase):', error);
+                console.log('❌ Error loading from Supabase (expected if no connection):', error.message);
+                // Try local storage as fallback
+                sportProfiles = await loadFromLocalStorage();
+                if (sportProfiles && sportProfiles.length > 0) {
+                    console.log('💾 Loaded sport profiles from local storage:', sportProfiles);
+                    dataSource = 'localStorage';
+                } else {
+                    console.log('📭 No sport profiles found in local storage');
+                }
             }
 
             if (sportProfiles && sportProfiles.length > 0) {
-                // Use database data
+                // Use loaded data (from database or local storage)
                 const sports = sportProfiles.map(sp =>
                     SPORTS.find(s => s.id === sp.sport_id)
                 ).filter(Boolean);
@@ -85,13 +130,22 @@ export default function PreferencesScreen({ navigation }) {
                     positionsMap[sp.sport_id] = sp.preferred_position;
                 });
 
-                console.log('Setting from DB - Sports:', sports);
-                console.log('Setting from DB - Skill levels:', skillLevelsMap);
-                console.log('Setting from DB - Positions:', positionsMap);
+                console.log(`📊 Setting data from ${dataSource}:`);
+                console.log('  - Sports:', sports.map(s => s.name));
+                console.log('  - Skill levels:', skillLevelsMap);
+                console.log('  - Positions:', positionsMap);
 
                 setSelectedSports(sports);
                 setSkillLevels(skillLevelsMap);
                 setPositions(positionsMap);
+
+                // Verify state was set correctly
+                setTimeout(() => {
+                    console.log(`✅ State verification after loading from ${dataSource}:`);
+                    console.log('  - selectedSports length:', sports.length);
+                    console.log('  - skillLevels keys:', Object.keys(skillLevelsMap));
+                    console.log('  - positions keys:', Object.keys(positionsMap));
+                }, 100);
             } else if (profile?.favorite_sports && Array.isArray(profile.favorite_sports)) {
                 // Use profile data as fallback
                 const sports = profile.favorite_sports.map(sportId =>
@@ -196,20 +250,37 @@ export default function PreferencesScreen({ navigation }) {
             }
 
             // Create new sport profiles for selected sports
-            for (const sport of selectedSports) {
-                try {
-                    const sportProfileData = {
-                        sport_id: sport.id,
-                        skill_level: skillLevels[sport.id] || 'Beginner',
-                        preferred_position: positions[sport.id] || POSITIONS[sport.id]?.[0] || 'No Preference',
-                    };
+            console.log('=== PREFERENCES SAVE DEBUG ===');
+            console.log('Selected sports:', selectedSports);
+            console.log('Skill levels state:', skillLevels);
+            console.log('Positions state:', positions);
 
+            const sportProfilesToSave = [];
+
+            for (const sport of selectedSports) {
+                const sportProfileData = {
+                    sport_id: sport.id,
+                    skill_level: skillLevels[sport.id] || 'Beginner',
+                    preferred_position: positions[sport.id] || POSITIONS[sport.id]?.[0] || 'No Preference',
+                };
+
+                console.log(`Creating sport profile for ${sport.name}:`, sportProfileData);
+                console.log(`  - Skill level from state: ${skillLevels[sport.id]}`);
+                console.log(`  - Position from state: ${positions[sport.id]}`);
+
+                sportProfilesToSave.push(sportProfileData);
+
+                try {
                     await profileService.createUserSportProfile(user.id, sportProfileData);
-                    console.log(`Created sport profile for ${sport.name}:`, sportProfileData);
+                    console.log(`✅ Successfully saved ${sport.name} to Supabase`);
                 } catch (error) {
-                    console.log(`Error creating sport profile for ${sport.name} (expected if no Supabase):`, error);
+                    console.log(`❌ Error saving ${sport.name} to Supabase (expected if no connection):`, error.message);
                 }
             }
+
+            // Always save to local storage as backup/fallback
+            await saveToLocalStorage(sportProfilesToSave);
+            console.log('💾 Saved all sport profiles to local storage as backup');
 
             // Update main profile with favorite sports array
             try {
@@ -315,6 +386,30 @@ export default function PreferencesScreen({ navigation }) {
                             })}
                         </View>
                     </View>
+
+                    {/* Debug Section */}
+                    {selectedSports.length > 0 && (
+                        <View style={styles.section}>
+                            <Text style={styles.sectionTitle}>Debug Info</Text>
+                            <Text style={styles.debugText}>Selected Sports: {selectedSports.map(s => s.name).join(', ')}</Text>
+                            <Text style={styles.debugText}>Skill Levels: {JSON.stringify(skillLevels)}</Text>
+                            <Text style={styles.debugText}>Positions: {JSON.stringify(positions)}</Text>
+
+                            <TouchableOpacity
+                                style={styles.debugButton}
+                                onPress={() => {
+                                    console.log('=== DEBUG BUTTON PRESSED ===');
+                                    console.log('Current state:');
+                                    console.log('  selectedSports:', selectedSports);
+                                    console.log('  skillLevels:', skillLevels);
+                                    console.log('  positions:', positions);
+                                    Alert.alert('Debug', 'Check console for current state');
+                                }}
+                            >
+                                <Text style={styles.debugButtonText}>Log Current State</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
 
                     {/* Sport Details */}
                     {selectedSports.map((sport) => (
@@ -555,5 +650,18 @@ const createStyles = (colors) => StyleSheet.create({
     },
     bottomPadding: {
         height: 40,
+    },
+    debugButton: {
+        backgroundColor: colors.primary,
+        borderRadius: 8,
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        marginTop: 8,
+    },
+    debugButtonText: {
+        color: colors.white,
+        fontSize: 14,
+        fontWeight: '600',
+        textAlign: 'center',
     },
 });

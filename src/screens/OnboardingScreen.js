@@ -13,6 +13,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSport } from '../context/SportContext';
 import { profileService } from '../services/supabase';
 import AnimatedBackground from '../components/AnimatedBackground';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SPORTS = [
   { id: 'padel', name: 'Padel', icon: 'tennisball' },
@@ -140,16 +141,38 @@ export default function OnboardingScreen({ navigation }) {
       };
 
       // Create sport profiles for each selected sport
+      console.log('=== ONBOARDING SAVE DEBUG ===');
+      console.log('Selected sports:', selectedSports);
+      console.log('Skill levels:', skillLevels);
+      console.log('Positions:', positions);
+      
+      const sportProfilesToSave = [];
+      
       for (const sport of selectedSports) {
+        const sportProfileData = {
+          sport_id: sport.id,
+          skill_level: skillLevels[sport.id],
+          preferred_position: positions[sport.id],
+        };
+        
+        console.log(`Creating sport profile for ${sport.name}:`, sportProfileData);
+        sportProfilesToSave.push(sportProfileData);
+        
         try {
-          await profileService.createUserSportProfile(user.id, {
-            sport_id: sport.id,
-            skill_level: skillLevels[sport.id],
-            preferred_position: positions[sport.id],
-          });
+          await profileService.createUserSportProfile(user.id, sportProfileData);
+          console.log(`✅ Successfully saved ${sport.name} to Supabase from onboarding`);
         } catch (error) {
-          console.log('Error creating sport profile (expected if no Supabase):', error);
+          console.log(`❌ Error saving ${sport.name} to Supabase (expected if no connection):`, error.message);
         }
+      }
+      
+      // Always save to local storage as backup/fallback
+      try {
+        const key = `sport_profiles_${user.id}`;
+        await AsyncStorage.setItem(key, JSON.stringify(sportProfilesToSave));
+        console.log('💾 Successfully saved sport profiles to local storage from onboarding:', sportProfilesToSave);
+      } catch (error) {
+        console.log('❌ Error saving to local storage from onboarding:', error);
       }
 
       // Update main profile

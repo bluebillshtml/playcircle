@@ -318,6 +318,10 @@ export const profileService = {
 
   // Create user sport profile (with upsert capability)
   createUserSportProfile: async (userId, sportData) => {
+    console.log('=== createUserSportProfile called ===');
+    console.log('userId:', userId);
+    console.log('sportData:', sportData);
+    
     const profileData = {
       user_id: userId,
       sport_id: sportData.sport_id,
@@ -325,6 +329,8 @@ export const profileService = {
       preferred_position: sportData.preferred_position,
       updated_at: new Date().toISOString(),
     };
+
+    console.log('profileData to save:', profileData);
 
     const { data, error } = await supabase
       .from('user_sport_profiles')
@@ -335,7 +341,12 @@ export const profileService = {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error:', error);
+      throw error;
+    }
+    
+    console.log('Saved data:', data);
     return data;
   },
 
