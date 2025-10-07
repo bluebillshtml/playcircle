@@ -26,6 +26,7 @@ export const authService = {
           username: userData.username,
           first_name: userData.firstName,
           last_name: userData.lastName,
+          full_name: `${userData.firstName} ${userData.lastName}`.trim(),
           skill_level: userData.skillLevel || 'Beginner',
         }
       }

@@ -17,7 +17,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { supabase, profileService } from '../services/supabase';
-import NavigationButton from '../components/NavigationButton';
+
 import AnimatedBackground from '../components/AnimatedBackground';
 
 
@@ -144,7 +144,6 @@ export default function ProfileScreen() {
 
           <View style={styles.header}>
             <View style={styles.headerTop}>
-              <NavigationButton navigation={navigation} currentScreen="Profile" />
               <Text style={styles.headerTitle}>Profile</Text>
             </View>
 
@@ -322,8 +321,8 @@ const createStyles = (colors) => StyleSheet.create({
   headerTop: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 40,
-    gap: 16,
   },
   headerTitle: {
     fontSize: 24,

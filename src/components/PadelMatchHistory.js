@@ -240,7 +240,7 @@ export default function PadelMatchHistory({ userId, onMatchSelect }) {
 const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   loadingText: {
     color: colors.textSecondary,
@@ -260,6 +260,11 @@ const createStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.glassBorder,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   activeFilter: {
     backgroundColor: colors.primary,
@@ -298,9 +303,14 @@ const createStyles = (colors) => StyleSheet.create({
   },
   matchCard: {
     backgroundColor: colors.card,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: 24,
+    padding: 18,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
     borderWidth: 1,
     borderColor: colors.glassBorder,
   },
@@ -326,9 +336,9 @@ const createStyles = (colors) => StyleSheet.create({
   resultBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
     gap: 4,
   },
   resultText: {

@@ -11,7 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useSport } from '../context/SportContext';
-import NavigationButton from '../components/NavigationButton';
+
 import SportSelector from '../components/SportSelector';
 import AnimatedBackground from '../components/AnimatedBackground';
 
@@ -87,7 +87,6 @@ export default function CreateMatchScreen({ navigation }) {
         <View style={styles.invisibleHeader} />
       {/* Header */}
       <View style={styles.header}>
-        <NavigationButton navigation={navigation} currentScreen="Create" />
         <Text style={styles.headerTitle}>Create Match</Text>
       </View>
       
@@ -309,15 +308,14 @@ const createStyles = (colors) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    gap: 16,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: '700',
     color: colors.text,
-    flex: 1,
   },
   scrollView: {
     flex: 1,

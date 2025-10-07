@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View } from 'react-native';
 import { NavigationContainer, DarkTheme, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
@@ -24,6 +25,78 @@ import AppSettingsScreen from './src/screens/AppSettingsScreen';
 import HelpCenterScreen from './src/screens/HelpCenterScreen';
 
 const Stack = createNativeStackNavigator();
+const Tab = createBottomTabNavigator();
+
+// Bottom Tab Navigator for main app screens
+function MainTabNavigator() {
+  const { colors } = useTheme();
+
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName;
+
+          if (route.name === 'Home') {
+            iconName = focused ? 'home' : 'home-outline';
+          } else if (route.name === 'Matches') {
+            iconName = focused ? 'search' : 'search-outline';
+          } else if (route.name === 'Create') {
+            iconName = focused ? 'add-circle' : 'add-circle-outline';
+          } else if (route.name === 'Dashboard') {
+            iconName = focused ? 'trophy' : 'trophy-outline';
+          } else if (route.name === 'Profile') {
+            iconName = focused ? 'person' : 'person-outline';
+          }
+
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textSecondary,
+        tabBarStyle: {
+          backgroundColor: colors.card,
+          borderTopWidth: 1,
+          borderTopColor: colors.glassBorder,
+          paddingBottom: 8,
+          paddingTop: 8,
+          height: 70,
+        },
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '600',
+          marginTop: 4,
+        },
+        headerShown: false,
+      })}
+    >
+      <Tab.Screen 
+        name="Home" 
+        component={HomeScreen}
+        options={{ tabBarLabel: 'Home' }}
+      />
+      <Tab.Screen 
+        name="Matches" 
+        component={MatchesScreen}
+        options={{ tabBarLabel: 'Find' }}
+      />
+      <Tab.Screen 
+        name="Create" 
+        component={CreateMatchScreen}
+        options={{ tabBarLabel: 'Create' }}
+      />
+      <Tab.Screen 
+        name="Dashboard" 
+        component={DashboardScreen}
+        options={{ tabBarLabel: 'Stats' }}
+      />
+      <Tab.Screen 
+        name="Profile" 
+        component={ProfileScreen}
+        options={{ tabBarLabel: 'Profile' }}
+      />
+    </Tab.Navigator>
+  );
+}
 
 function AppContent() {
   const { colors } = useTheme();
@@ -36,9 +109,9 @@ function AppContent() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#B8E6D5' }}>
+    <View style={{ flex: 1, backgroundColor: '#1a1a1a' }}>
       <NavigationContainer>
-        <StatusBar style="light" backgroundColor="#B8E6D5" />
+        <StatusBar style="light" backgroundColor="#1a1a1a" />
         <Stack.Navigator>
           {!user ? (
             // Auth Stack - Show when user is not logged in
@@ -58,28 +131,8 @@ function AppContent() {
             // Main App Stack - Show when user is logged in
             <>
               <Stack.Screen
-                name="Home"
-                component={HomeScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="Dashboard"
-                component={DashboardScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="Matches"
-                component={MatchesScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="Create"
-                component={CreateMatchScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="Profile"
-                component={ProfileScreen}
+                name="MainTabs"
+                component={MainTabNavigator}
                 options={{ headerShown: false }}
               />
               <Stack.Screen
