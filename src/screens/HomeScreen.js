@@ -16,7 +16,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSport } from '../context/SportContext';
 import { matchService, profileService } from '../services/supabase';
 
-import SportSelector from '../components/SportSelector';
+
 import PadelMatchHistory from '../components/PadelMatchHistory';
 import AnimatedBackground from '../components/AnimatedBackground';
 
@@ -254,9 +254,7 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.fixedHeader}>
           {/* Header */}
           <View style={styles.header}>
-            <View style={styles.headerTop}>
-              <SportSelector navigation={navigation} />
-            </View>
+
             <View style={styles.headerText}>
               <Text style={styles.greeting}>{getGreeting()}</Text>
               <Text style={styles.subGreeting}>Ready to play {selectedSport.name}?</Text>
@@ -485,12 +483,7 @@ const createStyles = (colors) => StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 16,
   },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
+
   headerText: {
     width: '100%',
   },

@@ -16,9 +16,12 @@ import { useSport } from '../context/SportContext';
 
 const { width, height } = Dimensions.get('window');
 
-export default function SportSelector({ onSportChange, navigation }) {
+export default function SportSelector({ onSportChange, navigation, userSports }) {
   const { colors } = useTheme();
   const { selectedSport, changeSport, allSports } = useSport();
+  
+  // Use userSports if provided, otherwise use allSports
+  const availableSports = userSports && userSports.length > 0 ? userSports : allSports;
   const [modalVisible, setModalVisible] = useState(false);
   const [showTransition, setShowTransition] = useState(false);
   const [transitionSport, setTransitionSport] = useState(null);
@@ -467,7 +470,7 @@ export default function SportSelector({ onSportChange, navigation }) {
             </View>
 
             <ScrollView style={styles.sportsList} showsVerticalScrollIndicator={false}>
-              {allSports.map((sport) => (
+              {availableSports.map((sport) => (
                 <TouchableOpacity
                   key={sport.id}
                   style={[
@@ -515,6 +518,31 @@ export default function SportSelector({ onSportChange, navigation }) {
                   </BlurView>
                 </TouchableOpacity>
               ))}
+              
+              {/* Add More Sports Option - only show if userSports is provided */}
+              {userSports && userSports.length > 0 && (
+                <TouchableOpacity
+                  style={styles.addMoreOption}
+                  onPress={() => {
+                    closeModal();
+                    navigation?.navigate('Preferences');
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <BlurView intensity={20} tint="light" style={styles.addMoreOptionBlur}>
+                    <View style={styles.addMoreIcon}>
+                      <Ionicons name="add" size={24} color={colors.primary} />
+                    </View>
+                    <View style={styles.optionInfo}>
+                      <Text style={styles.addMoreText}>Add More Sports</Text>
+                      <Text style={styles.addMoreDescription}>
+                        Manage your sport preferences
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+                  </BlurView>
+                </TouchableOpacity>
+              )}
             </ScrollView>
           </Animated.View>
         </View>
@@ -815,5 +843,39 @@ const createStyles = (colors) => StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 8,
     elevation: 6,
+  },
+  addMoreOption: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  addMoreOptionBlur: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  addMoreIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    borderStyle: 'dashed',
+  },
+  addMoreText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.primary,
+    marginBottom: 2,
+  },
+  addMoreDescription: {
+    fontSize: 12,
+    color: colors.textSecondary,
   },
 });
