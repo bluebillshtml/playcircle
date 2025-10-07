@@ -1,22 +1,26 @@
-import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated, Dimensions, ImageBackground, Easing } from 'react-native';
+import React, { useEffect, useRef, memo } from 'react';
+import { View, StyleSheet, Animated, Dimensions, ImageBackground, Easing, AppState } from 'react-native';
 import { BlurView } from 'expo-blur';
 
 const { width, height } = Dimensions.get('window');
 
-export default function AnimatedBackground({ children }) {
+const AnimatedBackground = memo(({ children }) => {
   // Animated values - start with zoomed in state
   const wave1 = useRef(new Animated.Value(0)).current;
   const wave2 = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(1.2)).current;
+  const appState = useRef(AppState.currentState);
+  const wave1AnimRef = useRef(null);
+  const wave2AnimRef = useRef(null);
+  const scaleAnimRef = useRef(null);
 
   useEffect(() => {
     // Slow horizontal movement
-    const wave1Animation = Animated.loop(
+    wave1AnimRef.current = Animated.loop(
       Animated.sequence([
         Animated.timing(wave1, {
           toValue: 1,
-          duration: 40000, // Slower movement
+          duration: 40000,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
@@ -30,11 +34,11 @@ export default function AnimatedBackground({ children }) {
     );
 
     // Slow vertical movement
-    const wave2Animation = Animated.loop(
+    wave2AnimRef.current = Animated.loop(
       Animated.sequence([
         Animated.timing(wave2, {
           toValue: 1,
-          duration: 35000, // Slower movement
+          duration: 35000,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
@@ -48,11 +52,11 @@ export default function AnimatedBackground({ children }) {
     );
 
     // Slow zoom animation - always zoomed in
-    const scaleAnimation = Animated.loop(
+    scaleAnimRef.current = Animated.loop(
       Animated.sequence([
         Animated.timing(scale, {
           toValue: 1.3,
-          duration: 30000, // Very slow zoom
+          duration: 30000,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
@@ -65,15 +69,32 @@ export default function AnimatedBackground({ children }) {
       ])
     );
 
-    // Start animations immediately
-    wave1Animation.start();
-    wave2Animation.start();
-    scaleAnimation.start();
+    // Start animations
+    wave1AnimRef.current.start();
+    wave2AnimRef.current.start();
+    scaleAnimRef.current.start();
+
+    // Listen to app state changes to pause/resume animations
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        // App has come to foreground - resume animations
+        wave1AnimRef.current?.start();
+        wave2AnimRef.current?.start();
+        scaleAnimRef.current?.start();
+      } else if (nextAppState.match(/inactive|background/)) {
+        // App has gone to background - stop animations to save resources
+        wave1AnimRef.current?.stop();
+        wave2AnimRef.current?.stop();
+        scaleAnimRef.current?.stop();
+      }
+      appState.current = nextAppState;
+    });
 
     return () => {
-      wave1Animation.stop();
-      wave2Animation.stop();
-      scaleAnimation.stop();
+      wave1AnimRef.current?.stop();
+      wave2AnimRef.current?.stop();
+      scaleAnimRef.current?.stop();
+      subscription?.remove();
     };
   }, []);
 
@@ -117,7 +138,9 @@ export default function AnimatedBackground({ children }) {
       <View style={styles.content}>{children}</View>
     </View>
   );
-}
+});
+
+export default AnimatedBackground;
 
 const styles = StyleSheet.create({
   container: {

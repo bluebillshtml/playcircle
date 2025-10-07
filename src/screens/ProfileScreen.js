@@ -57,7 +57,7 @@ export default function ProfileScreen() {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
@@ -70,17 +70,12 @@ export default function ProfileScreen() {
         try {
           const fileName = `profile_${user.id}_${Date.now()}.jpg`;
 
-          // Create FormData for React Native
-          const formData = new FormData();
-          formData.append('file', {
-            uri: imageUri,
-            type: 'image/jpeg',
-            name: fileName,
-          });
+          // Read file as base64 for Supabase upload
+          const base64 = await fetch(imageUri).then(res => res.text());
 
           const { data: uploadData, error: uploadError } = await supabase.storage
             .from('profile-pictures')
-            .upload(fileName, formData, {
+            .upload(fileName, base64, {
               contentType: 'image/jpeg',
               upsert: true,
             });
