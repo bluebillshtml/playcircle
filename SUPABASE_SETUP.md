@@ -1,410 +1,337 @@
-# SportConnect - Supabase Database Setup Guide
+# Supabase Setup Guide for PlayCircle
 
-## Overview
+This document outlines the required Supabase database schema and configuration for the PlayCircle app.
 
-This database schema provides a complete backend for the SportConnect multi-sport court booking and match management application, including support for live scoring, game statistics, payments, and leaderboards across multiple sports.
+## Prerequisites
 
-## Setup Instructions
+1. Create a Supabase project at [supabase.com](https://supabase.com)
+2. Get your project URL and anon key
+3. Update the `.env.local` file with your credentials
 
-### 1. Create a Supabase Project
+## Environment Variables
 
-1. Go to [supabase.com](https://supabase.com) and create a new project
-2. Wait for the project to be provisioned
-3. Note your project URL and anon key
+Create a `.env.local` file in the root directory:
 
-### 2. Run the Schema
+```env
+EXPO_PUBLIC_SUPABASE_URL=your_supabase_project_url
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
 
-1. Open your Supabase project dashboard
-2. Navigate to **SQL Editor**
-3. Create a new query
-4. Copy the entire contents of `supabase_schema.sql`
-5. Paste and run the script
+## Database Schema
 
-### 3. Enable PostGIS (for geolocation features)
-
-The schema uses PostGIS for location-based features. It should be enabled automatically, but if not:
+### 1. Profiles Table
 
 ```sql
-CREATE EXTENSION IF NOT EXISTS postgis;
+-- Create profiles table
+CREATE TABLE profiles (
+  id UUID REFERENCES auth.users(id) PRIMARY KEY,
+  username TEXT UNIQUE,
+  full_name TEXT,
+  phone TEXT,
+  bio TEXT,
+  avatar_url TEXT,
+  favorite_sports TEXT[], -- Array of sport IDs
+  onboarding_completed BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable RLS
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+-- Create policies
+CREATE POLICY "Users can view own profile" ON profiles
+  FOR SELECT USING (auth.uid() = id);
+
+CREATE POLICY "Users can update own profile" ON profiles
+  FOR UPDATE USING (auth.uid() = id);
+
+CREATE POLICY "Users can insert own profile" ON profiles
+  FOR INSERT WITH CHECK (auth.uid() = id);
 ```
 
-### 4. Set up Authentication
-
-In your Supabase dashboard:
-
-1. Go to **Authentication** → **Providers**
-2. Enable Email provider (or other providers you want)
-3. Configure email templates if needed
-
-## Database Structure
-
-### Core Tables
-
-#### Users & Profiles
-- **profiles** - User profile information (extends auth.users)
-- **user_sport_profiles** - User preferences and stats per sport
-- **user_sport_stats** - Detailed user statistics and analytics per sport
-- **leaderboard** - Regional and global rankings per sport
-
-#### Venues & Courts
-- **venues** - Venue information with geolocation
-- **courts** - Court/field definitions within venues for specific sports
-- **court_schedules** - Operating hours by day of week
-- **court_reviews** - User reviews and ratings
-
-#### Matches
-- **matches** - Match details and scheduling (with sport_id)
-- **match_players** - Players who joined a match
-- **teams** - Team A and Team B for team matches
-- **team_players** - Players assigned to teams
-
-#### Payments
-- **payments** - Payment records with Stripe integration support
-
-#### Live Scoring
-- **match_games** - Individual games/sets in a match
-- **scoring_events** - Real-time scoring events
-- **player_match_stats** - Per-player statistics for each match
-
-#### Other
-- **notifications** - User notifications
-
-## Key Features
-
-### 1. Automatic User Stats Updates
-
-When a match is completed, user statistics are automatically updated:
-- Total matches played
-- Wins/losses
-- Win rate
-- Hours played
-
-### 2. Live Scoring System
-
-Track real-time match progress:
-- Points scored
-- Aces, winners, errors
-- Game-by-game statistics
-- Player performance metrics
-
-### 3. Geolocation Search
-
-Find courts near a location:
+### 2. User Sport Profiles Table
 
 ```sql
-SELECT * FROM find_nearby_courts(37.7749, -122.4194, 10);
--- lat, lng, radius in km
+-- Create user sport profiles table
+CREATE TABLE user_sport_profiles (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  sport_id TEXT NOT NULL,
+  skill_level TEXT NOT NULL CHECK (skill_level IN ('Beginner', 'Intermediate', 'Advanced', 'Expert')),
+  preferred_position TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, sport_id)
+);
+
+-- Enable RLS
+ALTER TABLE user_sport_profiles ENABLE ROW LEVEL SECURITY;
+
+-- Create policies
+CREATE POLICY "Users can view own sport profiles" ON user_sport_profiles
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can manage own sport profiles" ON user_sport_profiles
+  FOR ALL USING (auth.uid() = user_id);
 ```
 
-### 4. Leaderboard System
-
-Supports multiple leaderboard types:
-- Regional (by city/state/country)
-- Time-based (weekly, monthly, all-time)
-- Automatic rank calculation and trending
-
-### 5. Payment Integration
-
-Ready for Stripe integration:
-- Payment intent tracking
-- Refund support
-- Payment status tracking
-
-## Common Queries
-
-### Get User Profile with Stats
+### 3. User Stats Table
 
 ```sql
-SELECT
-    p.*,
-    us.total_hours_played,
-    us.win_rate,
-    us.current_win_streak
-FROM profiles p
-LEFT JOIN user_stats us ON us.user_id = p.id
-WHERE p.id = 'user-uuid';
+-- Create user stats table
+CREATE TABLE user_stats (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  sport_id TEXT NOT NULL,
+  total_matches INTEGER DEFAULT 0,
+  wins INTEGER DEFAULT 0,
+  losses INTEGER DEFAULT 0,
+  points INTEGER DEFAULT 0,
+  win_rate DECIMAL(5,2) DEFAULT 0.00,
+  total_hours_played DECIMAL(8,2) DEFAULT 0.00,
+  favorite_position TEXT DEFAULT 'Any',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, sport_id)
+);
+
+-- Enable RLS
+ALTER TABLE user_stats ENABLE ROW LEVEL SECURITY;
+
+-- Create policies
+CREATE POLICY "Users can view own stats" ON user_stats
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own stats" ON user_stats
+  FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own stats" ON user_stats
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
 ```
 
-### Get Upcoming Matches
+### 4. Courts Table
 
 ```sql
-SELECT
-    m.*,
-    c.name as court_name,
-    c.address as court_address,
-    m.current_players,
-    m.max_players
-FROM matches m
-LEFT JOIN courts c ON c.id = m.court_id
-WHERE m.status = 'open'
-    AND m.match_date >= CURRENT_DATE
-ORDER BY m.match_date, m.match_time
-LIMIT 20;
+-- Create courts table
+CREATE TABLE courts (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  address TEXT,
+  city TEXT,
+  state TEXT,
+  zip_code TEXT,
+  phone TEXT,
+  email TEXT,
+  website TEXT,
+  description TEXT,
+  amenities TEXT[],
+  sports TEXT[] NOT NULL, -- Array of supported sport IDs
+  price_per_hour DECIMAL(8,2),
+  image_url TEXT,
+  rating DECIMAL(3,2) DEFAULT 0.00,
+  total_reviews INTEGER DEFAULT 0,
+  latitude DECIMAL(10,8),
+  longitude DECIMAL(11,8),
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable RLS
+ALTER TABLE courts ENABLE ROW LEVEL SECURITY;
+
+-- Create policies
+CREATE POLICY "Anyone can view active courts" ON courts
+  FOR SELECT USING (is_active = TRUE);
 ```
 
-### Get Match with Players and Teams
+### 5. Matches Table
 
 ```sql
-SELECT
-    m.*,
-    json_agg(DISTINCT jsonb_build_object(
-        'id', mp.user_id,
-        'name', p.full_name,
-        'username', p.username,
-        'is_host', mp.is_host,
-        'payment_status', mp.payment_status
-    )) as players,
-    json_agg(DISTINCT jsonb_build_object(
-        'id', t.id,
-        'team_name', t.team_name,
-        'team_position', t.team_position,
-        'team_color', t.team_color,
-        'players', (
-            SELECT json_agg(jsonb_build_object(
-                'id', tp.user_id,
-                'name', p2.full_name
-            ))
-            FROM team_players tp
-            LEFT JOIN profiles p2 ON p2.id = tp.user_id
-            WHERE tp.team_id = t.id
-        )
-    )) FILTER (WHERE t.id IS NOT NULL) as teams
-FROM matches m
-LEFT JOIN match_players mp ON mp.match_id = m.id
-LEFT JOIN profiles p ON p.id = mp.user_id
-LEFT JOIN teams t ON t.match_id = m.id
-WHERE m.id = 'match-uuid'
-GROUP BY m.id;
+-- Create matches table
+CREATE TABLE matches (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  court_id UUID REFERENCES courts(id),
+  host_id UUID REFERENCES profiles(id),
+  sport_id TEXT NOT NULL,
+  match_date DATE NOT NULL,
+  match_time TIME NOT NULL,
+  duration_minutes INTEGER NOT NULL,
+  max_players INTEGER NOT NULL,
+  current_players INTEGER DEFAULT 1,
+  skill_level TEXT CHECK (skill_level IN ('Beginner', 'Intermediate', 'Advanced', 'Expert', 'Mixed')),
+  match_type TEXT CHECK (match_type IN ('casual', 'competitive')),
+  price_per_player DECIMAL(8,2),
+  description TEXT,
+  status TEXT DEFAULT 'open' CHECK (status IN ('open', 'full', 'in_progress', 'completed', 'cancelled')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable RLS
+ALTER TABLE matches ENABLE ROW LEVEL SECURITY;
+
+-- Create policies
+CREATE POLICY "Anyone can view open matches" ON matches
+  FOR SELECT USING (status IN ('open', 'full', 'in_progress'));
+
+CREATE POLICY "Users can create matches" ON matches
+  FOR INSERT WITH CHECK (auth.uid() = host_id);
+
+CREATE POLICY "Host can update own matches" ON matches
+  FOR UPDATE USING (auth.uid() = host_id);
 ```
 
-### Get User Match History
+### 6. User Matches Table (Join Table)
 
 ```sql
-SELECT
-    m.*,
-    c.name as court_name,
-    mp.payment_status,
-    CASE
-        WHEN mg.winner_team_id IS NOT NULL
-        AND EXISTS (
-            SELECT 1 FROM team_players tp
-            WHERE tp.team_id = mg.winner_team_id
-            AND tp.user_id = 'user-uuid'
-        ) THEN 'Win'
-        ELSE 'Loss'
-    END as result
-FROM match_players mp
-JOIN matches m ON m.id = mp.match_id
-LEFT JOIN courts c ON c.id = m.court_id
-LEFT JOIN match_games mg ON mg.match_id = m.id
-WHERE mp.user_id = 'user-uuid'
-    AND m.status = 'completed'
-ORDER BY m.match_date DESC, m.match_time DESC;
+-- Create user matches table
+CREATE TABLE user_matches (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  match_id UUID REFERENCES matches(id) ON DELETE CASCADE,
+  is_host BOOLEAN DEFAULT FALSE,
+  joined_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, match_id)
+);
+
+-- Enable RLS
+ALTER TABLE user_matches ENABLE ROW LEVEL SECURITY;
+
+-- Create policies
+CREATE POLICY "Users can view own match participations" ON user_matches
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can join matches" ON user_matches
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can leave matches" ON user_matches
+  FOR DELETE USING (auth.uid() = user_id);
 ```
 
-### Get Live Match Score
+## Database Functions and Triggers
+
+### 1. Auto-create Profile Trigger
 
 ```sql
-SELECT
-    m.id,
-    m.match_date,
-    m.match_time,
-    json_build_object(
-        'team_a', json_build_object(
-            'name', ta.team_name,
-            'color', ta.team_color,
-            'score', COALESCE(SUM(CASE WHEN mg.winner_team_id = ta.id THEN 1 ELSE 0 END), 0)
-        ),
-        'team_b', json_build_object(
-            'name', tb.team_name,
-            'color', tb.team_color,
-            'score', COALESCE(SUM(CASE WHEN mg.winner_team_id = tb.id THEN 1 ELSE 0 END), 0)
-        )
-    ) as teams,
-    json_agg(json_build_object(
-        'game_number', mg.game_number,
-        'team_a_score', mg.team_a_score,
-        'team_b_score', mg.team_b_score,
-        'status', mg.status
-    ) ORDER BY mg.game_number) as games
-FROM matches m
-LEFT JOIN teams ta ON ta.match_id = m.id AND ta.team_position = 'A'
-LEFT JOIN teams tb ON tb.match_id = m.id AND tb.team_position = 'B'
-LEFT JOIN match_games mg ON mg.match_id = m.id
-WHERE m.id = 'match-uuid'
-GROUP BY m.id, ta.team_name, ta.team_color, tb.team_name, tb.team_color;
+-- Function to create profile on user signup
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, username, full_name)
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1)),
+    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name')
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger to call the function
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 ```
 
-### Get Leaderboard
+### 2. Update Timestamps Trigger
 
 ```sql
-SELECT
-    l.rank,
-    l.points,
-    l.trend,
-    p.username,
-    p.full_name,
-    p.total_matches,
-    p.wins,
-    p.losses,
-    us.win_rate
-FROM leaderboard l
-JOIN profiles p ON p.id = l.user_id
-LEFT JOIN user_stats us ON us.user_id = l.user_id
-WHERE l.region = 'global'
-    AND l.period = 'all_time'
-ORDER BY l.rank
-LIMIT 100;
+-- Function to update timestamps
+CREATE OR REPLACE FUNCTION public.handle_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Apply to all tables
+CREATE TRIGGER handle_updated_at BEFORE UPDATE ON profiles
+  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+
+CREATE TRIGGER handle_updated_at BEFORE UPDATE ON user_sport_profiles
+  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+
+CREATE TRIGGER handle_updated_at BEFORE UPDATE ON user_stats
+  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+
+CREATE TRIGGER handle_updated_at BEFORE UPDATE ON courts
+  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+
+CREATE TRIGGER handle_updated_at BEFORE UPDATE ON matches
+  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 ```
 
-## React Native Integration
+## Sample Data
 
-### Install Supabase Client
+### Courts Sample Data
 
-```bash
-npm install @supabase/supabase-js
+```sql
+-- Insert sample courts
+INSERT INTO courts (name, address, city, state, sports, price_per_hour, image_url) VALUES
+('Downtown Padel Club', '123 Main St', 'San Francisco', 'CA', ARRAY['padel'], 40.00, 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=400&h=300&fit=crop'),
+('Sunset Sports Center', '456 Ocean Ave', 'San Francisco', 'CA', ARRAY['tennis', 'basketball'], 35.00, 'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=400&h=300&fit=crop'),
+('Elite Tennis Academy', '789 Park Blvd', 'San Francisco', 'CA', ARRAY['tennis'], 50.00, 'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?w=400&h=300&fit=crop');
 ```
 
-### Create Supabase Client
+## Authentication Setup
 
-```javascript
-// src/lib/supabase.js
-import { createClient } from '@supabase/supabase-js';
+1. Enable email authentication in Supabase Auth settings
+2. Configure email templates (optional)
+3. Set up OAuth providers if needed (Google, Apple, etc.)
 
-const supabaseUrl = 'YOUR_SUPABASE_URL';
-const supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY';
+## Storage Setup (Optional)
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+If you want to support user avatars:
+
+1. Create a storage bucket named `avatars`
+2. Set up RLS policies for the bucket
+3. Configure upload policies
+
+```sql
+-- Storage policies for avatars
+CREATE POLICY "Avatar images are publicly accessible" ON storage.objects
+  FOR SELECT USING (bucket_id = 'avatars');
+
+CREATE POLICY "Users can upload their own avatar" ON storage.objects
+  FOR INSERT WITH CHECK (bucket_id = 'avatars' AND auth.uid()::text = (storage.foldername(name))[1]);
+
+CREATE POLICY "Users can update their own avatar" ON storage.objects
+  FOR UPDATE USING (bucket_id = 'avatars' AND auth.uid()::text = (storage.foldername(name))[1]);
 ```
 
-### Example Usage
+## Testing the Setup
 
-```javascript
-// Get upcoming matches
-const getUpcomingMatches = async () => {
-  const { data, error } = await supabase
-    .from('matches')
-    .select(`
-      *,
-      court:courts(*),
-      match_players(count)
-    `)
-    .eq('status', 'open')
-    .gte('match_date', new Date().toISOString().split('T')[0])
-    .order('match_date', { ascending: true })
-    .limit(20);
+1. Run the app and try to sign up a new user
+2. Check if the profile is created automatically
+3. Complete the onboarding process
+4. Verify that user sport profiles are created
+5. Check that all data is properly stored in the database
 
-  return data;
-};
+## Notes
 
-// Join a match
-const joinMatch = async (matchId, userId) => {
-  const { data: match } = await supabase
-    .from('matches')
-    .select('price_per_player')
-    .eq('id', matchId)
-    .single();
+- The app is designed to work without Supabase (it will show errors in console but continue functioning)
+- All database operations are wrapped in try-catch blocks
+- The onboarding process will complete successfully even if database operations fail
+- This allows for development and testing without a fully configured Supabase instance
 
-  const { data, error } = await supabase
-    .from('match_players')
-    .insert({
-      match_id: matchId,
-      user_id: userId,
-      payment_amount: match.price_per_player,
-      payment_status: 'pending'
-    });
+## Troubleshooting
 
-  return data;
-};
+### Common Issues
 
-// Create team and join
-const joinTeam = async (matchId, userId, teamPosition) => {
-  // Get or create team
-  let { data: team } = await supabase
-    .from('teams')
-    .select('*')
-    .eq('match_id', matchId)
-    .eq('team_position', teamPosition)
-    .single();
+1. **RLS Policies**: Make sure Row Level Security policies are properly configured
+2. **User Metadata**: Ensure user metadata is being passed correctly during signup
+3. **Triggers**: Verify that the profile creation trigger is working
+4. **Permissions**: Check that the anon key has the necessary permissions
 
-  if (!team) {
-    const { data: newTeam } = await supabase
-      .from('teams')
-      .insert({
-        match_id: matchId,
-        team_name: `Team ${teamPosition}`,
-        team_position: teamPosition,
-        team_color: teamPosition === 'A' ? '#FF6B6B' : '#4ECDC4'
-      })
-      .select()
-      .single();
+### Debug Mode
 
-    team = newTeam;
-  }
+To enable debug mode for Supabase operations, add this to your `.env.local`:
 
-  // Join team
-  const { data, error } = await supabase
-    .from('team_players')
-    .insert({
-      team_id: team.id,
-      user_id: userId
-    });
-
-  return data;
-};
-
-// Get live match score with realtime updates
-const subscribeLiveScore = (matchId, callback) => {
-  const channel = supabase
-    .channel(`match:${matchId}`)
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'scoring_events',
-        filter: `match_id=eq.${matchId}`
-      },
-      (payload) => {
-        callback(payload);
-      }
-    )
-    .subscribe();
-
-  return channel;
-};
+```env
+EXPO_PUBLIC_SUPABASE_DEBUG=true
 ```
 
-## Realtime Features
-
-Supabase supports realtime subscriptions. Enable them for:
-
-1. **Live Scoring** - Subscribe to `scoring_events` table
-2. **Match Updates** - Subscribe to `matches` table
-3. **Team Changes** - Subscribe to `team_players` table
-4. **Notifications** - Subscribe to `notifications` table
-
-## Security Notes
-
-1. **Row Level Security (RLS)** is enabled on all tables
-2. Users can only update their own data
-3. Match hosts can manage their matches
-4. Payments are private to users
-5. All policies are production-ready
-
-## Next Steps
-
-1. Set up Stripe for payments
-2. Configure email templates for notifications
-3. Add Cloud Functions for:
-   - Payment processing
-   - Email notifications
-   - Leaderboard calculations (cron job)
-4. Enable Realtime for live scoring
-5. Add Storage bucket for court/user images
-
-## Support
-
-For issues or questions, refer to:
-- [Supabase Documentation](https://supabase.com/docs)
-- [PostGIS Documentation](https://postgis.net/docs/)
+This will log all database operations to the console for debugging purposes.

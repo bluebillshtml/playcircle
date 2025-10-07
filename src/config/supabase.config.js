@@ -4,6 +4,3 @@
 
 export const SUPABASE_URL = 'https://wfblfjjrmsvzlsoaphqi.supabase.co';
 export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndmYmxmampybXN2emxzb2FwaHFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1MTY0MTEsImV4cCI6MjA3NTA5MjQxMX0.tz5EfXrKof4N3AKecD398Ccs88uYMzTUZp7moQ3U-Tw';
-
-// The service_role key is stored here as a comment for your reference only - DO NOT use it in code
-// SERVICE_ROLE_KEY (backend only): eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndmYmxmampybXN2emxzb2FwaHFpIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1OTUxNjQxMSwiZXhwIjoyMDc1MDkyNDExfQ.NyRMkWuc7IY5oxKlpVvIru7UhXazwdTIE-uu4p4PjV4

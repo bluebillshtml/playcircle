@@ -15,7 +15,7 @@ export const AuthProvider = ({ children }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        loadProfile(session.user.id);
+        loadProfile(session.user.id, session);
       } else {
         setLoading(false);
       }
@@ -28,7 +28,7 @@ export const AuthProvider = ({ children }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        loadProfile(session.user.id);
+        loadProfile(session.user.id, session);
       } else {
         setProfile(null);
         setLoading(false);
@@ -38,7 +38,8 @@ export const AuthProvider = ({ children }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const loadProfile = async (userId) => {
+  const loadProfile = async (userId, userSession = null) => {
+    const currentSession = userSession || session;
     try {
       console.log('Loading profile for user:', userId);
       let profileData = await profileService.getProfile(userId);
@@ -60,13 +61,16 @@ export const AuthProvider = ({ children }) => {
         }
       }
 
-      // If still no profile data, create a default one
+      // If still no profile data, create a default one using user metadata
       if (!profileData) {
-        console.log('Using default profile data');
+        console.log('Using default profile data from user metadata');
+        const userMetadata = currentSession?.user?.user_metadata || {};
         profileData = {
           id: userId,
-          username: `user_${userId.slice(0, 8)}`,
-          full_name: 'User',
+          username: userMetadata.username || `user_${userId.slice(0, 8)}`,
+          full_name: userMetadata.full_name || userMetadata.name || null,
+          first_name: userMetadata.first_name || null,
+          last_name: userMetadata.last_name || null,
         };
       }
 
@@ -78,6 +82,8 @@ export const AuthProvider = ({ children }) => {
         last_name: profileData.last_name || (profileData.full_name ? profileData.full_name.split(' ').slice(1).join(' ') : ''),
         // Ensure skill_level exists (it might be in user_sport_profiles)
         skill_level: profileData.skill_level || 'Beginner',
+        // Ensure onboarding_completed exists
+        onboarding_completed: profileData.onboarding_completed || false,
       };
 
       console.log('Profile loaded successfully:', mappedProfile);
@@ -86,13 +92,15 @@ export const AuthProvider = ({ children }) => {
       // Ignore user_stats RLS errors
       if (error.code === '42501' && error.message?.includes('user_stats')) {
         console.log('Ignoring user_stats RLS error - using default profile');
+        const userMetadata = currentSession?.user?.user_metadata || {};
         setProfile({
           id: userId,
-          username: `user_${userId.slice(0, 8)}`,
-          full_name: 'User',
-          first_name: 'User',
-          last_name: '',
+          username: userMetadata.username || `user_${userId.slice(0, 8)}`,
+          full_name: userMetadata.full_name || userMetadata.name || null,
+          first_name: userMetadata.first_name || null,
+          last_name: userMetadata.last_name || null,
           skill_level: 'Beginner',
+          onboarding_completed: false,
         });
       } else {
         console.error('Error loading profile:', error);

@@ -12,7 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useSport } from '../context/SportContext';
 import { leaderboardService } from '../services/supabase';
-import NavigationButton from '../components/NavigationButton';
+
 import AnimatedBackground from '../components/AnimatedBackground';
 
 // Mock leaderboard data
@@ -152,9 +152,6 @@ export default function DashboardScreen({ navigation }) {
       
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <NavigationButton navigation={navigation} currentScreen="Dashboard" />
-        </View>
         <View style={styles.headerTitle}>
           <Text style={styles.title}>{selectedSport.name} Leaderboard</Text>
         </View>

@@ -26,6 +26,7 @@ export const authService = {
           username: userData.username,
           first_name: userData.firstName,
           last_name: userData.lastName,
+          full_name: `${userData.firstName} ${userData.lastName}`.trim(),
           skill_level: userData.skillLevel || 'Beginner',
         }
       }
@@ -313,6 +314,69 @@ export const profileService = {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
+  },
+
+  // Create user sport profile (with upsert capability)
+  createUserSportProfile: async (userId, sportData) => {
+    console.log('=== createUserSportProfile called ===');
+    console.log('userId:', userId);
+    console.log('sportData:', sportData);
+    
+    const profileData = {
+      user_id: userId,
+      sport_id: sportData.sport_id,
+      skill_level: sportData.skill_level,
+      preferred_position: sportData.preferred_position,
+      updated_at: new Date().toISOString(),
+    };
+
+    console.log('profileData to save:', profileData);
+
+    const { data, error } = await supabase
+      .from('user_sport_profiles')
+      .upsert(profileData, {
+        onConflict: 'user_id,sport_id',
+        ignoreDuplicates: false,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error:', error);
+      throw error;
+    }
+    
+    console.log('Saved data:', data);
+    return data;
+  },
+
+  // Get user sport profiles
+  getUserSportProfiles: async (userId) => {
+    const { data, error } = await supabase
+      .from('user_sport_profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      // If table doesn't exist or other database error, return empty array
+      if (error.code === 'PGRST116' || error.code === '42P01') {
+        return [];
+      }
+      throw error;
+    }
+    
+    return data || [];
+  },
+
+  // Delete user sport profiles
+  deleteUserSportProfiles: async (userId) => {
+    const { error } = await supabase
+      .from('user_sport_profiles')
+      .delete()
+      .eq('user_id', userId);
+
+    if (error) throw error;
   },
 };
 

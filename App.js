@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
 import { NavigationContainer, DarkTheme, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,6 +11,8 @@ import { SportProvider } from './src/context/SportContext';
 import SplashScreen from './src/screens/SplashScreen';
 import SignInScreen from './src/screens/SignInScreen';
 import SignUpScreen from './src/screens/SignUpScreen';
+import OnboardingScreen from './src/screens/OnboardingScreen';
+import PreferencesScreen from './src/screens/PreferencesScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import MatchesScreen from './src/screens/MatchesScreen';
 import CreateMatchScreen from './src/screens/CreateMatchScreen';
@@ -22,12 +24,28 @@ import PurchasesScreen from './src/screens/PurchasesScreen';
 import LanguagesScreen from './src/screens/LanguagesScreen';
 import AppSettingsScreen from './src/screens/AppSettingsScreen';
 import HelpCenterScreen from './src/screens/HelpCenterScreen';
+import NavigationButton from './src/components/NavigationButton';
 
 const Stack = createNativeStackNavigator();
 
+// Helper component to add NavigationButton to screens
+function ScreenWithNavButton({ component: Component, currentScreen, ...rest }) {
+  return (props) => {
+    return (
+      <View style={{ flex: 1 }}>
+        <Component {...props} {...rest} />
+        <NavigationButton 
+          navigation={props.navigation} 
+          currentScreen={currentScreen}
+        />
+      </View>
+    );
+  };
+}
+
 function AppContent() {
   const { colors } = useTheme();
-  const { user } = useAuth();
+  const { user, profile, loading } = useAuth();
   const [showSplash, setShowSplash] = useState(true);
 
   // Show splash screen for initial load
@@ -35,10 +53,18 @@ function AppContent() {
     return <SplashScreen onComplete={() => setShowSplash(false)} />;
   }
 
+  // Show loading while auth is initializing
+  if (loading) {
+    return <SplashScreen onComplete={() => {}} />;
+  }
+
+  // Check if user needs onboarding
+  const needsOnboarding = user && (!profile?.onboarding_completed);
+
   return (
-    <View style={{ flex: 1, backgroundColor: '#B8E6D5' }}>
+    <View style={{ flex: 1, backgroundColor: '#1a1a1a' }}>
       <NavigationContainer>
-        <StatusBar style="light" backgroundColor="#B8E6D5" />
+        <StatusBar style="light" backgroundColor="#1a1a1a" />
         <Stack.Navigator>
           {!user ? (
             // Auth Stack - Show when user is not logged in
@@ -54,32 +80,39 @@ function AppContent() {
                 options={{ headerShown: false }}
               />
             </>
+          ) : needsOnboarding ? (
+            // Onboarding Stack - Show when user needs onboarding
+            <Stack.Screen
+              name="Onboarding"
+              component={OnboardingScreen}
+              options={{ headerShown: false }}
+            />
           ) : (
             // Main App Stack - Show when user is logged in
             <>
               <Stack.Screen
                 name="Home"
-                component={HomeScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
-                name="Dashboard"
-                component={DashboardScreen}
+                component={ScreenWithNavButton({ component: HomeScreen, currentScreen: 'Home' })}
                 options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="Matches"
-                component={MatchesScreen}
+                component={ScreenWithNavButton({ component: MatchesScreen, currentScreen: 'Matches' })}
                 options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="Create"
-                component={CreateMatchScreen}
+                component={ScreenWithNavButton({ component: CreateMatchScreen, currentScreen: 'Create' })}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="Dashboard"
+                component={ScreenWithNavButton({ component: DashboardScreen, currentScreen: 'Dashboard' })}
                 options={{ headerShown: false }}
               />
               <Stack.Screen
                 name="Profile"
-                component={ProfileScreen}
+                component={ScreenWithNavButton({ component: ProfileScreen, currentScreen: 'Profile' })}
                 options={{ headerShown: false }}
               />
               <Stack.Screen
@@ -127,6 +160,11 @@ function AppContent() {
               <Stack.Screen
                 name="HelpCenter"
                 component={HelpCenterScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="Preferences"
+                component={PreferencesScreen}
                 options={{ headerShown: false }}
               />
             </>

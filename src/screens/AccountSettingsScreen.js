@@ -41,7 +41,7 @@ export default function AccountSettingsScreen({ navigation }) {
   const [phone, setPhone] = useState('');
   const [bio, setBio] = useState('');
   const [location, setLocation] = useState('');
-  const [skillLevel, setSkillLevel] = useState('Beginner');
+
 
   // Update form state when profile changes
   useEffect(() => {
@@ -53,7 +53,7 @@ export default function AccountSettingsScreen({ navigation }) {
       setPhone(profile.phone || '');
       setBio(profile.bio || '');
       setLocation(profile.location || '');
-      setSkillLevel(profile.skill_level || 'Beginner');
+
     }
     if (user) {
       setEmail(user.email || '');
@@ -62,7 +62,7 @@ export default function AccountSettingsScreen({ navigation }) {
 
   const styles = createStyles(colors);
 
-  const skillLevels = ['Beginner', 'Intermediate', 'Advanced', 'Professional'];
+
 
   // Auto-save to Supabase when any field changes
   useEffect(() => {
@@ -73,7 +73,7 @@ export default function AccountSettingsScreen({ navigation }) {
     }, 1000); // Debounce for 1 second
 
     return () => clearTimeout(saveTimeout);
-  }, [firstName, lastName, username, phone, bio, location, skillLevel]);
+  }, [firstName, lastName, username, phone, bio, location]);
 
   const handleAutoSave = async () => {
     try {
@@ -90,7 +90,6 @@ export default function AccountSettingsScreen({ navigation }) {
         phone: phone,
         bio: bio,
         location: location,
-        skill_level: skillLevel,
         full_name: `${firstName} ${lastName}`.trim() || 'User',
         updated_at: new Date().toISOString(),
       };
@@ -134,7 +133,6 @@ export default function AccountSettingsScreen({ navigation }) {
         phone: phone.trim(),
         bio: bio.trim(),
         location: location.trim(),
-        skill_level: skillLevel,
         full_name: `${firstName.trim()} ${lastName.trim()}`.trim() || 'User',
         updated_at: new Date().toISOString(),
       };
@@ -295,31 +293,7 @@ export default function AccountSettingsScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Skill Level */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Skill Level</Text>
-          <View style={styles.skillLevelContainer}>
-            {skillLevels.map((level) => (
-              <TouchableOpacity
-                key={level}
-                style={[
-                  styles.skillLevelButton,
-                  skillLevel === level && styles.skillLevelButtonActive,
-                ]}
-                onPress={() => setSkillLevel(level)}
-              >
-                <Text
-                  style={[
-                    styles.skillLevelText,
-                    skillLevel === level && styles.skillLevelTextActive,
-                  ]}
-                >
-                  {level}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+
 
         {/* Account Actions */}
         <View style={styles.section}>
@@ -458,34 +432,7 @@ const createStyles = (colors) => StyleSheet.create({
     marginTop: 4,
     fontStyle: 'italic',
   },
-  skillLevelContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  skillLevelButton: {
-    flex: 1,
-    minWidth: '45%',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: colors.background,
-    borderWidth: 2,
-    borderColor: colors.border,
-    alignItems: 'center',
-  },
-  skillLevelButtonActive: {
-    backgroundColor: colors.primary + '20',
-    borderColor: colors.primary,
-  },
-  skillLevelText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  skillLevelTextActive: {
-    color: colors.primary,
-  },
+
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',

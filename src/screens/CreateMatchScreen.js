@@ -11,9 +11,11 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useSport } from '../context/SportContext';
-import NavigationButton from '../components/NavigationButton';
+import { useAuth } from '../context/AuthContext';
+import { profileService } from '../services/supabase';
 import SportSelector from '../components/SportSelector';
 import AnimatedBackground from '../components/AnimatedBackground';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const COURTS = [
   { id: 1, name: 'Downtown Sports Club', pricePerHour: 40, sports: ['padel', 'tennis', 'pickleball'] },
@@ -25,9 +27,20 @@ const COURTS = [
 
 const DURATIONS = [60, 90, 120];
 
+const SPORTS = [
+  { id: 'padel', name: 'Padel', icon: 'tennisball', maxPlayers: 4 },
+  { id: 'tennis', name: 'Tennis', icon: 'tennisball-outline', maxPlayers: 4 },
+  { id: 'pickleball', name: 'Pickleball', icon: 'baseball', maxPlayers: 4 },
+  { id: 'basketball', name: 'Basketball', icon: 'basketball', maxPlayers: 10 },
+  { id: 'volleyball', name: 'Volleyball', icon: 'football', maxPlayers: 12 },
+];
+
 export default function CreateMatchScreen({ navigation }) {
   const { colors } = useTheme();
-  const { selectedSport } = useSport();
+  const { selectedSport, setSelectedSport } = useSport();
+  const { user, profile } = useAuth();
+  const [userSports, setUserSports] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedCourt, setSelectedCourt] = useState(null);
   const [matchType, setMatchType] = useState('casual');
   const [duration, setDuration] = useState(90);
@@ -36,10 +49,65 @@ export default function CreateMatchScreen({ navigation }) {
   const [description, setDescription] = useState('');
   const [totalPlayers, setTotalPlayers] = useState(selectedSport.maxPlayers);
 
+  // Load user's preferred sports
+  React.useEffect(() => {
+    loadUserSports();
+  }, [user, profile]);
+
   // Update total players when sport changes
   React.useEffect(() => {
     setTotalPlayers(selectedSport.maxPlayers);
   }, [selectedSport]);
+
+  const loadUserSports = async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Try to load sport profiles from database or local storage
+      let sportProfiles = [];
+      try {
+        sportProfiles = await profileService.getUserSportProfiles(user.id);
+      } catch (error) {
+        // Try local storage as fallback
+        try {
+          const key = `sport_profiles_${user.id}`;
+          const data = await AsyncStorage.getItem(key);
+          if (data) {
+            sportProfiles = JSON.parse(data);
+          }
+        } catch (localError) {
+          console.log('Error loading from local storage:', localError);
+        }
+      }
+
+      if (sportProfiles && sportProfiles.length > 0) {
+        // Use sport profiles data
+        const sports = sportProfiles.map(sp => 
+          SPORTS.find(s => s.id === sp.sport_id)
+        ).filter(Boolean);
+        setUserSports(sports);
+      } else if (profile?.favorite_sports && Array.isArray(profile.favorite_sports)) {
+        // Fallback to profile favorite sports
+        const sports = profile.favorite_sports.map(sportId => 
+          SPORTS.find(s => s.id === sportId)
+        ).filter(Boolean);
+        setUserSports(sports);
+      } else {
+        // No sports found, show all sports
+        setUserSports(SPORTS);
+      }
+    } catch (error) {
+      console.error('Error loading user sports:', error);
+      setUserSports(SPORTS);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Filter courts based on selected sport
   const availableCourts = COURTS.filter(court => 
@@ -87,12 +155,11 @@ export default function CreateMatchScreen({ navigation }) {
         <View style={styles.invisibleHeader} />
       {/* Header */}
       <View style={styles.header}>
-        <NavigationButton navigation={navigation} currentScreen="Create" />
         <Text style={styles.headerTitle}>Create Match</Text>
       </View>
       
       {/* Sport Selector */}
-      <SportSelector navigation={navigation} />
+      <SportSelector navigation={navigation} userSports={userSports} />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
@@ -309,15 +376,14 @@ const createStyles = (colors) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    gap: 16,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: '700',
     color: colors.text,
-    flex: 1,
   },
   scrollView: {
     flex: 1,
@@ -594,4 +660,5 @@ const createStyles = (colors) => StyleSheet.create({
     fontWeight: '700',
     letterSpacing: -0.3,
   },
+
 });

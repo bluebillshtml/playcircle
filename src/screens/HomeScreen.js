@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,6 @@ import {
   ScrollView,
   Dimensions,
   Image,
-  Animated,
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,8 +15,8 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useSport } from '../context/SportContext';
 import { matchService, profileService } from '../services/supabase';
-import NavigationButton from '../components/NavigationButton';
-import SportSelector from '../components/SportSelector';
+
+
 import PadelMatchHistory from '../components/PadelMatchHistory';
 import AnimatedBackground from '../components/AnimatedBackground';
 
@@ -96,7 +95,7 @@ export default function HomeScreen({ navigation }) {
   const { colors } = useTheme();
   const { user, profile } = useAuth();
   const { selectedSport } = useSport();
-  const scrollY = useRef(new Animated.Value(0)).current;
+
   const [upcomingMatches, setUpcomingMatches] = useState([]);
   const [pastMatches, setPastMatches] = useState([]);
   const [userStats, setUserStats] = useState(null);
@@ -105,6 +104,8 @@ export default function HomeScreen({ navigation }) {
   useEffect(() => {
     loadData();
   }, [user]);
+
+
 
   const loadData = async () => {
     try {
@@ -199,12 +200,17 @@ export default function HomeScreen({ navigation }) {
   };
 
   const getGreeting = () => {
-    if (profile?.full_name) {
+    if (profile?.full_name && profile.full_name.trim() !== '' && profile.full_name !== 'User') {
       return `Welcome back, ${profile.full_name}`;
-    } else if (profile?.first_name) {
+    } else if (profile?.first_name && profile.first_name.trim() !== '') {
       return `Welcome back, ${profile.first_name}`;
-    } else if (profile?.username) {
+    } else if (profile?.username && profile.username.trim() !== '') {
       return `Welcome back, ${profile.username}`;
+    } else if (user?.user_metadata?.full_name) {
+      // Check user metadata for name
+      return `Welcome back, ${user.user_metadata.full_name}`;
+    } else if (user?.user_metadata?.first_name) {
+      return `Welcome back, ${user.user_metadata.first_name}`;
     } else if (user?.email) {
       // Fallback to email if no profile name is available
       const emailName = user.email.split('@')[0];
@@ -244,99 +250,55 @@ export default function HomeScreen({ navigation }) {
   return (
     <AnimatedBackground>
       <View style={styles.container}>
-        <Animated.ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: true }
-        )}
-        scrollEventThrottle={16}
-      >
-      {/* Header */}
-      <Animated.View
-        style={[
-          styles.header,
-          {
-            opacity: scrollY.interpolate({
-              inputRange: [0, 100],
-              outputRange: [1, 0.3],
-              extrapolate: 'clamp',
-            }),
-          },
-        ]}
-      >
-        <View style={styles.headerTop}>
-          <NavigationButton navigation={navigation} currentScreen="Home" />
-          <SportSelector navigation={navigation} />
-        </View>
-        <View style={styles.headerText}>
-          <Text style={styles.greeting}>{getGreeting()}</Text>
-          <Text style={styles.subGreeting}>Ready to play {selectedSport.name}?</Text>
-        </View>
-      </Animated.View>
+        {/* Fixed Header Section */}
+        <View style={styles.fixedHeader}>
+          {/* Header */}
+          <View style={styles.header}>
 
-      {/* Quick Stats */}
-      <Animated.View
-        style={[
-          styles.quickStats,
-          {
-            opacity: scrollY.interpolate({
-              inputRange: [50, 150],
-              outputRange: [1, 0.2],
-              extrapolate: 'clamp',
-            }),
-          },
-        ]}
-      >
-        <View style={styles.statCard}>
-          <Ionicons name={selectedSport.icon} size={24} color={colors.primary} />
-          <Text style={styles.statNumber}>{userStats?.totalMatches || 0}</Text>
-          <Text style={styles.statLabel}>Matches</Text>
+            <View style={styles.headerText}>
+              <Text style={styles.greeting}>{getGreeting()}</Text>
+              <Text style={styles.subGreeting}>Ready to play {selectedSport.name}?</Text>
+            </View>
+          </View>
+
+          {/* Quick Stats */}
+          <View style={styles.quickStats}>
+            <View style={styles.statCard}>
+              <Ionicons name={selectedSport.icon} size={24} color={colors.primary} />
+              <Text style={styles.statNumber}>{userStats?.totalMatches || 0}</Text>
+              <Text style={styles.statLabel}>Matches</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Ionicons name="trophy" size={24} color={colors.warning} />
+              <Text style={styles.statNumber}>{userStats?.winRate || 0}%</Text>
+              <Text style={styles.statLabel}>Win Rate</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Ionicons name="time" size={24} color={colors.success} />
+              <Text style={styles.statNumber}>{userStats?.hoursPlayed || 0}h</Text>
+              <Text style={styles.statLabel}>Played</Text>
+            </View>
+          </View>
         </View>
-        <View style={styles.statCard}>
-          <Ionicons name="trophy" size={24} color={colors.warning} />
-          <Text style={styles.statNumber}>{userStats?.winRate || 0}%</Text>
-          <Text style={styles.statLabel}>Win Rate</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Ionicons name="time" size={24} color={colors.success} />
-          <Text style={styles.statNumber}>{userStats?.hoursPlayed || 0}h</Text>
-          <Text style={styles.statLabel}>Played</Text>
-        </View>
-      </Animated.View>
+
+        {/* Scrollable Content */}
+        <ScrollView
+          style={styles.scrollableContent}
+          showsVerticalScrollIndicator={false}
+        >
 
       {/* Upcoming Matches Section */}
       <View style={styles.section}>
-        <Animated.View
-          style={{
-            opacity: scrollY.interpolate({
-              inputRange: [100, 250],
-              outputRange: [1, 0.15],
-              extrapolate: 'clamp',
-            }),
-          }}
-        >
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Upcoming {selectedSport.name} Matches</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Matches')}>
-              <Text style={styles.seeAllText}>See All</Text>
-            </TouchableOpacity>
-          </View>
-        </Animated.View>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Upcoming {selectedSport.name} Matches</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Matches')}>
+            <Text style={styles.seeAllText}>See All</Text>
+          </TouchableOpacity>
+        </View>
 
         {upcomingMatches.length > 0 ? (
           upcomingMatches.map((match, index) => (
-            <Animated.View
-              key={match.id}
-              style={{
-                opacity: scrollY.interpolate({
-                  inputRange: [150 + (index * 100), 300 + (index * 100)],
-                  outputRange: [1, 0.15],
-                  extrapolate: 'clamp',
-                }),
-              }}
-            >
+            <View key={match.id}>
               <TouchableOpacity
                 style={styles.matchCard}
                 onPress={() =>
@@ -411,7 +373,7 @@ export default function HomeScreen({ navigation }) {
                 </View>
               </View>
               </TouchableOpacity>
-            </Animated.View>
+            </View>
           ))
         ) : (
            <View style={styles.emptyState}>
@@ -429,19 +391,9 @@ export default function HomeScreen({ navigation }) {
 
       {/* Past Matches Section */}
       <View style={styles.section}>
-        <Animated.View
-          style={{
-            opacity: scrollY.interpolate({
-              inputRange: [350, 500],
-              outputRange: [1, 0.15],
-              extrapolate: 'clamp',
-            }),
-          }}
-        >
-          <Text style={styles.sectionTitle}>Recent Activity</Text>
-        </Animated.View>
+        <Text style={styles.sectionTitle}>Recent Activity</Text>
         {selectedSport.id === 'padel' && user ? (
-          <View style={styles.padelHistoryContainer}>
+          <View style={styles.recentActivityCard}>
             <PadelMatchHistory
               userId={user.id}
               onMatchSelect={(match) => {
@@ -452,16 +404,7 @@ export default function HomeScreen({ navigation }) {
           </View>
         ) : (
           pastMatches.map((match, index) => (
-            <Animated.View
-              key={match.id}
-              style={{
-                opacity: scrollY.interpolate({
-                  inputRange: [400 + (index * 80), 550 + (index * 80)],
-                  outputRange: [1, 0.15],
-                  extrapolate: 'clamp',
-                }),
-              }}
-            >
+            <View key={match.id}>
               <TouchableOpacity style={styles.pastMatchCard}>
               <View style={styles.pastMatchLeft}>
                 <View
@@ -500,24 +443,13 @@ export default function HomeScreen({ navigation }) {
               </View>
               <Text style={styles.scoreText}>{match.score}</Text>
               </TouchableOpacity>
-            </Animated.View>
+            </View>
           ))
         )}
       </View>
 
       {/* Quick Action */}
-      <Animated.View
-        style={[
-          styles.actionsSection,
-          {
-            opacity: scrollY.interpolate({
-              inputRange: [500, 650],
-              outputRange: [1, 0.15],
-              extrapolate: 'clamp',
-            }),
-          },
-        ]}
-      >
+      <View style={styles.actionsSection}>
          <TouchableOpacity
            style={styles.actionButton}
            onPress={() => navigation.navigate('Matches')}
@@ -525,10 +457,10 @@ export default function HomeScreen({ navigation }) {
            <Ionicons name="search" size={26} color={colors.white} />
            <Text style={styles.actionButtonText}>Find {selectedSport.name} Players Near You</Text>
          </TouchableOpacity>
-      </Animated.View>
+      </View>
 
-      <View style={styles.bottomPadding} />
-      </Animated.ScrollView>
+          <View style={styles.bottomPadding} />
+        </ScrollView>
       </View>
     </AnimatedBackground>
   );
@@ -539,20 +471,19 @@ const createStyles = (colors) => StyleSheet.create({
     flex: 1,
     backgroundColor: 'transparent',
   },
-  scrollView: {
+  fixedHeader: {
+    backgroundColor: 'transparent',
+    paddingBottom: 16,
+  },
+  scrollableContent: {
     flex: 1,
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
+    paddingTop: 110,
+    paddingBottom: 16,
   },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
+
   headerText: {
     width: '100%',
   },
@@ -572,7 +503,7 @@ const createStyles = (colors) => StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 16,
     gap: 12,
-    marginBottom: 8,
+    marginBottom: 0,
   },
   statCard: {
     flex: 1,
@@ -895,5 +826,19 @@ const createStyles = (colors) => StyleSheet.create({
   },
   padelHistoryContainer: {
     height: 300, // Fixed height for the padel history component
+  },
+  recentActivityCard: {
+    backgroundColor: colors.card,
+    borderRadius: 24,
+    padding: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    overflow: 'hidden',
+    minHeight: 300,
   },
 });
