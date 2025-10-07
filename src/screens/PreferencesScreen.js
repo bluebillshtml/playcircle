@@ -342,7 +342,7 @@ export default function PreferencesScreen({ navigation }) {
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                         <Ionicons name="arrow-back" size={24} color={colors.text} />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Sport Preferences</Text>
+                    <Text style={styles.headerTitle}>Preferences</Text>
                     <TouchableOpacity onPress={handleSave} disabled={saving}>
                         {saving ? (
                             <ActivityIndicator size="small" color={colors.primary} />
@@ -387,30 +387,6 @@ export default function PreferencesScreen({ navigation }) {
                         </View>
                     </View>
 
-                    {/* Debug Section */}
-                    {selectedSports.length > 0 && (
-                        <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>Debug Info</Text>
-                            <Text style={styles.debugText}>Selected Sports: {selectedSports.map(s => s.name).join(', ')}</Text>
-                            <Text style={styles.debugText}>Skill Levels: {JSON.stringify(skillLevels)}</Text>
-                            <Text style={styles.debugText}>Positions: {JSON.stringify(positions)}</Text>
-
-                            <TouchableOpacity
-                                style={styles.debugButton}
-                                onPress={() => {
-                                    console.log('=== DEBUG BUTTON PRESSED ===');
-                                    console.log('Current state:');
-                                    console.log('  selectedSports:', selectedSports);
-                                    console.log('  skillLevels:', skillLevels);
-                                    console.log('  positions:', positions);
-                                    Alert.alert('Debug', 'Check console for current state');
-                                }}
-                            >
-                                <Text style={styles.debugButtonText}>Log Current State</Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
                     {/* Sport Details */}
                     {selectedSports.map((sport) => (
                         <View key={sport.id} style={styles.section}>
@@ -422,7 +398,6 @@ export default function PreferencesScreen({ navigation }) {
                             {/* Skill Level */}
                             <View style={styles.subsection}>
                                 <Text style={styles.subsectionTitle}>Skill Level</Text>
-                                <Text style={styles.debugText}>Current: {skillLevels[sport.id] || 'None'}</Text>
                                 <View style={styles.optionsGrid}>
                                     {SKILL_LEVELS.map((level) => {
                                         const isSelected = skillLevels[sport.id] === level;
@@ -450,7 +425,6 @@ export default function PreferencesScreen({ navigation }) {
                             {/* Preferred Position */}
                             <View style={styles.subsection}>
                                 <Text style={styles.subsectionTitle}>Preferred Position</Text>
-                                <Text style={styles.debugText}>Current: {positions[sport.id] || 'None'}</Text>
                                 <View style={styles.optionsGrid}>
                                     {POSITIONS[sport.id]?.map((position) => {
                                         const isSelected = positions[sport.id] === position;
@@ -650,18 +624,5 @@ const createStyles = (colors) => StyleSheet.create({
     },
     bottomPadding: {
         height: 40,
-    },
-    debugButton: {
-        backgroundColor: colors.primary,
-        borderRadius: 8,
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        marginTop: 8,
-    },
-    debugButtonText: {
-        color: colors.white,
-        fontSize: 14,
-        fontWeight: '600',
-        textAlign: 'center',
     },
 });

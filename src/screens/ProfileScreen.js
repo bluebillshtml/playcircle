@@ -118,150 +118,150 @@ export default function ProfileScreen() {
     <AnimatedBackground>
       <View style={styles.container}>
         <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <View style={styles.headerWrapper}>
-          {/* Zoomed and Blurred Profile Background */}
-          <View style={styles.headerBackgroundContainer}>
-            {profileImage ? (
-              <Image
-                source={{ uri: profileImage }}
-                style={styles.headerBackground}
-              />
-            ) : (
-              <Image
-                source={require('../../background1.jpg')}
-                style={styles.headerBackground}
-              />
-            )}
-            <View style={styles.headerBackgroundDarkOverlay} />
-            <BlurView intensity={60} tint="dark" style={styles.headerBackgroundBlur} />
-            <View style={styles.headerEdgeFade} />
-          </View>
-
-          <View style={styles.header}>
-            <View style={styles.headerTop}>
-              <Text style={styles.headerTitle}>Profile</Text>
+          style={styles.scrollView}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header */}
+          <View style={styles.headerWrapper}>
+            {/* Zoomed and Blurred Profile Background */}
+            <View style={styles.headerBackgroundContainer}>
+              {profileImage ? (
+                <Image
+                  source={{ uri: profileImage }}
+                  style={styles.headerBackground}
+                />
+              ) : (
+                <Image
+                  source={require('../../background1.jpg')}
+                  style={styles.headerBackground}
+                />
+              )}
+              <View style={styles.headerBackgroundDarkOverlay} />
+              <BlurView intensity={60} tint="dark" style={styles.headerBackgroundBlur} />
+              <View style={styles.headerEdgeFade} />
             </View>
 
-            {/* Profile Picture and Edit Button */}
-            <View style={styles.profileSection}>
-              <TouchableOpacity style={styles.avatarContainer} onPress={handlePickImage}>
-                {profileImage ? (
-                  <Image source={{ uri: profileImage }} style={styles.avatarImage} />
-                ) : (
-                  <Ionicons name="person" size={48} color="#FFFFFF" />
-                )}
-                <View style={styles.cameraIconContainer}>
-                  <Ionicons name="camera" size={20} color="#FFFFFF" />
+            <View style={styles.header}>
+              <View style={styles.headerTop}>
+                <Text style={styles.headerTitle}>Profile</Text>
+              </View>
+
+              {/* Profile Picture and Edit Button */}
+              <View style={styles.profileSection}>
+                <TouchableOpacity style={styles.avatarContainer} onPress={handlePickImage}>
+                  {profileImage ? (
+                    <Image source={{ uri: profileImage }} style={styles.avatarImage} />
+                  ) : (
+                    <Ionicons name="person" size={48} color="#FFFFFF" />
+                  )}
+                  <View style={styles.cameraIconContainer}>
+                    <Ionicons name="camera" size={20} color="#FFFFFF" />
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.editButton}>
+                  <Ionicons name="pencil" size={16} color="#FFFFFF" />
+                  <Text style={styles.editButtonText}>Edit Profile</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* User Info */}
+              <View style={styles.userInfoContainer}>
+                <Text style={styles.userName}>{getUserName()}</Text>
+                <Text style={styles.userEmail}>{getUserEmail()}</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Menu Items */}
+          <View style={styles.menuContainer}>
+            <BlurView intensity={40} tint="dark" style={styles.blurContainer}>
+              {/* Account Setting */}
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => navigation.navigate('AccountSettings')}
+              >
+                <View style={styles.menuItemLeft}>
+                  <Ionicons name="person-outline" size={24} color={colors.text} />
+                  <Text style={styles.menuItemText}>Account Setting</Text>
                 </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.editButton}>
-                <Ionicons name="pencil" size={16} color="#FFFFFF" />
-                <Text style={styles.editButtonText}>Edit Profile</Text>
-              </TouchableOpacity>
-            </View>
 
-            {/* User Info */}
-            <View style={styles.userInfoContainer}>
-              <Text style={styles.userName}>{getUserName()}</Text>
-              <Text style={styles.userEmail}>{getUserEmail()}</Text>
-            </View>
+              {/* Sport Preferences */}
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => navigation.navigate('Preferences')}
+              >
+                <View style={styles.menuItemLeft}>
+                  <Ionicons name="options-outline" size={24} color={colors.text} />
+                  <Text style={styles.menuItemText}>Preferences</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+
+              {/* Purchases */}
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => navigation.navigate('Purchases')}
+              >
+                <View style={styles.menuItemLeft}>
+                  <Ionicons name="cart-outline" size={24} color={colors.text} />
+                  <Text style={styles.menuItemText}>Purchases</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+
+              {/* Languages */}
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => navigation.navigate('Languages')}
+              >
+                <View style={styles.menuItemLeft}>
+                  <Ionicons name="globe-outline" size={24} color={colors.text} />
+                  <Text style={styles.menuItemText}>Languages</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+
+              {/* Settings */}
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => navigation.navigate('AppSettings')}
+              >
+                <View style={styles.menuItemLeft}>
+                  <Ionicons name="settings-outline" size={24} color={colors.text} />
+                  <Text style={styles.menuItemText}>Settings</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+
+              {/* Help Center */}
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => navigation.navigate('HelpCenter')}
+              >
+                <View style={styles.menuItemLeft}>
+                  <Ionicons name="help-circle-outline" size={24} color={colors.text} />
+                  <Text style={styles.menuItemText}>Help Center</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+
+              {/* Sign Out */}
+              <TouchableOpacity style={styles.menuItem} onPress={handleSignOut}>
+                <View style={styles.menuItemLeft}>
+                  <Ionicons name="log-out-outline" size={24} color={colors.error} />
+                  <Text style={[styles.menuItemText, { color: colors.error }]}>Sign Out</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </BlurView>
           </View>
-        </View>
 
-        {/* Menu Items */}
-        <View style={styles.menuContainer}>
-          <BlurView intensity={40} tint="dark" style={styles.blurContainer}>
-            {/* Account Setting */}
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => navigation.navigate('AccountSettings')}
-            >
-              <View style={styles.menuItemLeft}>
-                <Ionicons name="person-outline" size={24} color={colors.text} />
-                <Text style={styles.menuItemText}>Account Setting</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
-
-            {/* Sport Preferences */}
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => navigation.navigate('Preferences')}
-            >
-              <View style={styles.menuItemLeft}>
-                <Ionicons name="sports" size={24} color={colors.text} />
-                <Text style={styles.menuItemText}>Sport Preferences</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
-
-          {/* Purchases */}
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => navigation.navigate('Purchases')}
-          >
-            <View style={styles.menuItemLeft}>
-              <Ionicons name="cart-outline" size={24} color={colors.text} />
-              <Text style={styles.menuItemText}>Purchases</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
-
-          {/* Languages */}
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => navigation.navigate('Languages')}
-          >
-            <View style={styles.menuItemLeft}>
-              <Ionicons name="globe-outline" size={24} color={colors.text} />
-              <Text style={styles.menuItemText}>Languages</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
-
-          {/* Settings */}
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => navigation.navigate('AppSettings')}
-          >
-            <View style={styles.menuItemLeft}>
-              <Ionicons name="settings-outline" size={24} color={colors.text} />
-              <Text style={styles.menuItemText}>Settings</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
-
-          {/* Help Center */}
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => navigation.navigate('HelpCenter')}
-          >
-            <View style={styles.menuItemLeft}>
-              <Ionicons name="help-circle-outline" size={24} color={colors.text} />
-              <Text style={styles.menuItemText}>Help Center</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
-
-          {/* Sign Out */}
-          <TouchableOpacity style={styles.menuItem} onPress={handleSignOut}>
-            <View style={styles.menuItemLeft}>
-              <Ionicons name="log-out-outline" size={24} color={colors.error} />
-              <Text style={[styles.menuItemText, { color: colors.error }]}>Sign Out</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
-          </BlurView>
-        </View>
-
-        {/* Version */}
-        <Text style={styles.versionText}>Version 1.0.0</Text>
-      </ScrollView>
+          {/* Version */}
+          <Text style={styles.versionText}>Version 1.0.0</Text>
+        </ScrollView>
       </View>
     </AnimatedBackground>
   );
