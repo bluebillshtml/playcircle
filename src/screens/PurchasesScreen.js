@@ -13,7 +13,6 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import AnimatedBackground from '../components/AnimatedBackground';
 import { paymentService } from '../services/supabase';
-import AnimatedBackground from '../components/AnimatedBackground';
 
 export default function PurchasesScreen({ navigation }) {
   const { colors } = useTheme();

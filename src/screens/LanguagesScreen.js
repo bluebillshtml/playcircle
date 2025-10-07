@@ -12,7 +12,6 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import AnimatedBackground from '../components/AnimatedBackground';
 import { profileService } from '../services/supabase';
-import AnimatedBackground from '../components/AnimatedBackground';
 
 export default function LanguagesScreen({ navigation }) {
   const { colors } = useTheme();
