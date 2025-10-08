@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   ImageBackground,
   Image,
   Alert,
+  Animated,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,8 +28,10 @@ export default function ProfileScreen() {
   const { user, profile, signOut } = useAuth();
   const navigation = useNavigation();
   const [profileImage, setProfileImage] = useState(profile?.profile_picture_url || null);
+  const scrollY = useRef(new Animated.Value(0)).current;
 
   const styles = useMemo(() => createStyles(colors), [colors]);
+
 
   const getUserName = () => {
     if (profile?.first_name && profile?.last_name) {
@@ -130,7 +133,7 @@ export default function ProfileScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
-        bounces={true}
+        bounces={false}
       >
         {/* Header */}
         <View style={styles.headerWrapper}>
@@ -161,7 +164,6 @@ export default function ProfileScreen() {
           <View style={styles.header}>
             <View style={styles.headerTop}>
               <NavigationButton navigation={navigation} currentScreen="Profile" />
-              <Text style={styles.headerTitle}>Profile</Text>
             </View>
 
             {/* Profile Picture and Edit Button */}
@@ -479,10 +481,10 @@ const createStyles = (colors) => StyleSheet.create({
   },
   headerBackgroundContainer: {
     position: 'absolute',
-    top: -200,
+    top: -60,
     left: 0,
     right: 0,
-    height: 600,
+    height: 280,
     overflow: 'hidden',
   },
   headerBackground: {
