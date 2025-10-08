@@ -52,7 +52,7 @@ const UPCOMING_MATCHES = [
   },
 ];
 
-// Mock data for past matches
+// Mock data for past matches here. Delete later.
 const PAST_MATCHES = [
   {
     id: 1,
