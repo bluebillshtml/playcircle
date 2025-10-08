@@ -382,6 +382,18 @@ export default function ProfileScreen() {
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
+            
+              {/* Sport Preferences */}
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => navigation.navigate('Preferences')}
+              >
+                <View style={styles.menuItemLeft}>
+                  <Ionicons name="options-outline" size={24} color={colors.text} />
+                  <Text style={styles.menuItemText}>Preferences</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
 
             {/* Purchases */}
             <TouchableOpacity
