@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
   Alert,
   Animated,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -25,12 +25,25 @@ import AnimatedBackground from '../components/AnimatedBackground';
 
 export default function ProfileScreen() {
   const { colors } = useTheme();
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, refreshProfile } = useAuth();
   const navigation = useNavigation();
   const [profileImage, setProfileImage] = useState(profile?.profile_picture_url || null);
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const styles = useMemo(() => createStyles(colors), [colors]);
+
+  // Refresh profile when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      if (refreshProfile) {
+        refreshProfile();
+      }
+      // Update profile image if it changed
+      if (profile?.profile_picture_url) {
+        setProfileImage(profile.profile_picture_url);
+      }
+    }, [profile?.profile_picture_url, refreshProfile])
+  );
 
 
   const getUserName = () => {
@@ -162,28 +175,24 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.header}>
-            <View style={styles.headerTop}>
-              <NavigationButton navigation={navigation} currentScreen="Profile" />
-            </View>
-
             {/* Profile Picture and Edit Button */}
             <View style={styles.profileSection}>
               <TouchableOpacity style={styles.avatarContainer} onPress={handlePickImage}>
                 {profileImage ? (
                   <Image source={{ uri: profileImage }} style={styles.avatarImage} />
                 ) : (
-                  <Ionicons name="person" size={32} color="#FFFFFF" />
+                  <Ionicons name="person" size={24} color="#FFFFFF" />
                 )}
                 <View style={styles.cameraIconContainer}>
-                  <Ionicons name="camera" size={16} color="#FFFFFF" />
+                  <Ionicons name="camera" size={14} color="#FFFFFF" />
                 </View>
               </TouchableOpacity>
               <View style={styles.userInfoContainer}>
                 <Text style={styles.userName}>{getUserName()}</Text>
-                <Text style={styles.userEmail}>{getUserEmail()}</Text>
+                <Text style={styles.userEmail}>@{profile?.username || 'username'}</Text>
               </View>
               <TouchableOpacity style={styles.editButton} onPress={handlePickImage}>
-                <Ionicons name="pencil" size={16} color="#FFFFFF" />
+                <Ionicons name="pencil" size={14} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
           </View>
@@ -515,15 +524,9 @@ const createStyles = (colors) => StyleSheet.create({
   },
   header: {
     backgroundColor: 'transparent',
-    paddingTop: 60,
+    paddingTop: 110,
     paddingBottom: 24,
     paddingHorizontal: 20,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-    gap: 16,
   },
   headerTitle: {
     fontSize: 24,
@@ -534,12 +537,12 @@ const createStyles = (colors) => StyleSheet.create({
   profileSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 12,
   },
   avatarContainer: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: '#E5E5E5',
     alignItems: 'center',
     justifyContent: 'center',
@@ -549,22 +552,23 @@ const createStyles = (colors) => StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
     position: 'relative',
-    borderWidth: 3,
+    borderWidth: 2,
     borderColor: 'rgba(255, 255, 255, 0.5)',
+    alignSelf: 'center',
   },
   avatarImage: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
   },
   cameraIconContainer: {
     position: 'absolute',
     bottom: 0,
     right: 0,
     backgroundColor: '#667eea',
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
@@ -574,24 +578,26 @@ const createStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.3)',
+    alignSelf: 'center',
   },
   userInfoContainer: {
     flex: 1,
+    justifyContent: 'center',
   },
   userName: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '700',
     color: '#FFFFFF',
-    marginBottom: 4,
+    marginBottom: 2,
     letterSpacing: -0.5,
   },
   userEmail: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#FFFFFF',
     fontWeight: '400',
     opacity: 0.7,
