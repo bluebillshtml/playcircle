@@ -22,7 +22,7 @@ import AnimatedBackground from '../components/AnimatedBackground';
 
 const { width } = Dimensions.get('window');
 
-// Mock data for upcoming matches
+// Mock data for upcoming matches - delete this later
 const UPCOMING_MATCHES = [
   {
     id: 1,
