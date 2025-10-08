@@ -83,7 +83,7 @@ const PAST_MATCHES = [
   },
 ];
 
-// Stats data
+// Stats data fadsfsd
 const USER_STATS = {
   totalMatches: 24,
   winRate: 67,
