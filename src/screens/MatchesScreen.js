@@ -126,63 +126,63 @@ export default function MatchesScreen({ navigation }) {
     <AnimatedBackground>
       <View style={styles.container}>
         <View style={styles.spacer} />
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Available Matches</Text>
-      </View>
-      <View style={styles.filterContainer}>
-        <TouchableOpacity
-          style={[styles.filterButton, filter === 'all' && styles.filterActive]}
-          onPress={() => setFilter('all')}
-        >
-          <Text
-            style={[
-              styles.filterText,
-              filter === 'all' && styles.filterTextActive,
-            ]}
-          >
-            All Matches
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            filter === 'casual' && styles.filterActive,
-          ]}
-          onPress={() => setFilter('casual')}
-        >
-          <Text
-            style={[
-              styles.filterText,
-              filter === 'casual' && styles.filterTextActive,
-            ]}
-          >
-            Casual
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            filter === 'competitive' && styles.filterActive,
-          ]}
-          onPress={() => setFilter('competitive')}
-        >
-          <Text
-            style={[
-              styles.filterText,
-              filter === 'competitive' && styles.filterTextActive,
-            ]}
-          >
-            Competitive
-          </Text>
-        </TouchableOpacity>
-      </View>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Available Matches</Text>
+        </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.matchesList}
-        showsVerticalScrollIndicator={false}
-      >
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.matchesList}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.filterContainer}>
+            <TouchableOpacity
+              style={[styles.filterButton, filter === 'all' && styles.filterActive]}
+              onPress={() => setFilter('all')}
+            >
+              <Text
+                style={[
+                  styles.filterText,
+                  filter === 'all' && styles.filterTextActive,
+                ]}
+              >
+                All Matches
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.filterButton,
+                filter === 'casual' && styles.filterActive,
+              ]}
+              onPress={() => setFilter('casual')}
+            >
+              <Text
+                style={[
+                  styles.filterText,
+                  filter === 'casual' && styles.filterTextActive,
+                ]}
+              >
+                Casual
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.filterButton,
+                filter === 'competitive' && styles.filterActive,
+              ]}
+              onPress={() => setFilter('competitive')}
+            >
+              <Text
+                style={[
+                  styles.filterText,
+                  filter === 'competitive' && styles.filterTextActive,
+                ]}
+              >
+                Competitive
+              </Text>
+            </TouchableOpacity>
+          </View>
         {filteredMatches.map((match) => (
           <TouchableOpacity
             key={match.id}

@@ -153,6 +153,13 @@ export default function MatchDetailScreen({ navigation, route }) {
   const matchId = route.params?.matchId;
 
   useEffect(() => {
+    // Hide the native navigation header
+    navigation.setOptions({
+      headerShown: false,
+    });
+  }, [navigation]);
+
+  useEffect(() => {
     if (matchId) {
       loadMatchDetails();
     }
@@ -272,6 +279,28 @@ export default function MatchDetailScreen({ navigation, route }) {
     });
   };
 
+  const isToday = (dateString) => {
+    const today = new Date();
+    const date = new Date(dateString);
+    return today.toDateString() === date.toDateString();
+  };
+
+  const getDateDisplay = (dateString) => {
+    if (isToday(dateString)) {
+      return 'Today';
+    }
+    return formatDate(dateString);
+  };
+
+  const calculateEndTime = (startTime, durationMinutes) => {
+    const [hours, minutes] = startTime.split(':').map(Number);
+    const endMinutes = minutes + durationMinutes;
+    const endHours = hours + Math.floor(endMinutes / 60);
+    const finalMinutes = endMinutes % 60;
+    const finalHours = endHours % 24;
+    return `${String(finalHours).padStart(2, '0')}:${String(finalMinutes).padStart(2, '0')}`;
+  };
+
   const handleJoinMatch = async () => {
     if (!user) {
       Alert.alert('Error', 'You must be logged in to join a match');
@@ -331,7 +360,6 @@ export default function MatchDetailScreen({ navigation, route }) {
 
   const openDirections = () => {
     const { latitude, longitude } = match.coordinates;
-    const address = encodeURIComponent(match.courtAddress);
 
     const options = [
       { name: 'Apple Maps', url: `http://maps.apple.com/?daddr=${latitude},${longitude}` },
@@ -388,233 +416,236 @@ export default function MatchDetailScreen({ navigation, route }) {
   return (
     <AnimatedBackground>
       <View style={styles.container}>
-        <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Glassmorphic Court Preview */}
-        <View style={styles.courtPreviewSection}>
-          <ImageBackground
-            source={{ uri: match.courtImage }}
-            style={styles.courtImage}
-            imageStyle={styles.courtImageStyle}
+        {/* Custom Header */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
           >
-            <LinearGradient
-              colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.6)']}
-              style={styles.imageOverlay}
-            >
-              <View
-                style={[
-                  styles.typeBadge,
-                  match.type === 'competitive'
-                    ? styles.typeBadgeCompetitive
-                    : styles.typeBadgeCasual,
-                ]}
-              >
-                <BlurView intensity={20} tint={isDarkMode ? 'dark' : 'light'} style={styles.typeBadgeBlur}>
-                  <Text style={styles.typeBadgeText}>
-                    {match.type === 'competitive' ? 'COMPETITIVE' : 'CASUAL'}
-                  </Text>
-                </BlurView>
-              </View>
-            </LinearGradient>
-          </ImageBackground>
-
-          <BlurView intensity={isDarkMode ? 40 : 60} tint={isDarkMode ? 'dark' : 'light'} style={styles.courtInfoCard}>
-            <View style={styles.courtInfoHeader}>
-              <View style={styles.courtInfoLeft}>
-                <Text style={styles.courtName}>{match.courtName}</Text>
-                <View style={styles.ratingRow}>
-                  <Ionicons name="star" size={16} color={colors.warning} />
-                  <Text style={styles.ratingText}>{match.courtDetails.rating}</Text>
-                </View>
-              </View>
-              <BracketButton onPress={() => setBracketVisible(true)} />
-            </View>
-            <View style={styles.locationRow}>
-              <Ionicons name="location" size={14} color={colors.textSecondary} />
-              <Text style={styles.courtAddress}>{match.courtAddress}</Text>
-            </View>
-            <View style={styles.courtQuickInfo}>
-              <View style={styles.quickInfoItem}>
-                <Ionicons name="layers" size={14} color={colors.textSecondary} />
-                <Text style={styles.quickInfoText}>{match.courtDetails.surface}</Text>
-              </View>
-              <View style={styles.quickInfoItem}>
-                <Ionicons name="time" size={14} color={colors.textSecondary} />
-                <Text style={styles.quickInfoText}>{match.duration} min</Text>
-              </View>
-            </View>
-          </BlurView>
-        </View>
-
-        {/* Glassmorphic Action Buttons */}
-        <View style={styles.actionButtonsSection}>
-          <TouchableOpacity style={styles.primaryActionButton} onPress={openDirections} activeOpacity={0.8}>
-            <LinearGradient
-              colors={[colors.primary, colors.primary + 'DD']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.primaryActionGradient}
-            >
-              <Ionicons name="navigate" size={20} color="#FFFFFF" />
-              <Text style={styles.primaryActionButtonText}>Get Directions</Text>
-            </LinearGradient>
+            <BlurView intensity={isDarkMode ? 30 : 40} tint={isDarkMode ? 'dark' : 'light'} style={styles.headerButtonBlur}>
+              <Ionicons name="arrow-back" size={24} color={colors.text} />
+            </BlurView>
           </TouchableOpacity>
 
-          <View style={styles.secondaryActionsRow}>
-            <TouchableOpacity style={styles.secondaryActionButton} onPress={callCourt} activeOpacity={0.7}>
-              <BlurView intensity={isDarkMode ? 30 : 40} tint={isDarkMode ? 'dark' : 'light'} style={styles.secondaryActionBlur}>
-                <Ionicons name="call" size={20} color={colors.primary} />
-                <Text style={styles.secondaryActionButtonText}>Call</Text>
+          <Text style={styles.headerTitle}>Match Details</Text>
+
+          <View style={styles.headerActions}>
+            <TouchableOpacity style={styles.headerActionButton} activeOpacity={0.7}>
+              <BlurView intensity={isDarkMode ? 30 : 40} tint={isDarkMode ? 'dark' : 'light'} style={styles.headerButtonBlur}>
+                <Ionicons name="chatbubble-outline" size={22} color={colors.text} />
               </BlurView>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.secondaryActionButton} onPress={shareMatch} activeOpacity={0.7}>
-              <BlurView intensity={isDarkMode ? 30 : 40} tint={isDarkMode ? 'dark' : 'light'} style={styles.secondaryActionBlur}>
-                <Ionicons name="share-social" size={20} color={colors.primary} />
-                <Text style={styles.secondaryActionButtonText}>Share</Text>
+            <TouchableOpacity style={styles.headerActionButton} activeOpacity={0.7}>
+              <BlurView intensity={isDarkMode ? 30 : 40} tint={isDarkMode ? 'dark' : 'light'} style={styles.headerButtonBlur}>
+                <Ionicons name="location-outline" size={22} color={colors.text} />
               </BlurView>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.secondaryActionButton} activeOpacity={0.7}>
-              <BlurView intensity={isDarkMode ? 30 : 40} tint={isDarkMode ? 'dark' : 'light'} style={styles.secondaryActionBlur}>
-                <Ionicons name="bookmark-outline" size={20} color={colors.primary} />
-                <Text style={styles.secondaryActionButtonText}>Save</Text>
+            <TouchableOpacity style={styles.headerActionButton} onPress={shareMatch} activeOpacity={0.7}>
+              <BlurView intensity={isDarkMode ? 30 : 40} tint={isDarkMode ? 'dark' : 'light'} style={styles.headerButtonBlur}>
+                <Ionicons name="share-outline" size={22} color={colors.text} />
               </BlurView>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Glassmorphic Match Details */}
-        <BlurView intensity={isDarkMode ? 35 : 50} tint={isDarkMode ? 'dark' : 'light'} style={styles.section}>
-          <Text style={styles.sectionTitle}>Match Details</Text>
-          <View style={styles.detailRow}>
-            <BlurView intensity={isDarkMode ? 20 : 30} tint={isDarkMode ? 'dark' : 'light'} style={styles.detailIconContainer}>
-              <Ionicons name="calendar-outline" size={20} color={colors.primary} />
-            </BlurView>
-            <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Date & Time</Text>
-              <Text style={styles.detailValue}>
-                {formatDate(match.date)} at {match.time}
-              </Text>
-            </View>
-          </View>
-          <View style={styles.detailRow}>
-            <BlurView intensity={isDarkMode ? 20 : 30} tint={isDarkMode ? 'dark' : 'light'} style={styles.detailIconContainer}>
-              <Ionicons name="trophy-outline" size={20} color={colors.primary} />
-            </BlurView>
-            <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Skill Level</Text>
-              <Text style={styles.detailValue}>{match.skillLevel}</Text>
-            </View>
-          </View>
-          <View style={styles.detailRow}>
-            <BlurView intensity={isDarkMode ? 20 : 30} tint={isDarkMode ? 'dark' : 'light'} style={styles.detailIconContainer}>
-              <Ionicons name="people-outline" size={20} color={colors.primary} />
-            </BlurView>
-            <View style={styles.detailContent}>
-              <Text style={styles.detailLabel}>Players</Text>
-              <Text style={styles.detailValue}>
-                {match.joinedPlayers}/{match.totalPlayers} joined
-              </Text>
-            </View>
-          </View>
-        </BlurView>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
 
-        {/* Glassmorphic Description */}
-        <BlurView intensity={isDarkMode ? 35 : 50} tint={isDarkMode ? 'dark' : 'light'} style={styles.section}>
-          <Text style={styles.sectionTitle}>Description</Text>
-          <Text style={styles.description}>{match.description}</Text>
-        </BlurView>
+          {/* Tab Navigation */}
+          <View style={styles.tabContainer}>
+            <TouchableOpacity style={[styles.tab, styles.tabActive]} activeOpacity={0.7}>
+              <Text style={[styles.tabText, styles.tabTextActive]}>ABOUT</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.tab} activeOpacity={0.7}>
+              <Text style={styles.tabText}>ROSTER</Text>
+            </TouchableOpacity>
+          </View>
 
-        {/* Glassmorphic Players */}
-        <BlurView intensity={isDarkMode ? 35 : 50} tint={isDarkMode ? 'dark' : 'light'} style={styles.section}>
-          <Text style={styles.sectionTitle}>Players ({match.joinedPlayers})</Text>
-          {match.players.map((player) => (
-            <BlurView key={player.id} intensity={isDarkMode ? 25 : 35} tint={isDarkMode ? 'dark' : 'light'} style={styles.playerCard}>
+          {/* Overview Section */}
+          <BlurView intensity={isDarkMode ? 35 : 50} tint={isDarkMode ? 'dark' : 'light'} style={styles.overviewSection}>
+            <Text style={styles.sectionTitle}>Overview</Text>
+            <View style={styles.overviewGrid}>
+              <View style={styles.overviewItem}>
+                <BlurView intensity={isDarkMode ? 20 : 30} tint={isDarkMode ? 'dark' : 'light'} style={styles.overviewIconContainer}>
+                  <Ionicons name="calendar-outline" size={22} color={colors.primary} />
+                </BlurView>
+                <Text style={styles.overviewLabel}>{getDateDisplay(match.date)}</Text>
+              </View>
+              <View style={styles.overviewItem}>
+                <BlurView intensity={isDarkMode ? 20 : 30} tint={isDarkMode ? 'dark' : 'light'} style={styles.overviewIconContainer}>
+                  <Ionicons name="cash-outline" size={22} color={colors.primary} />
+                </BlurView>
+                <Text style={styles.overviewLabel}>${match.pricePerPlayer}</Text>
+              </View>
+            </View>
+            <View style={styles.overviewGrid}>
+              <View style={styles.overviewItem}>
+                <BlurView intensity={isDarkMode ? 20 : 30} tint={isDarkMode ? 'dark' : 'light'} style={styles.overviewIconContainer}>
+                  <Ionicons name="time-outline" size={22} color={colors.primary} />
+                </BlurView>
+                <Text style={styles.overviewLabel}>{match.time} - {calculateEndTime(match.time, match.duration)}</Text>
+              </View>
+              <View style={styles.overviewItem}>
+                <BlurView intensity={isDarkMode ? 20 : 30} tint={isDarkMode ? 'dark' : 'light'} style={styles.overviewIconContainer}>
+                  <Ionicons name="people-outline" size={22} color={colors.primary} />
+                </BlurView>
+                <Text style={styles.overviewLabel}>{match.joinedPlayers}-{match.totalPlayers} Players</Text>
+              </View>
+            </View>
+
+            {/* Progress Bar */}
+            <View style={styles.progressContainer}>
+              <View style={styles.progressHeader}>
+                <Text style={styles.spotsLabel}>Spots Available</Text>
+                <Text style={styles.spotsCount}>{match.joinedPlayers} of {match.totalPlayers}</Text>
+              </View>
+              <View style={styles.progressBarBg}>
+                <LinearGradient
+                  colors={[colors.primary, colors.primary + 'CC']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={[styles.progressBarFill, { width: `${(match.joinedPlayers / match.totalPlayers) * 100}%` }]}
+                />
+              </View>
+              <View style={styles.progressLabels}>
+                <Text style={styles.progressLabel}>Scheduled</Text>
+                <Text style={styles.progressLabel}>Confirmed</Text>
+                <Text style={styles.progressLabel}>Game Full</Text>
+              </View>
+              {match.totalPlayers - match.joinedPlayers > 0 && (
+                <View style={styles.spotsToGo}>
+                  <Text style={styles.spotsToGoText}>{match.totalPlayers - match.joinedPlayers} more to go!</Text>
+                </View>
+              )}
+            </View>
+          </BlurView>
+
+          {/* Organized By */}
+          <BlurView intensity={isDarkMode ? 35 : 50} tint={isDarkMode ? 'dark' : 'light'} style={styles.section}>
+            <Text style={styles.sectionTitle}>Organized by</Text>
+            <View style={styles.organizerCard}>
               <LinearGradient
                 colors={[colors.primary + '40', colors.primary + '20']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={styles.playerAvatar}
+                style={styles.organizerAvatar}
               >
-                <Ionicons name="person" size={24} color="#FFFFFF" />
+                <Ionicons name="person" size={28} color="#FFFFFF" />
               </LinearGradient>
-              <View style={styles.playerInfo}>
-                <View style={styles.playerNameRow}>
-                  <Text style={styles.playerName}>{player.name}</Text>
-                  {player.isHost && (
-                    <LinearGradient
-                      colors={[colors.primary, colors.primary + 'DD']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={styles.hostBadge}
-                    >
-                      <Text style={styles.hostBadgeText}>HOST</Text>
-                    </LinearGradient>
-                  )}
-                </View>
-                <View style={styles.playerRatingRow}>
-                  <Ionicons name="star" size={14} color={colors.warning} />
-                  <Text style={styles.playerRating}>{player.rating}</Text>
-                </View>
+              <View style={styles.organizerInfo}>
+                <Text style={styles.organizerName}>{match.host.name}</Text>
               </View>
-            </BlurView>
-          ))}
-        </BlurView>
+              <TouchableOpacity style={styles.contactButton} activeOpacity={0.8}>
+                <LinearGradient
+                  colors={[colors.primary, colors.primary + 'DD']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.contactButtonGradient}
+                >
+                  <Text style={styles.contactButtonText}>Contact</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </BlurView>
 
-        {/* Glassmorphic Facilities */}
-        <BlurView intensity={isDarkMode ? 35 : 50} tint={isDarkMode ? 'dark' : 'light'} style={styles.section}>
-          <Text style={styles.sectionTitle}>Court Facilities</Text>
-          <View style={styles.facilitiesGrid}>
-            {match.courtDetails.facilities.map((facility, index) => (
-              <View key={index} style={styles.facilityItem}>
-                <Ionicons
-                  name="checkmark-circle"
-                  size={18}
-                  color={colors.primary}
-                />
-                <Text style={styles.facilityText}>{facility}</Text>
+          {/* Location */}
+          <BlurView intensity={isDarkMode ? 35 : 50} tint={isDarkMode ? 'dark' : 'light'} style={styles.section}>
+            <Text style={styles.sectionTitle}>Location</Text>
+            <TouchableOpacity style={styles.locationCard} onPress={openDirections} activeOpacity={0.8}>
+              <View style={styles.locationIconContainer}>
+                <Ionicons name="car" size={28} color={colors.primary} />
               </View>
-            ))}
+              <View style={styles.locationInfo}>
+                <Text style={styles.locationTitle}>Get Directions</Text>
+                <Text style={styles.locationAddress}>{match.courtAddress}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={24} color={colors.textSecondary} />
+            </TouchableOpacity>
+
+            {/* Map Placeholder */}
+            <ImageBackground
+              source={{ uri: match.courtImage }}
+              style={styles.mapImage}
+              imageStyle={{ borderRadius: 16, marginTop: 16 }}
+            />
+          </BlurView>
+
+          {/* About This Event */}
+          <BlurView intensity={isDarkMode ? 35 : 50} tint={isDarkMode ? 'dark' : 'light'} style={styles.section}>
+            <Text style={styles.sectionTitle}>ABOUT THIS EVENT</Text>
+            <Text style={styles.aboutEventText}>{match.courtName}</Text>
+          </BlurView>
+
+          {/* What to Expect */}
+          <View style={styles.whatToExpectSection}>
+            <Text style={styles.sectionTitleMain}>What to expect</Text>
+            <View style={styles.expectCardsRow}>
+              <BlurView intensity={isDarkMode ? 35 : 50} tint={isDarkMode ? 'dark' : 'light'} style={styles.expectCard}>
+                <Text style={styles.expectTitle}>GAME TYPE</Text>
+                <Text style={styles.expectValue}>• {match.type === 'competitive' ? 'Co-ed' : 'Casual'}</Text>
+                <Text style={styles.expectValue}>• Min 4v4 - Max 5v5</Text>
+              </BlurView>
+
+              <BlurView intensity={isDarkMode ? 35 : 50} tint={isDarkMode ? 'dark' : 'light'} style={styles.expectCard}>
+                <Text style={styles.expectTitle}>GAME SKILL LEVEL</Text>
+                <View style={styles.skillLevelBadge}>
+                  <Text style={styles.skillLevelText}>{match.skillLevel}</Text>
+                </View>
+              </BlurView>
+            </View>
           </View>
+
+          {/* Facility Rules */}
+          <BlurView intensity={isDarkMode ? 35 : 50} tint={isDarkMode ? 'dark' : 'light'} style={styles.section}>
+            <Text style={styles.sectionTitle}>Facility rules:</Text>
+            <View style={styles.facilityRuleItem}>
+              <View style={styles.idIcon}>
+                <Text style={styles.idText}>ID</Text>
+              </View>
+              <Text style={styles.facilityRuleText}>ID required to check out game ball...</Text>
+            </View>
+          <TouchableOpacity style={styles.readMoreButton} activeOpacity={0.7}>
+            <Text style={styles.readMoreText}>Read more</Text>
+          </TouchableOpacity>
         </BlurView>
 
-        <View style={styles.spacer} />
+        {/* Glassmorphic Bottom Bar */}
+        <BlurView intensity={isDarkMode ? 50 : 70} tint={isDarkMode ? 'dark' : 'light'} style={styles.bottomBar}>
+          <View style={styles.priceContainer}>
+            <Text style={styles.priceLabel}>Your share</Text>
+            <LinearGradient
+              colors={[colors.primary, colors.primary + 'CC']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.priceGradient}
+            >
+              <Text style={styles.price}>${match.pricePerPlayer}</Text>
+            </LinearGradient>
+            <Text style={styles.totalCostText}>
+              (${match.totalCost} total ÷ {match.totalPlayers} players)
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.joinButton}
+            onPress={handleJoinMatch}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={[colors.primary, colors.primary + 'DD']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.joinButtonGradient}
+            >
+              <Ionicons name="checkmark-circle" size={22} color="#FFFFFF" />
+              <Text style={styles.joinButtonText}>Join & Pay</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </BlurView>
       </ScrollView>
-
-      {/* Glassmorphic Bottom Bar */}
-      <BlurView intensity={isDarkMode ? 50 : 70} tint={isDarkMode ? 'dark' : 'light'} style={styles.bottomBar}>
-        <View style={styles.priceContainer}>
-          <Text style={styles.priceLabel}>Your share</Text>
-          <LinearGradient
-            colors={[colors.primary, colors.primary + 'CC']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.priceGradient}
-          >
-            <Text style={styles.price}>${match.pricePerPlayer}</Text>
-          </LinearGradient>
-          <Text style={styles.totalCostText}>
-            (${match.totalCost} total ÷ {match.totalPlayers} players)
-          </Text>
-        </View>
-        <TouchableOpacity
-          style={styles.joinButton}
-          onPress={handleJoinMatch}
-          activeOpacity={0.8}
-        >
-          <LinearGradient
-            colors={[colors.primary, colors.primary + 'DD']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.joinButtonGradient}
-          >
-            <Ionicons name="checkmark-circle" size={22} color="#FFFFFF" />
-            <Text style={styles.joinButtonText}>Join & Pay</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-      </BlurView>
 
       {/* Payment Modal */}
       <Modal
@@ -730,7 +761,7 @@ export default function MatchDetailScreen({ navigation, route }) {
         visible={bracketVisible}
         onClose={() => setBracketVisible(false)}
         matchData={match}
-        onConfirm={(selectedTeams) => {
+        onConfirm={() => {
           // User confirmed their team selection, proceed to payment
           setModalVisible(true);
         }}
@@ -748,8 +779,338 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  content: {
-    paddingBottom: 120,
+  scrollContent: {
+    paddingBottom: 40,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 60,
+    paddingBottom: 16,
+    backgroundColor: 'transparent',
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)',
+  },
+  headerButtonBlur: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    textAlign: 'center',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  headerActionButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)',
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)',
+    marginBottom: 20,
+    marginHorizontal: 0,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderBottomWidth: 3,
+    borderBottomColor: 'transparent',
+  },
+  tabActive: {
+    borderBottomColor: colors.primary,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    letterSpacing: 1.2,
+  },
+  tabTextActive: {
+    color: colors.primary,
+  },
+  overviewSection: {
+    marginHorizontal: 16,
+    padding: 20,
+    marginBottom: 16,
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+  },
+  overviewGrid: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 16,
+  },
+  overviewItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  overviewIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+  },
+  overviewLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: colors.text,
+    flex: 1,
+  },
+  progressContainer: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+    position: 'relative',
+  },
+  progressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  spotsLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  spotsCount: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  progressBarBg: {
+    height: 24,
+    backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 12,
+  },
+  progressLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  progressLabel: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  spotsToGo: {
+    position: 'absolute',
+    top: -10,
+    left: '50%',
+    transform: [{ translateX: -50 }],
+    backgroundColor: colors.card,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  spotsToGoText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  organizerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  organizerAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  organizerInfo: {
+    flex: 1,
+  },
+  organizerName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  contactButton: {
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  contactButtonGradient: {
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+  },
+  contactButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  locationCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 16,
+    backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+    borderRadius: 16,
+    marginBottom: 16,
+  },
+  locationIconContainer: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  locationInfo: {
+    flex: 1,
+  },
+  locationTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  locationAddress: {
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  mapImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 16,
+  },
+  policyText: {
+    fontSize: 14,
+    color: colors.text,
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  aboutEventText: {
+    fontSize: 16,
+    color: colors.text,
+    lineHeight: 22,
+  },
+  readMoreButton: {
+    alignSelf: 'flex-start',
+  },
+  readMoreText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary,
+    textDecorationLine: 'underline',
+  },
+  whatToExpectSection: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+  },
+  sectionTitleMain: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 16,
+  },
+  expectCardsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  expectCard: {
+    flex: 1,
+    padding: 20,
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+  },
+  expectTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    letterSpacing: 1,
+    marginBottom: 12,
+  },
+  expectValue: {
+    fontSize: 14,
+    color: colors.text,
+    marginBottom: 6,
+    lineHeight: 20,
+  },
+  skillLevelBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.primary + '20',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+    marginTop: 4,
+  },
+  skillLevelText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  facilityRuleItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  idIcon: {
+    width: 40,
+    height: 28,
+    backgroundColor: '#9333EA',
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  idText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+  facilityRuleText: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.text,
   },
   courtPreviewSection: {
     marginBottom: 16,
@@ -936,10 +1297,11 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
     elevation: 5,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
     color: colors.text,
     marginBottom: 16,
+    letterSpacing: 0.5,
   },
   detailRow: {
     flexDirection: 'row',
@@ -1055,17 +1417,17 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
     height: 20,
   },
   bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    marginHorizontal: 16,
+    marginTop: 20,
+    marginBottom: 20,
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 20,
-    borderTopWidth: 1,
-    borderTopColor: isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 8,

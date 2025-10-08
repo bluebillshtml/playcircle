@@ -423,276 +423,282 @@ export default function PadelMatchDetailScreen({ navigation, route }) {
   return (
     <AnimatedBackground>
       <View style={styles.container}>
-      <View style={styles.spacer} />
-
-      {/* Glassmorphic Court Preview Section */}
-      <View style={styles.courtPreviewSection}>
-        <ImageBackground
-          source={{
-            uri: match.court?.image_url || 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800'
-          }}
-          style={styles.courtImage}
-          imageStyle={styles.courtImageStyle}
-        >
-          <LinearGradient
-            colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.6)']}
-            style={styles.imageOverlay}
-          >
-            <View
-              style={[
-                styles.typeBadge,
-                match.match_type === 'competitive'
-                  ? styles.typeBadgeCompetitive
-                  : styles.typeBadgeCasual,
-              ]}
-            >
-              <BlurView intensity={20} tint="dark" style={styles.typeBadgeBlur}>
-                <Text style={styles.typeBadgeText}>
-                  {match.match_type === 'competitive' ? 'COMPETITIVE' : 'CASUAL'}
-                </Text>
-              </BlurView>
-            </View>
-          </LinearGradient>
-        </ImageBackground>
-
-        <BlurView intensity={colors.isDarkMode ? 40 : 60} tint={colors.isDarkMode ? 'dark' : 'light'} style={styles.courtInfoCard}>
-          <View style={styles.courtInfoHeader}>
-            <View style={styles.courtInfoLeft}>
-              <Text style={styles.courtNameLarge}>{match.court?.name || 'Unknown Court'}</Text>
-              <View style={styles.ratingRow}>
-                <Ionicons name="star" size={16} color={colors.warning} />
-                <Text style={styles.ratingText}>{match.court?.rating || 4.5}</Text>
-              </View>
-            </View>
-          </View>
-          <View style={styles.locationRow}>
-            <Ionicons name="location" size={14} color={colors.textSecondary} />
-            <Text style={styles.courtAddress}>
-              {match.court?.address || 'Address not available'}
-            </Text>
-          </View>
-          <View style={styles.courtQuickInfo}>
-            <View style={styles.quickInfoItem}>
-              <Ionicons name="calendar" size={14} color={colors.textSecondary} />
-              <Text style={styles.quickInfoText}>{formatDate(match.match_date)}</Text>
-            </View>
-            <View style={styles.quickInfoItem}>
-              <Ionicons name="time" size={14} color={colors.textSecondary} />
-              <Text style={styles.quickInfoText}>
-                {formatTime(match.match_time)} • {match.duration_minutes} min
-              </Text>
-            </View>
-          </View>
-        </BlurView>
-      </View>
-
-      {/* Glassmorphic Action Buttons */}
-      <View style={styles.actionButtonsSection}>
-        <TouchableOpacity style={styles.primaryActionButton} onPress={openDirections} activeOpacity={0.8}>
-          <LinearGradient
-            colors={[colors.primary, colors.primary + 'DD']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.primaryActionGradient}
-          >
-            <Ionicons name="navigate" size={20} color="#FFFFFF" />
-            <Text style={styles.primaryActionButtonText}>Get Directions</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-
-        <View style={styles.secondaryActionsRow}>
-          <TouchableOpacity style={styles.secondaryActionButton} onPress={callCourt} activeOpacity={0.7}>
-            <BlurView intensity={colors.isDarkMode ? 30 : 40} tint={colors.isDarkMode ? 'dark' : 'light'} style={styles.secondaryActionBlur}>
-              <Ionicons name="call" size={20} color={colors.primary} />
-              <Text style={styles.secondaryActionButtonText}>Call</Text>
-            </BlurView>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.secondaryActionButton} onPress={shareMatch} activeOpacity={0.7}>
-            <BlurView intensity={colors.isDarkMode ? 30 : 40} tint={colors.isDarkMode ? 'dark' : 'light'} style={styles.secondaryActionBlur}>
-              <Ionicons name="share-social" size={20} color={colors.primary} />
-              <Text style={styles.secondaryActionButtonText}>Share</Text>
-            </BlurView>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.secondaryActionButton} onPress={saveMatch} activeOpacity={0.7}>
-            <BlurView intensity={colors.isDarkMode ? 30 : 40} tint={colors.isDarkMode ? 'dark' : 'light'} style={styles.secondaryActionBlur}>
-              <Ionicons name="bookmark-outline" size={20} color={colors.primary} />
-              <Text style={styles.secondaryActionButtonText}>Save</Text>
-            </BlurView>
-          </TouchableOpacity>
+        <View style={styles.header}>
+          <NavigationButton navigation={navigation} currentScreen="MatchDetail" />
         </View>
-      </View>
 
-      {/* Tab Navigation */}
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'details' && styles.activeTab]}
-          onPress={() => setActiveTab('details')}
+        <ScrollView 
+          style={styles.scrollView} 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
         >
-          <Text style={[styles.tabText, activeTab === 'details' && styles.activeTabText]}>
-            Details
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'scoring' && styles.activeTab]}
-          onPress={() => setActiveTab('scoring')}
-        >
-          <Text style={[styles.tabText, activeTab === 'scoring' && styles.activeTabText]}>
-            Scoring
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'stats' && styles.activeTab]}
-          onPress={() => setActiveTab('stats')}
-        >
-          <Text style={[styles.tabText, activeTab === 'stats' && styles.activeTabText]}>
-            Stats
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Tab Content */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {activeTab === 'details' && (
-          <View style={styles.detailsTab}>
-            {/* Players Section */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Players ({match.current_players}/{match.max_players})</Text>
-              <View style={styles.playersList}>
-                {match.match_players?.map((player) => (
-                  <View key={player.id} style={styles.playerItem}>
-                    <View style={styles.playerInfo}>
-                      <Text style={styles.playerName}>
-                        {player.user?.full_name || player.user?.username || 'Unknown Player'}
-                      </Text>
-                      {player.is_host && (
-                        <Text style={styles.hostBadge}>Host</Text>
-                      )}
-                    </View>
-                    <Text style={styles.playerJoined}>
-                      Joined {new Date(player.joined_at).toLocaleDateString()}
+          {/* Glassmorphic Court Preview Section */}
+          <View style={styles.courtPreviewSection}>
+            <ImageBackground
+              source={{
+                uri: match.court?.image_url || 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800'
+              }}
+              style={styles.courtImage}
+              imageStyle={styles.courtImageStyle}
+            >
+              <LinearGradient
+                colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.6)']}
+                style={styles.imageOverlay}
+              >
+                <View
+                  style={[
+                    styles.typeBadge,
+                    match.match_type === 'competitive'
+                      ? styles.typeBadgeCompetitive
+                      : styles.typeBadgeCasual,
+                  ]}
+                >
+                  <BlurView intensity={20} tint="dark" style={styles.typeBadgeBlur}>
+                    <Text style={styles.typeBadgeText}>
+                      {match.match_type === 'competitive' ? 'COMPETITIVE' : 'CASUAL'}
                     </Text>
+                  </BlurView>
+                </View>
+              </LinearGradient>
+            </ImageBackground>
+
+            <BlurView intensity={colors.isDarkMode ? 40 : 60} tint={colors.isDarkMode ? 'dark' : 'light'} style={styles.courtInfoCard}>
+              <View style={styles.courtInfoHeader}>
+                <View style={styles.courtInfoLeft}>
+                  <Text style={styles.courtNameLarge}>{match.court?.name || 'Unknown Court'}</Text>
+                  <View style={styles.ratingRow}>
+                    <Ionicons name="star" size={16} color={colors.warning} />
+                    <Text style={styles.ratingText}>{match.court?.rating || 4.5}</Text>
                   </View>
-                ))}
+                </View>
               </View>
-            </View>
+              <View style={styles.locationRow}>
+                <Ionicons name="location" size={14} color={colors.textSecondary} />
+                <Text style={styles.courtAddress}>
+                  {match.court?.address || 'Address not available'}
+                </Text>
+              </View>
+              <View style={styles.courtQuickInfo}>
+                <View style={styles.quickInfoItem}>
+                  <Ionicons name="calendar" size={14} color={colors.textSecondary} />
+                  <Text style={styles.quickInfoText}>{formatDate(match.match_date)}</Text>
+                </View>
+                <View style={styles.quickInfoItem}>
+                  <Ionicons name="time" size={14} color={colors.textSecondary} />
+                  <Text style={styles.quickInfoText}>
+                    {formatTime(match.match_time)} • {match.duration_minutes} min
+                  </Text>
+                </View>
+              </View>
+            </BlurView>
+          </View>
 
-            {/* Description */}
-            {match.description && (
+          {/* Glassmorphic Action Buttons */}
+          <View style={styles.actionButtonsSection}>
+            <TouchableOpacity style={styles.primaryActionButton} onPress={openDirections} activeOpacity={0.8}>
+              <LinearGradient
+                colors={[colors.primary, colors.primary + 'DD']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.primaryActionGradient}
+              >
+                <Ionicons name="navigate" size={20} color="#FFFFFF" />
+                <Text style={styles.primaryActionButtonText}>Get Directions</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <View style={styles.secondaryActionsRow}>
+              <TouchableOpacity style={styles.secondaryActionButton} onPress={callCourt} activeOpacity={0.7}>
+                <BlurView intensity={colors.isDarkMode ? 30 : 40} tint={colors.isDarkMode ? 'dark' : 'light'} style={styles.secondaryActionBlur}>
+                  <Ionicons name="call" size={20} color={colors.primary} />
+                  <Text style={styles.secondaryActionButtonText}>Call</Text>
+                </BlurView>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.secondaryActionButton} onPress={shareMatch} activeOpacity={0.7}>
+                <BlurView intensity={colors.isDarkMode ? 30 : 40} tint={colors.isDarkMode ? 'dark' : 'light'} style={styles.secondaryActionBlur}>
+                  <Ionicons name="share-social" size={20} color={colors.primary} />
+                  <Text style={styles.secondaryActionButtonText}>Share</Text>
+                </BlurView>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.secondaryActionButton} onPress={saveMatch} activeOpacity={0.7}>
+                <BlurView intensity={colors.isDarkMode ? 30 : 40} tint={colors.isDarkMode ? 'dark' : 'light'} style={styles.secondaryActionBlur}>
+                  <Ionicons name="bookmark-outline" size={20} color={colors.primary} />
+                  <Text style={styles.secondaryActionButtonText}>Save</Text>
+                </BlurView>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Tab Navigation */}
+          <View style={styles.tabContainer}>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'details' && styles.activeTab]}
+              onPress={() => setActiveTab('details')}
+            >
+              <Text style={[styles.tabText, activeTab === 'details' && styles.activeTabText]}>
+                Details
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'scoring' && styles.activeTab]}
+              onPress={() => setActiveTab('scoring')}
+            >
+              <Text style={[styles.tabText, activeTab === 'scoring' && styles.activeTabText]}>
+                Scoring
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'stats' && styles.activeTab]}
+              onPress={() => setActiveTab('stats')}
+            >
+              <Text style={[styles.tabText, activeTab === 'stats' && styles.activeTabText]}>
+                Stats
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Tab Content */}
+          {activeTab === 'details' && (
+            <View style={styles.detailsTab}>
+              {/* Players Section */}
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Description</Text>
-                <Text style={styles.description}>{match.description}</Text>
+                <Text style={styles.sectionTitle}>Players ({match.current_players}/{match.max_players})</Text>
+                <View style={styles.playersList}>
+                  {match.match_players?.map((player) => (
+                    <View key={player.id} style={styles.playerItem}>
+                      <View style={styles.playerInfo}>
+                        <Text style={styles.playerName}>
+                          {player.user?.full_name || player.user?.username || 'Unknown Player'}
+                        </Text>
+                        {player.is_host && (
+                          <Text style={styles.hostBadge}>Host</Text>
+                        )}
+                      </View>
+                      <Text style={styles.playerJoined}>
+                        Joined {new Date(player.joined_at).toLocaleDateString()}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
               </View>
-            )}
 
-            {/* Court Details */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Court Information</Text>
-              <View style={styles.courtDetails}>
-                <Text style={styles.courtAddress}>{match.court?.address}</Text>
-                <Text style={styles.courtCity}>{match.court?.city}</Text>
-                <Text style={styles.courtSurface}>Surface: {match.court?.surface_type}</Text>
-                <Text style={styles.courtIndoor}>
-                  {match.court?.is_indoor ? 'Indoor' : 'Outdoor'} Court
-                </Text>
+              {/* Description */}
+              {match.description && (
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Description</Text>
+                  <Text style={styles.description}>{match.description}</Text>
+                </View>
+              )}
+
+              {/* Court Details */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Court Information</Text>
+                <View style={styles.courtDetails}>
+                  <Text style={styles.courtAddress}>{match.court?.address}</Text>
+                  <Text style={styles.courtCity}>{match.court?.city}</Text>
+                  <Text style={styles.courtSurface}>Surface: {match.court?.surface_type}</Text>
+                  <Text style={styles.courtIndoor}>
+                    {match.court?.is_indoor ? 'Indoor' : 'Outdoor'} Court
+                  </Text>
+                </View>
+              </View>
+
+              {/* Pricing */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Pricing</Text>
+                <View style={styles.pricingContainer}>
+                  <Text style={styles.pricePerPlayer}>${match.price_per_player} per player</Text>
+                  <Text style={styles.totalCost}>Total: ${match.total_cost}</Text>
+                </View>
               </View>
             </View>
+          )}
 
-            {/* Pricing */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Pricing</Text>
-              <View style={styles.pricingContainer}>
-                <Text style={styles.pricePerPlayer}>${match.price_per_player} per player</Text>
-                <Text style={styles.totalCost}>Total: ${match.total_cost}</Text>
-              </View>
+          {activeTab === 'scoring' && (
+            <View style={styles.scoringTab}>
+              {teams ? (
+                <PadelScoring
+                  matchId={matchId}
+                  teams={teams}
+                  onScoreUpdate={loadMatchDetails}
+                />
+              ) : (
+                <View style={styles.noTeamsContainer}>
+                  <Ionicons name="people" size={48} color={colors.textSecondary} />
+                  <Text style={styles.noTeamsText}>Teams not set up yet</Text>
+                  <Text style={styles.noTeamsSubtext}>
+                    The host needs to organize teams before scoring can begin
+                  </Text>
+                </View>
+              )}
             </View>
-          </View>
-        )}
+          )}
 
-        {activeTab === 'scoring' && (
-          <View style={styles.scoringTab}>
-            {teams ? (
-              <PadelScoring
-                matchId={matchId}
-                teams={teams}
-                onScoreUpdate={loadMatchDetails}
-              />
+          {activeTab === 'stats' && (
+            <View style={styles.statsTab}>
+              {teams ? (
+                <PadelStats
+                  matchId={matchId}
+                  teams={teams}
+                />
+              ) : (
+                <View style={styles.noTeamsContainer}>
+                  <Ionicons name="people" size={48} color={colors.textSecondary} />
+                  <Text style={styles.noTeamsText}>Teams not set up yet</Text>
+                  <Text style={styles.noTeamsSubtext}>
+                    Statistics will be available once teams are organized
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Action Buttons */}
+          <View style={styles.actionButtons}>
+            {isUserInMatch() ? (
+              <TouchableOpacity
+                style={styles.leaveButton}
+                onPress={handleLeaveMatch}
+              >
+                <Ionicons name="exit" size={20} color={colors.error} />
+                <Text style={styles.leaveButtonText}>Leave Match</Text>
+              </TouchableOpacity>
             ) : (
-              <View style={styles.noTeamsContainer}>
-                <Ionicons name="people" size={48} color={colors.textSecondary} />
-                <Text style={styles.noTeamsText}>Teams not set up yet</Text>
-                <Text style={styles.noTeamsSubtext}>
-                  The host needs to organize teams before scoring can begin
+              <TouchableOpacity
+                style={styles.joinButton}
+                onPress={handleJoinMatch}
+                disabled={match.current_players >= match.max_players}
+              >
+                <Ionicons name="add" size={20} color={colors.white} />
+                <Text style={styles.joinButtonText}>
+                  {match.current_players >= match.max_players ? 'Match Full' : 'Join Match'}
                 </Text>
-              </View>
+              </TouchableOpacity>
+            )}
+
+            {canStartMatch() && (
+              <TouchableOpacity
+                style={styles.startButton}
+                onPress={startMatch}
+              >
+                <Ionicons name="play" size={20} color={colors.white} />
+                <Text style={styles.startButtonText}>Start Match</Text>
+              </TouchableOpacity>
             )}
           </View>
-        )}
+        </ScrollView>
 
-        {activeTab === 'stats' && (
-          <View style={styles.statsTab}>
-            {teams ? (
-              <PadelStats
-                matchId={matchId}
-                teams={teams}
-              />
-            ) : (
-              <View style={styles.noTeamsContainer}>
-                <Ionicons name="people" size={48} color={colors.textSecondary} />
-                <Text style={styles.noTeamsText}>Teams not set up yet</Text>
-                <Text style={styles.noTeamsSubtext}>
-                  Statistics will be available once teams are organized
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
-      </ScrollView>
-
-      {/* Action Buttons */}
-      <View style={styles.actionButtons}>
-        {isUserInMatch() ? (
-          <TouchableOpacity
-            style={styles.leaveButton}
-            onPress={handleLeaveMatch}
-          >
-            <Ionicons name="exit" size={20} color={colors.error} />
-            <Text style={styles.leaveButtonText}>Leave Match</Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            style={styles.joinButton}
-            onPress={handleJoinMatch}
-            disabled={match.current_players >= match.max_players}
-          >
-            <Ionicons name="add" size={20} color={colors.white} />
-            <Text style={styles.joinButtonText}>
-              {match.current_players >= match.max_players ? 'Match Full' : 'Join Match'}
-            </Text>
-          </TouchableOpacity>
-        )}
-
-        {canStartMatch() && (
-          <TouchableOpacity
-            style={styles.startButton}
-            onPress={startMatch}
-          >
-            <Ionicons name="play" size={20} color={colors.white} />
-            <Text style={styles.startButtonText}>Start Match</Text>
-          </TouchableOpacity>
-        )}
+        {/* Team Bracket Modal */}
+        <TeamBracketOverlay
+          visible={bracketVisible}
+          onClose={() => setBracketVisible(false)}
+          matchData={match}
+          onConfirm={() => {
+            setBracketVisible(false);
+            loadMatchDetails();
+          }}
+        />
       </View>
-
-      {/* Team Bracket Modal */}
-      <TeamBracketOverlay
-        visible={bracketVisible}
-        onClose={() => setBracketVisible(false)}
-        matchData={match}
-        onConfirm={() => {
-          setBracketVisible(false);
-          loadMatchDetails();
-        }}
-      />
-    </View>
     </AnimatedBackground>
   );
 }
@@ -702,22 +708,25 @@ const createStyles = (colors) => StyleSheet.create({
     flex: 1,
     backgroundColor: 'transparent',
   },
-  spacer: {
-    height: 8,
-  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
+    paddingTop: 60,
     paddingBottom: 16,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 40,
   },
   courtPreviewSection: {
     marginBottom: 16,
     overflow: 'hidden',
     borderRadius: 24,
     marginHorizontal: 16,
-    marginTop: 0,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
@@ -967,11 +976,8 @@ const createStyles = (colors) => StyleSheet.create({
     color: colors.primary,
     fontWeight: '600',
   },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
   detailsTab: {
+    paddingHorizontal: 20,
     paddingBottom: 20,
   },
   section: {
@@ -1063,10 +1069,9 @@ const createStyles = (colors) => StyleSheet.create({
     color: colors.primary,
   },
   scoringTab: {
-    flex: 1,
+    paddingHorizontal: 20,
   },
   noTeamsContainer: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 60,
@@ -1082,12 +1087,10 @@ const createStyles = (colors) => StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     marginTop: 8,
+    paddingHorizontal: 20,
   },
   statsTab: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 60,
+    paddingHorizontal: 20,
   },
   comingSoon: {
     fontSize: 16,
@@ -1098,6 +1101,7 @@ const createStyles = (colors) => StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 20,
     paddingVertical: 16,
+    paddingBottom: 32,
     gap: 12,
   },
   joinButton: {
