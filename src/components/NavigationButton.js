@@ -281,11 +281,6 @@ const createStyles = (colors) => StyleSheet.create({
     top: Platform.OS === 'ios' ? 40 : (StatusBar.currentHeight ? StatusBar.currentHeight + 5 : 45),
     left: 20,
     zIndex: 1000,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
   },
   navButton: {
     width: 52,
@@ -295,15 +290,12 @@ const createStyles = (colors) => StyleSheet.create({
     padding: 8,
     backgroundColor: colors.card,
     borderRadius: 26,
-    borderWidth: 1.5,
-    borderColor: colors.glassBorder,
+    borderWidth: 0,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
-    // Add backdrop blur effect for better visibility
-    backdropFilter: 'blur(10px)',
   },
   hamburgerContainer: {
     width: 24,
