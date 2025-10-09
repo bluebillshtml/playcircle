@@ -37,13 +37,19 @@ export default function PadelScoring({ matchId, teams, onScoreUpdate }) {
     try {
       setLoading(true);
       const liveScore = await scoringService.getLiveScore(matchId);
-      setGames(liveScore);
+      
+      // Ensure liveScore is an array
+      const gamesArray = Array.isArray(liveScore) ? liveScore : [];
+      setGames(gamesArray);
       
       // Find current active game
-      const activeGame = liveScore.find(game => game.status === 'active');
-      setCurrentGame(activeGame);
+      const activeGame = gamesArray.find(game => game.status === 'active');
+      setCurrentGame(activeGame || null);
     } catch (error) {
       console.error('Error loading live score:', error);
+      // Set empty arrays on error to prevent crashes
+      setGames([]);
+      setCurrentGame(null);
     } finally {
       setLoading(false);
     }
@@ -88,12 +94,18 @@ export default function PadelScoring({ matchId, teams, onScoreUpdate }) {
   };
 
   const getSetScore = () => {
+    if (!Array.isArray(games) || !teams?.teamA || !teams?.teamB) {
+      return '0-0';
+    }
     const teamASets = games.filter(g => g.winner_team_id === teams.teamA.id).length;
     const teamBSets = games.filter(g => g.winner_team_id === teams.teamB.id).length;
     return `${teamASets}-${teamBSets}`;
   };
 
   const getMatchWinner = () => {
+    if (!Array.isArray(games) || !teams?.teamA || !teams?.teamB) {
+      return null;
+    }
     const teamASets = games.filter(g => g.winner_team_id === teams.teamA.id).length;
     const teamBSets = games.filter(g => g.winner_team_id === teams.teamB.id).length;
     

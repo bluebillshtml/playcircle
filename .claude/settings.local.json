@@ -55,7 +55,8 @@
       "Bash(git log:*)",
       "Read(//tmp/**)",
       "Read(//var/folders/zh/mgnlh1hn21b0xgd16v22vh140000gn/T/TemporaryItems/NSIRD_screencaptureui_whnTU1/**)",
-      "Read(//var/folders/zh/mgnlh1hn21b0xgd16v22vh140000gn/T/TemporaryItems/NSIRD_screencaptureui_UFEFtJ/**)"
+      "Read(//var/folders/zh/mgnlh1hn21b0xgd16v22vh140000gn/T/TemporaryItems/NSIRD_screencaptureui_UFEFtJ/**)",
+      "Read(//var/folders/zh/mgnlh1hn21b0xgd16v22vh140000gn/T/TemporaryItems/NSIRD_screencaptureui_GzPjiG/**)"
     ],
     "deny": [],
     "ask": []

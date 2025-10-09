@@ -324,23 +324,26 @@ export default function HomeScreen({ navigation }) {
       <View style={styles.container}>
         {/* Fixed Header Section */}
         <View style={styles.fixedHeader}>
-          {/* Header */}
+          {/* Header with Menu, Search, and Notification */}
           <View style={styles.header}>
-            <Text style={styles.discoverTitle}>Discover</Text>
-            <TouchableOpacity style={styles.notificationButton}>
-              <Ionicons name="notifications-outline" size={24} color={colors.text} />
+            <TouchableOpacity style={styles.menuButton}>
+              <Ionicons name="menu" size={28} color={colors.text} />
             </TouchableOpacity>
-          </View>
 
-          {/* Search Bar */}
-          <View style={styles.searchContainer}>
-            <Ionicons name="search" size={20} color={colors.textSecondary} />
-            <Text style={styles.searchPlaceholder}>Search games</Text>
-            <TouchableOpacity
-              style={styles.filterButton}
-              onPress={() => setFilterModalVisible(true)}
-            >
-              <Ionicons name="options-outline" size={20} color="#FFFFFF" />
+            {/* Search Bar */}
+            <View style={styles.searchContainer}>
+              <Ionicons name="search" size={20} color={colors.textSecondary} />
+              <Text style={styles.searchPlaceholder}>Search games</Text>
+              <TouchableOpacity
+                style={styles.filterButton}
+                onPress={() => setFilterModalVisible(true)}
+              >
+                <Ionicons name="options-outline" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity style={styles.notificationButton}>
+              <Ionicons name="notifications-outline" size={28} color={colors.text} />
             </TouchableOpacity>
           </View>
 
@@ -641,35 +644,38 @@ const createStyles = (colors) => StyleSheet.create({
   header: {
     paddingHorizontal: 20,
     paddingTop: 60,
-    paddingBottom: 16,
+    paddingBottom: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 12,
   },
-  discoverTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: colors.text,
-    letterSpacing: -0.5,
+  menuButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   notificationButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
   searchContainer: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.card,
-    marginHorizontal: 20,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderRadius: 24,
     gap: 12,
-    marginBottom: 16,
+    height: 48,
   },
   searchPlaceholder: {
     flex: 1,

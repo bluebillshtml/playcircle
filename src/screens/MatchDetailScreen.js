@@ -468,32 +468,29 @@ export default function MatchDetailScreen({ navigation, route }) {
           {/* Overview Section */}
           <BlurView intensity={isDarkMode ? 35 : 50} tint={isDarkMode ? 'dark' : 'light'} style={styles.overviewSection}>
             <Text style={styles.sectionTitle}>Overview</Text>
-            <View style={styles.overviewGrid}>
-              <View style={styles.overviewItem}>
-                <BlurView intensity={isDarkMode ? 20 : 30} tint={isDarkMode ? 'dark' : 'light'} style={styles.overviewIconContainer}>
-                  <Ionicons name="calendar-outline" size={22} color={colors.primary} />
-                </BlurView>
-                <Text style={styles.overviewLabel}>{getDateDisplay(match.date)}</Text>
+            
+            {/* Single Card Container for Overview Info */}
+            <View style={styles.overviewCard}>
+              <View style={styles.overviewRow}>
+                <View style={styles.overviewItem}>
+                  <Ionicons name="calendar-outline" size={24} color={colors.primary} />
+                  <Text style={styles.overviewLabel}>{getDateDisplay(match.date)}</Text>
+                </View>
+                <View style={styles.overviewItem}>
+                  <Ionicons name="cash-outline" size={24} color={colors.primary} />
+                  <Text style={styles.overviewLabel}>${match.pricePerPlayer.toFixed(2)}</Text>
+                </View>
               </View>
-              <View style={styles.overviewItem}>
-                <BlurView intensity={isDarkMode ? 20 : 30} tint={isDarkMode ? 'dark' : 'light'} style={styles.overviewIconContainer}>
-                  <Ionicons name="cash-outline" size={22} color={colors.primary} />
-                </BlurView>
-                <Text style={styles.overviewLabel}>${match.pricePerPlayer}</Text>
-              </View>
-            </View>
-            <View style={styles.overviewGrid}>
-              <View style={styles.overviewItem}>
-                <BlurView intensity={isDarkMode ? 20 : 30} tint={isDarkMode ? 'dark' : 'light'} style={styles.overviewIconContainer}>
-                  <Ionicons name="time-outline" size={22} color={colors.primary} />
-                </BlurView>
-                <Text style={styles.overviewLabel}>{match.time} - {calculateEndTime(match.time, match.duration)}</Text>
-              </View>
-              <View style={styles.overviewItem}>
-                <BlurView intensity={isDarkMode ? 20 : 30} tint={isDarkMode ? 'dark' : 'light'} style={styles.overviewIconContainer}>
-                  <Ionicons name="people-outline" size={22} color={colors.primary} />
-                </BlurView>
-                <Text style={styles.overviewLabel}>{match.joinedPlayers}-{match.totalPlayers} Players</Text>
+              
+              <View style={styles.overviewRow}>
+                <View style={styles.overviewItem}>
+                  <Ionicons name="time-outline" size={24} color={colors.primary} />
+                  <Text style={styles.overviewLabel}>{match.time} - {calculateEndTime(match.time, match.duration)}</Text>
+                </View>
+                <View style={styles.overviewItem}>
+                  <Ionicons name="people-outline" size={24} color={colors.primary} />
+                  <Text style={styles.overviewLabel}>{match.joinedPlayers}-{match.totalPlayers} Players</Text>
+                </View>
               </View>
             </View>
 
@@ -503,6 +500,13 @@ export default function MatchDetailScreen({ navigation, route }) {
                 <Text style={styles.spotsLabel}>Spots Available</Text>
                 <Text style={styles.spotsCount}>{match.joinedPlayers} of {match.totalPlayers}</Text>
               </View>
+              
+              {match.totalPlayers - match.joinedPlayers > 0 && (
+                <View style={styles.spotsToGoBadge}>
+                  <Text style={styles.spotsToGoText}>{match.totalPlayers - match.joinedPlayers} more to go!</Text>
+                </View>
+              )}
+              
               <View style={styles.progressBarBg}>
                 <LinearGradient
                   colors={[colors.primary, colors.primary + 'CC']}
@@ -516,11 +520,6 @@ export default function MatchDetailScreen({ navigation, route }) {
                 <Text style={styles.progressLabel}>Confirmed</Text>
                 <Text style={styles.progressLabel}>Game Full</Text>
               </View>
-              {match.totalPlayers - match.joinedPlayers > 0 && (
-                <View style={styles.spotsToGo}>
-                  <Text style={styles.spotsToGoText}>{match.totalPlayers - match.joinedPlayers} more to go!</Text>
-                </View>
-              )}
             </View>
           </BlurView>
 
@@ -578,6 +577,26 @@ export default function MatchDetailScreen({ navigation, route }) {
           <BlurView intensity={isDarkMode ? 35 : 50} tint={isDarkMode ? 'dark' : 'light'} style={styles.section}>
             <Text style={styles.sectionTitle}>ABOUT THIS EVENT</Text>
             <Text style={styles.aboutEventText}>{match.courtName}</Text>
+            
+            {match.description && (
+              <>
+                <View style={styles.sectionDivider} />
+                <Text style={styles.eventDescription}>{match.description}</Text>
+              </>
+            )}
+            
+            {/* Facility Rules */}
+            <View style={styles.sectionDivider} />
+            <Text style={styles.facilityTitle}>Facility rules:</Text>
+            <View style={styles.facilityRuleItem}>
+              <View style={styles.idIcon}>
+                <Text style={styles.idText}>ID</Text>
+              </View>
+              <Text style={styles.facilityRuleText}>ID required to check out game ball...</Text>
+            </View>
+            <TouchableOpacity style={styles.readMoreButton} activeOpacity={0.7}>
+              <Text style={styles.readMoreText}>Read more</Text>
+            </TouchableOpacity>
           </BlurView>
 
           {/* What to Expect */}
@@ -599,36 +618,19 @@ export default function MatchDetailScreen({ navigation, route }) {
             </View>
           </View>
 
-          {/* Facility Rules */}
+          {/* Payment & Cancellation Policy */}
           <BlurView intensity={isDarkMode ? 35 : 50} tint={isDarkMode ? 'dark' : 'light'} style={styles.section}>
-            <Text style={styles.sectionTitle}>Facility rules:</Text>
-            <View style={styles.facilityRuleItem}>
-              <View style={styles.idIcon}>
-                <Text style={styles.idText}>ID</Text>
-              </View>
-              <Text style={styles.facilityRuleText}>ID required to check out game ball...</Text>
-            </View>
-          <TouchableOpacity style={styles.readMoreButton} activeOpacity={0.7}>
-            <Text style={styles.readMoreText}>Read more</Text>
-          </TouchableOpacity>
-        </BlurView>
+            <Text style={styles.sectionTitle}>Payment & cancellation policy</Text>
+            <Text style={styles.policyText}>
+              Make sure you're comfortable with our policy before joining a game.
+            </Text>
+            <TouchableOpacity style={styles.readMoreButton} activeOpacity={0.7}>
+              <Text style={styles.readMoreText}>Read more</Text>
+            </TouchableOpacity>
+          </BlurView>
 
         {/* Glassmorphic Bottom Bar */}
         <BlurView intensity={isDarkMode ? 50 : 70} tint={isDarkMode ? 'dark' : 'light'} style={styles.bottomBar}>
-          <View style={styles.priceContainer}>
-            <Text style={styles.priceLabel}>Your share</Text>
-            <LinearGradient
-              colors={[colors.primary, colors.primary + 'CC']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.priceGradient}
-            >
-              <Text style={styles.price}>${match.pricePerPlayer}</Text>
-            </LinearGradient>
-            <Text style={styles.totalCostText}>
-              (${match.totalCost} total ÷ {match.totalPlayers} players)
-            </Text>
-          </View>
           <TouchableOpacity
             style={styles.joinButton}
             onPress={handleJoinMatch}
@@ -640,8 +642,7 @@ export default function MatchDetailScreen({ navigation, route }) {
               end={{ x: 1, y: 1 }}
               style={styles.joinButtonGradient}
             >
-              <Ionicons name="checkmark-circle" size={22} color="#FFFFFF" />
-              <Text style={styles.joinButtonText}>Join & Pay</Text>
+              <Text style={styles.joinButtonText}>Join Game</Text>
             </LinearGradient>
           </TouchableOpacity>
         </BlurView>
@@ -862,44 +863,37 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
     borderWidth: 1,
     borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
   },
-  overviewGrid: {
-    flexDirection: 'row',
+  overviewCard: {
+    backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+    borderRadius: 16,
+    padding: 16,
     gap: 16,
     marginBottom: 16,
+  },
+  overviewRow: {
+    flexDirection: 'row',
+    gap: 16,
   },
   overviewItem: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-  },
-  overviewIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+    gap: 12,
   },
   overviewLabel: {
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: 14,
+    fontWeight: '600',
     color: colors.text,
     flex: 1,
   },
   progressContainer: {
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+    marginTop: 0,
     position: 'relative',
   },
   progressHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   spotsLabel: {
     fontSize: 14,
@@ -910,6 +904,22 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: colors.textSecondary,
+  },
+  spotsToGoBadge: {
+    alignSelf: 'center',
+    backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    marginBottom: 12,
+  },
+  spotsToGoText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.text,
+    textAlign: 'center',
   },
   progressBarBg: {
     height: 24,
@@ -930,28 +940,6 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
     fontSize: 11,
     color: colors.textSecondary,
     fontWeight: '500',
-  },
-  spotsToGo: {
-    position: 'absolute',
-    top: -10,
-    left: '50%',
-    transform: [{ translateX: -50 }],
-    backgroundColor: colors.card,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: colors.primary,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  spotsToGoText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.text,
   },
   organizerCard: {
     flexDirection: 'row',
@@ -1023,17 +1011,37 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
   },
   policyText: {
     fontSize: 14,
-    color: colors.text,
+    color: colors.textSecondary,
     lineHeight: 20,
     marginBottom: 12,
   },
   aboutEventText: {
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: '600',
     color: colors.text,
-    lineHeight: 22,
+    lineHeight: 24,
+    marginBottom: 4,
+  },
+  eventDescription: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+    marginVertical: 16,
+  },
+  facilityTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 12,
   },
   readMoreButton: {
     alignSelf: 'flex-start',
+    marginTop: 4,
   },
   readMoreText: {
     fontSize: 14,
@@ -1423,8 +1431,7 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
     marginTop: 20,
     marginBottom: 20,
     paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 20,
+    paddingVertical: 16,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)',
@@ -1434,35 +1441,6 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
     overflow: 'hidden',
-  },
-  priceContainer: {
-    marginBottom: 14,
-    alignItems: 'center',
-  },
-  priceLabel: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginBottom: 6,
-    fontWeight: '500',
-  },
-  priceGradient: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 16,
-    marginBottom: 4,
-  },
-  price: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    textAlign: 'center',
-    letterSpacing: -1,
-  },
-  totalCostText: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: 2,
-    fontWeight: '500',
   },
   joinButton: {
     borderRadius: 16,
