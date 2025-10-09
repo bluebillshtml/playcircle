@@ -424,7 +424,9 @@ export default function PadelMatchDetailScreen({ navigation, route }) {
     <AnimatedBackground>
       <View style={styles.container}>
         <View style={styles.header}>
-          <NavigationButton navigation={navigation} currentScreen="MatchDetail" />
+          <View style={styles.headerSpacer} />
+          <View style={styles.headerSpacer} />
+          <View style={styles.headerSpacer} />
         </View>
 
         <ScrollView 
@@ -713,13 +715,18 @@ const createStyles = (colors) => StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 16,
+    paddingTop: 5,
+    paddingBottom: 2,
+    height: 25,
+  },
+  headerSpacer: {
+    width: 40,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
+    paddingTop: 0,
     paddingBottom: 40,
   },
   courtPreviewSection: {
@@ -727,6 +734,7 @@ const createStyles = (colors) => StyleSheet.create({
     overflow: 'hidden',
     borderRadius: 24,
     marginHorizontal: 16,
+    marginTop: 0,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
@@ -901,11 +909,6 @@ const createStyles = (colors) => StyleSheet.create({
     color: colors.error,
     fontSize: 18,
     marginTop: 12,
-  },
-  matchHeader: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    alignItems: 'center',
   },
   courtName: {
     fontSize: 24,

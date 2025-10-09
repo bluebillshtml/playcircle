@@ -780,6 +780,7 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
+    paddingTop: 8,
     paddingBottom: 40,
   },
   header: {
@@ -788,7 +789,7 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingTop: 60,
-    paddingBottom: 16,
+    paddingBottom: 8,
     backgroundColor: 'transparent',
   },
   backButton: {
