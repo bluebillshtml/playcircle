@@ -310,6 +310,17 @@ CREATE POLICY "Users can update their own avatar" ON storage.objects
 4. Verify that user sport profiles are created
 5. Check that all data is properly stored in the database
 
+## Additional Features
+
+### Chat System (Messages Experience)
+
+For the Messages experience feature, additional database setup is required:
+
+1. Follow the instructions in `database/setup_chat_system.md`
+2. Run the migration in `database/migrations/002_chat_system.sql`
+3. This adds tables for chats, chat_members, and messages
+4. Includes automatic triggers for chat creation and membership management
+
 ## Notes
 
 - The app is designed to work without Supabase (it will show errors in console but continue functioning)
