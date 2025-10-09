@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
+  Animated,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useSport } from '../context/SportContext';
@@ -20,7 +22,6 @@ const SPORTS = [
   { id: 'tennis', name: 'Tennis', icon: 'tennisball-outline' },
   { id: 'pickleball', name: 'Pickleball', icon: 'baseball' },
   { id: 'basketball', name: 'Basketball', icon: 'basketball' },
-  { id: 'volleyball', name: 'Volleyball', icon: 'football' },
 ];
 
 const SKILL_LEVELS = ['Beginner', 'Intermediate', 'Advanced', 'Expert'];
@@ -30,20 +31,64 @@ const POSITIONS = {
   tennis: ['Singles', 'Doubles', 'No Preference'],
   pickleball: ['Singles', 'Doubles', 'No Preference'],
   basketball: ['Point Guard', 'Shooting Guard', 'Small Forward', 'Power Forward', 'Center', 'No Preference'],
-  volleyball: ['Setter', 'Outside Hitter', 'Middle Blocker', 'Opposite', 'Libero', 'No Preference'],
 };
 
 export default function OnboardingScreen({ navigation }) {
-  const { colors } = useTheme();
+  const { colors, isDarkMode } = useTheme();
   const { user, profile, setProfile } = useAuth();
   const { setSelectedSport } = useSport();
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(0); // Start at 0 for intro screen
   const [selectedSports, setSelectedSports] = useState([]);
   const [skillLevels, setSkillLevels] = useState({});
   const [positions, setPositions] = useState({});
   const [loading, setLoading] = useState(false);
 
+  // Animation refs for intro screen
+  const introFadeAnim = useRef(new Animated.Value(0)).current;
+  const introScaleAnim = useRef(new Animated.Value(0.9)).current;
+  const sportIconsAnim = useRef(new Animated.Value(0)).current;
+  const titleSlideAnim = useRef(new Animated.Value(-50)).current;
+
+  // Animation refs for step transitions
+  const stepFadeAnim = useRef(new Animated.Value(1)).current;
+  const stepSlideAnim = useRef(new Animated.Value(0)).current;
+
   const styles = createStyles(colors);
+
+  // Intro screen animation on mount
+  useEffect(() => {
+    if (currentStep === 0) {
+      Animated.sequence([
+        Animated.parallel([
+          Animated.timing(introFadeAnim, {
+            toValue: 1,
+            duration: 600,
+            useNativeDriver: true,
+          }),
+          Animated.spring(introScaleAnim, {
+            toValue: 1,
+            friction: 7,
+            tension: 40,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.delay(200),
+        Animated.parallel([
+          Animated.timing(titleSlideAnim, {
+            toValue: 0,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(sportIconsAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ]),
+      ]).start();
+    }
+  }, [currentStep]);
+
 
   const handleSportToggle = (sport) => {
     if (selectedSports.find(s => s.id === sport.id)) {
@@ -80,20 +125,77 @@ export default function OnboardingScreen({ navigation }) {
 
   const handleNext = () => {
     if (currentStep < 4) {
-      setCurrentStep(currentStep + 1);
+      // Animate out current step
+      Animated.parallel([
+        Animated.timing(stepFadeAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(stepSlideAnim, {
+          toValue: -30,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setCurrentStep(currentStep + 1);
+        // Reset and animate in new step
+        stepSlideAnim.setValue(30);
+        Animated.parallel([
+          Animated.timing(stepFadeAnim, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.spring(stepSlideAnim, {
+            toValue: 0,
+            friction: 8,
+            tension: 40,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      });
     }
   };
 
   const handleBack = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
+    if (currentStep > 0) {
+      // Animate out current step
+      Animated.parallel([
+        Animated.timing(stepFadeAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(stepSlideAnim, {
+          toValue: 30,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setCurrentStep(currentStep - 1);
+        // Reset and animate in previous step
+        stepSlideAnim.setValue(-30);
+        Animated.parallel([
+          Animated.timing(stepFadeAnim, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.spring(stepSlideAnim, {
+            toValue: 0,
+            friction: 8,
+            tension: 40,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      });
     }
   };
 
+
   const handleSkip = async () => {
     try {
-      setLoading(true);
-      
       // Mark onboarding as completed without setting preferences
       const updatedProfile = {
         ...profile,
@@ -106,26 +208,14 @@ export default function OnboardingScreen({ navigation }) {
         console.log('Error updating profile (expected if no Supabase):', error);
       }
 
-      // Set the profile locally
-      setProfile(updatedProfile);
+      // Set flag to show skip notification on Home screen
+      await AsyncStorage.setItem('show_skip_notification', 'true');
 
-      Alert.alert(
-        'Onboarding Skipped',
-        'You can set up your sport preferences anytime in your Profile settings.',
-        [
-          {
-            text: 'Continue',
-            onPress: () => {
-              // Navigate to main app - this will be handled by the auth state change
-            },
-          },
-        ]
-      );
+      // Set the profile locally - this will trigger navigation to Home
+      setProfile(updatedProfile);
     } catch (error) {
       console.error('Skip onboarding error:', error);
       Alert.alert('Welcome!', 'You can set up your preferences anytime in Profile settings.');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -325,6 +415,101 @@ export default function OnboardingScreen({ navigation }) {
     </View>
   );
 
+  const renderIntroScreen = () => (
+    <Animated.View
+      style={[
+        styles.introContainer,
+        {
+          opacity: introFadeAnim,
+          transform: [{ scale: introScaleAnim }]
+        }
+      ]}
+    >
+      <Animated.View
+        style={[
+          styles.introHeader,
+          { transform: [{ translateY: titleSlideAnim }] }
+        ]}
+      >
+        <View style={styles.introIconContainer}>
+          <Ionicons name="tennisball" size={64} color={colors.primary} />
+        </View>
+        <Text style={styles.introTitle}>Welcome to PlayCircle</Text>
+        <Text style={styles.introSubtitle}>
+          Your ultimate sport game booking community
+        </Text>
+      </Animated.View>
+
+      <Animated.View
+        style={[
+          styles.sportIconsContainer,
+          { opacity: sportIconsAnim }
+        ]}
+      >
+        {SPORTS.map((sport, index) => (
+          <Animated.View
+            key={sport.id}
+            style={[
+              styles.sportIconWrapper,
+              {
+                opacity: sportIconsAnim,
+                transform: [{
+                  translateY: sportIconsAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [30, 0]
+                  })
+                }]
+              }
+            ]}
+          >
+            <View style={styles.sportIconBadge}>
+              <Ionicons name={sport.icon} size={28} color={colors.primary} />
+            </View>
+          </Animated.View>
+        ))}
+      </Animated.View>
+
+      <View style={styles.introInfoCard}>
+        <View style={styles.infoHeader}>
+          <Ionicons name="information-circle" size={24} color={colors.primary} />
+          <Text style={styles.infoTitle}>Let's set up your profile</Text>
+        </View>
+
+        <View style={styles.infoSteps}>
+          <View style={styles.infoStep}>
+            <View style={styles.stepNumber}>
+              <Text style={styles.stepNumberText}>1</Text>
+            </View>
+            <Text style={styles.infoStepText}>Choose your favorite sports</Text>
+          </View>
+
+          <View style={styles.infoStep}>
+            <View style={styles.stepNumber}>
+              <Text style={styles.stepNumberText}>2</Text>
+            </View>
+            <Text style={styles.infoStepText}>Set your skill levels</Text>
+          </View>
+
+          <View style={styles.infoStep}>
+            <View style={styles.stepNumber}>
+              <Text style={styles.stepNumberText}>3</Text>
+            </View>
+            <Text style={styles.infoStepText}>Select preferred positions</Text>
+          </View>
+        </View>
+      </View>
+
+      <TouchableOpacity
+        style={styles.introStartButton}
+        onPress={handleNext}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.introStartButtonText}>Let's Get Started</Text>
+        <Ionicons name="arrow-forward" size={20} color={colors.white} />
+      </TouchableOpacity>
+    </Animated.View>
+  );
+
   const renderStep4 = () => (
     <View style={styles.stepContainer}>
       <View style={styles.welcomeContainer}>
@@ -333,11 +518,11 @@ export default function OnboardingScreen({ navigation }) {
         <Text style={styles.welcomeSubtitle}>
           You're all set up and ready to find players and join matches.
         </Text>
-        
+
         <Text style={styles.settingsNote}>
           You can update these preferences anytime in your Profile settings.
         </Text>
-        
+
         <View style={styles.summaryContainer}>
           <Text style={styles.summaryTitle}>Your Profile:</Text>
           {selectedSports.map((sport) => (
@@ -356,68 +541,122 @@ export default function OnboardingScreen({ navigation }) {
   return (
     <AnimatedBackground>
       <View style={styles.container}>
-        {/* Progress Indicator */}
-        <View style={styles.progressContainer}>
-          <View style={styles.progressHeader}>
-            {currentStep < 4 && (
-              <TouchableOpacity onPress={handleSkip} style={styles.skipButton}>
-                <Text style={styles.skipButtonText}>Skip</Text>
-              </TouchableOpacity>
-            )}
+        {/* Skip button on intro screen */}
+        {currentStep === 0 && (
+          <View style={styles.introSkipContainer}>
+            <TouchableOpacity onPress={handleSkip} style={styles.skipButton}>
+              <Text style={styles.skipButtonText}>Skip</Text>
+            </TouchableOpacity>
           </View>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${(currentStep / 4) * 100}%` }]} />
+        )}
+
+        {/* Progress Indicator - Hide on intro screen */}
+        {currentStep > 0 && (
+          <View style={styles.progressContainer}>
+            <View style={styles.progressHeader}>
+              {currentStep < 4 && (
+                <TouchableOpacity onPress={handleSkip} style={styles.skipButton}>
+                  <Text style={styles.skipButtonText}>Skip</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            <View style={styles.progressBar}>
+              <View style={[styles.progressFill, { width: `${(currentStep / 4) * 100}%` }]} />
+            </View>
+            <Text style={styles.progressText}>Step {currentStep} of 4</Text>
           </View>
-          <Text style={styles.progressText}>Step {currentStep} of 4</Text>
-        </View>
+        )}
 
         {/* Content */}
         <View style={styles.content}>
-          {currentStep === 1 && renderStep1()}
-          {currentStep === 2 && renderStep2()}
-          {currentStep === 3 && renderStep3()}
-          {currentStep === 4 && renderStep4()}
+          {currentStep === 0 && renderIntroScreen()}
+          {currentStep === 1 && (
+            <Animated.View
+              style={{
+                flex: 1,
+                opacity: stepFadeAnim,
+                transform: [{ translateY: stepSlideAnim }]
+              }}
+            >
+              {renderStep1()}
+            </Animated.View>
+          )}
+          {currentStep === 2 && (
+            <Animated.View
+              style={{
+                flex: 1,
+                opacity: stepFadeAnim,
+                transform: [{ translateY: stepSlideAnim }]
+              }}
+            >
+              {renderStep2()}
+            </Animated.View>
+          )}
+          {currentStep === 3 && (
+            <Animated.View
+              style={{
+                flex: 1,
+                opacity: stepFadeAnim,
+                transform: [{ translateY: stepSlideAnim }]
+              }}
+            >
+              {renderStep3()}
+            </Animated.View>
+          )}
+          {currentStep === 4 && (
+            <Animated.View
+              style={{
+                flex: 1,
+                opacity: stepFadeAnim,
+                transform: [{ translateY: stepSlideAnim }]
+              }}
+            >
+              {renderStep4()}
+            </Animated.View>
+          )}
         </View>
 
-        {/* Navigation */}
-        <View style={styles.navigation}>
-          {currentStep > 1 && currentStep < 4 && (
-            <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-              <Text style={styles.backButtonText}>Back</Text>
-            </TouchableOpacity>
-          )}
-          
-          {currentStep < 4 ? (
-            <TouchableOpacity
-              style={[
-                styles.nextButton,
-                (currentStep === 1 && !canProceedFromStep1) ||
-                (currentStep === 2 && !canProceedFromStep2) ||
-                (currentStep === 3 && !canProceedFromStep3)
-                  ? styles.nextButtonDisabled
-                  : null,
-              ]}
-              onPress={handleNext}
-              disabled={
-                (currentStep === 1 && !canProceedFromStep1) ||
-                (currentStep === 2 && !canProceedFromStep2) ||
-                (currentStep === 3 && !canProceedFromStep3)
-              }
-            >
-              <Text style={styles.nextButtonText}>Next</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
-              style={styles.completeButton}
-              onPress={handleComplete}
-              disabled={loading}
-            >
-              <Text style={styles.completeButtonText}>
-                {loading ? 'Setting up...' : 'Get Started'}
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
+        {/* Navigation - Hide on intro screen */}
+        {currentStep > 0 && (
+          <View style={styles.navigation}>
+            {currentStep > 1 && currentStep < 4 && (
+              <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+                <Text style={styles.backButtonText}>Back</Text>
+              </TouchableOpacity>
+            )}
+
+            {currentStep < 4 ? (
+              <TouchableOpacity
+                style={[
+                  styles.nextButton,
+                  (currentStep === 1 && !canProceedFromStep1) ||
+                  (currentStep === 2 && !canProceedFromStep2) ||
+                  (currentStep === 3 && !canProceedFromStep3)
+                    ? styles.nextButtonDisabled
+                    : null,
+                ]}
+                onPress={handleNext}
+                disabled={
+                  (currentStep === 1 && !canProceedFromStep1) ||
+                  (currentStep === 2 && !canProceedFromStep2) ||
+                  (currentStep === 3 && !canProceedFromStep3)
+                }
+              >
+                <Text style={styles.nextButtonText}>Next</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={styles.completeButton}
+                onPress={handleComplete}
+                disabled={loading}
+              >
+                <Text style={styles.completeButtonText}>
+                  {loading ? 'Setting up...' : 'Get Started'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
       </View>
     </AnimatedBackground>
   );
@@ -427,6 +666,12 @@ const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'transparent',
+  },
+  introSkipContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 20,
+    alignItems: 'flex-end',
   },
   progressContainer: {
     paddingHorizontal: 20,
@@ -679,6 +924,126 @@ const createStyles = (colors) => StyleSheet.create({
   },
   completeButtonText: {
     fontSize: 16,
+    fontWeight: '700',
+    color: colors.white,
+  },
+  introContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+  },
+  introHeader: {
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  introIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: colors.primary + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+    borderWidth: 2,
+    borderColor: colors.primary + '40',
+  },
+  introTitle: {
+    fontSize: 36,
+    fontWeight: '900',
+    color: colors.text,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  introSubtitle: {
+    fontSize: 18,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  sportIconsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    gap: 16,
+    marginBottom: 40,
+    paddingHorizontal: 20,
+  },
+  sportIconWrapper: {
+    alignItems: 'center',
+  },
+  sportIconBadge: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.glassBorder,
+  },
+  introInfoCard: {
+    backgroundColor: colors.card,
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    marginBottom: 32,
+  },
+  infoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    gap: 12,
+  },
+  infoTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text,
+    flex: 1,
+  },
+  infoSteps: {
+    gap: 16,
+  },
+  infoStep: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  stepNumber: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepNumberText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.white,
+  },
+  infoStepText: {
+    fontSize: 16,
+    color: colors.text,
+    flex: 1,
+    fontWeight: '500',
+  },
+  introStartButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    width: '100%',
+    justifyContent: 'center',
+  },
+  introStartButtonText: {
+    fontSize: 18,
     fontWeight: '700',
     color: colors.white,
   },

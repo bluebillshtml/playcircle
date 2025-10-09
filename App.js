@@ -78,12 +78,20 @@ function AppContent() {
               <Stack.Screen
                 name="SignUp"
                 component={SignUpScreen}
-                options={{ headerShown: false }}
+                options={{
+                  headerShown: false,
+                  contentStyle: { backgroundColor: 'transparent' },
+                  animation: 'fade'
+                }}
               />
               <Stack.Screen
                 name="SignIn"
                 component={SignInScreen}
-                options={{ headerShown: false }}
+                options={{
+                  headerShown: false,
+                  contentStyle: { backgroundColor: 'transparent' },
+                  animation: 'fade'
+                }}
               />
             </>
           ) : needsOnboarding ? (
@@ -91,7 +99,7 @@ function AppContent() {
             <Stack.Screen
               name="Onboarding"
               component={OnboardingScreen}
-              options={{ headerShown: false }}
+              options={{ headerShown: false, animation: 'fade' }}
             />
           ) : (
             // Main App Stack - Show when user is logged in
@@ -99,7 +107,11 @@ function AppContent() {
               <Stack.Screen
                 name="Home"
                 component={HomeScreen}
-                options={{ headerShown: false }}
+                options={{
+                  headerShown: false,
+                  animation: 'fade',
+                  contentStyle: { backgroundColor: '#1a1a1a' }
+                }}
               />
               <Stack.Screen
                 name="Friends"
@@ -136,20 +148,9 @@ function AppContent() {
                 component={MatchDetailScreen}
                 options={{
                   headerTitle: 'Match Details',
-                  headerTitleAlign: 'left',
+                  headerTintColor: '#FFFFFF',
                   headerStyle: {
-                    backgroundColor: 'transparent',
-                    borderBottomWidth: 0,
-                    shadowColor: 'transparent',
-                    shadowOffset: { width: 0, height: 0 },
-                    shadowOpacity: 0,
-                    shadowRadius: 0,
-                    elevation: 0,
-                  },
-                  headerTintColor: colors.text,
-                  headerTitleStyle: {
-                    fontSize: 20,
-                    fontWeight: '700',
+                    backgroundColor: '#1a1a1a',
                   },
                 }}
               />
