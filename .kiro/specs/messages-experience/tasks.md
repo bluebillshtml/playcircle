@@ -15,6 +15,9 @@
 
 - [ ] 2. Extend Supabase services with chat functionality
   - Create ChatService class with core messaging methods (getChatsByUser, getChatMessages, sendMessage)
+
+
+
   - Implement real-time subscription methods for chat updates and new messages
   - Add chat membership management methods (addUserToChat, removeUserFromChat)
   - Extend existing MatchService to handle session-chat integration
