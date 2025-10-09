@@ -6,22 +6,22 @@ import { COLORS } from '../constants/colors';
 const ThemeContext = createContext();
 
 const DARK_COLORS = {
-  // Primary colors - Using beige as accent
-  primary: '#D2C1B6',
-  primaryDark: '#C4B0A3',
+  // Primary colors - Using green as accent
+  primary: '#10B981',
+  primaryDark: '#059669',
 
-  // Background colors - Using blue palette
-  background: '#1B3C53',
-  surface: '#234C6A',
-  surfaceLight: '#456882',
-  card: '#234C6A',
+  // Background colors - Using green palette
+  background: '#064E3B',
+  surface: '#065F46',
+  surfaceLight: '#047857',
+  card: '#065F46',
 
   // Text colors
   text: '#FFFFFF',
   textSecondary: '#D2C1B6',
 
   // Border colors
-  border: '#456882',
+  border: '#047857',
 
   // Status colors
   error: '#FF6B6B',
@@ -29,14 +29,14 @@ const DARK_COLORS = {
   warning: '#FFD43B',
 
   // Additional colors
-  lightGray: '#456882',
+  lightGray: '#047857',
   white: '#FFFFFF',
 
   // Badge colors
-  badgeCompetitive: 'rgba(210, 193, 182, 0.2)',
-  badgeCompetitiveText: '#D2C1B6',
-  badgeCasual: 'rgba(69, 104, 130, 0.3)',
-  badgeCasualText: '#D2C1B6',
+  badgeCompetitive: 'rgba(16, 185, 129, 0.2)',
+  badgeCompetitiveText: '#10B981',
+  badgeCasual: 'rgba(4, 120, 87, 0.3)',
+  badgeCasualText: '#10B981',
 
   // Match result colors
   winBackground: 'rgba(81, 207, 102, 0.15)',
@@ -45,14 +45,14 @@ const DARK_COLORS = {
   lossText: '#FF6B6B',
 
   // Glass effect colors
-  glass: 'rgba(35, 76, 106, 0.95)',
-  glassBorder: 'rgba(210, 193, 182, 0.15)',
+  glass: 'rgba(6, 95, 70, 0.95)',
+  glassBorder: 'rgba(16, 185, 129, 0.15)',
 };
 
 const LIGHT_COLORS = {
-  // Primary colors - Using darkest blue as primary
-  primary: '#1B3C53',
-  primaryDark: '#142D3F',
+  // Primary colors - Using green as primary
+  primary: '#10B981',
+  primaryDark: '#059669',
 
   // Background colors - Light palette
   background: '#F5F5F5',

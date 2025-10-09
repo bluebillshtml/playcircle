@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Modal,
   Animated,
+  Alert,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,37 +31,39 @@ const { width } = Dimensions.get('window');
 const UPCOMING_MATCHES = [
   {
     id: 1,
-    courtName: 'Center City Indoor',
+    courtName: 'Center City Padel Club',
     location: 'Phield House',
     distance: '85.2 mi away',
-    date: '2025-10-08',
+    date: '2025-10-09',
     time: '7:30pm to 8:30pm',
     duration: 60,
     type: 'casual',
+    sport: 'padel',
     skillLevel: 'Intermediate',
     joinedPlayers: 3,
-    totalPlayers: 10,
+    totalPlayers: 4,
     pricePerPlayer: 17.50,
-    gameType: '5v5',
+    gameType: 'Doubles',
     organizer: 'Plei',
-    image: 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800&h=600&fit=crop',
+    image: 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800&h=600&fit=crop',
   },
   {
     id: 2,
-    courtName: 'Sunset Sports Complex',
+    courtName: 'Elite Padel Academy',
     location: 'Downtown Arena',
     distance: '12.3 mi away',
-    date: '2025-10-08',
+    date: '2025-10-10',
     time: '6:00pm to 7:00pm',
     duration: 60,
     type: 'competitive',
+    sport: 'padel',
     skillLevel: 'Advanced',
-    joinedPlayers: 8,
-    totalPlayers: 10,
+    joinedPlayers: 2,
+    totalPlayers: 4,
     pricePerPlayer: 15.00,
-    gameType: '5v5',
+    gameType: 'Doubles',
     organizer: 'PlayCircle',
-    image: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&h=600&fit=crop',
+    image: 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800&h=600&fit=crop',
   },
   {
     id: 3,
@@ -71,6 +74,7 @@ const UPCOMING_MATCHES = [
     time: '5:00pm to 6:30pm',
     duration: 90,
     type: 'casual',
+    sport: 'basketball',
     skillLevel: 'Beginner',
     joinedPlayers: 4,
     totalPlayers: 8,
@@ -84,10 +88,11 @@ const UPCOMING_MATCHES = [
     courtName: 'Elite Tennis Academy',
     location: 'Tennis Center',
     distance: '18.5 mi away',
-    date: '2025-10-09',
+    date: '2025-10-11',
     time: '4:00pm to 6:00pm',
     duration: 120,
     type: 'competitive',
+    sport: 'tennis',
     skillLevel: 'Intermediate',
     joinedPlayers: 2,
     totalPlayers: 4,
@@ -98,20 +103,57 @@ const UPCOMING_MATCHES = [
   },
   {
     id: 5,
-    courtName: 'West Side Soccer Fields',
+    courtName: 'Sunset Tennis Club',
     location: 'Memorial Park',
     distance: '7.2 mi away',
-    date: '2025-10-10',
+    date: '2025-10-09',
     time: '7:00pm to 9:00pm',
     duration: 120,
     type: 'casual',
+    sport: 'tennis',
     skillLevel: 'All Levels',
-    joinedPlayers: 12,
-    totalPlayers: 16,
+    joinedPlayers: 2,
+    totalPlayers: 4,
     pricePerPlayer: 12.50,
-    gameType: '8v8',
-    organizer: 'West Side FC',
-    image: 'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=800&h=600&fit=crop',
+    gameType: 'Doubles',
+    organizer: 'Sunset Club',
+    image: 'https://images.unsplash.com/photo-1622163642998-1ea32b0bbc67?w=800&h=600&fit=crop',
+  },
+  {
+    id: 6,
+    courtName: 'Downtown Pickleball Courts',
+    location: 'City Sports Complex',
+    distance: '3.2 mi away',
+    date: '2025-10-10',
+    time: '10:00am to 11:30am',
+    duration: 90,
+    type: 'casual',
+    sport: 'pickleball',
+    skillLevel: 'Beginner',
+    joinedPlayers: 3,
+    totalPlayers: 4,
+    pricePerPlayer: 8.00,
+    gameType: 'Doubles',
+    organizer: 'Pickleball Club',
+    image: 'https://images.unsplash.com/photo-1617882252239-ce6fc579ced4?w=800&h=600&fit=crop',
+  },
+  {
+    id: 7,
+    courtName: 'Victory Basketball Arena',
+    location: 'Sports Center',
+    distance: '6.5 mi away',
+    date: '2025-10-11',
+    time: '8:00pm to 9:30pm',
+    duration: 90,
+    type: 'competitive',
+    sport: 'basketball',
+    skillLevel: 'Advanced',
+    joinedPlayers: 6,
+    totalPlayers: 10,
+    pricePerPlayer: 15.00,
+    gameType: '5v5',
+    organizer: 'Victory Sports',
+    image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800&h=600&fit=crop',
   },
 ];
 
@@ -166,12 +208,73 @@ export default function HomeScreen({ navigation }) {
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [navModalVisible, setNavModalVisible] = useState(false);
   const [showSkipNotification, setShowSkipNotification] = useState(false);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
   // Filter states
   const [selectedDifficulties, setSelectedDifficulties] = useState([]);
   const [selectedTimes, setSelectedTimes] = useState([]);
   const [distanceRange, setDistanceRange] = useState(100);
   const [sortBy, setSortBy] = useState('nearest');
+
+  // Generate 7 days starting from today
+  const generateDateButtons = () => {
+    const dates = [];
+    const today = new Date();
+
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      dates.push(date);
+    }
+
+    return dates;
+  };
+
+  const dateButtons = generateDateButtons();
+
+  const formatDateButton = (date) => {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const day = days[date.getDay()];
+    const dateNum = date.getDate().toString().padStart(2, '0');
+    return `${day} ${dateNum}`;
+  };
+
+  const isSameDate = (date1, date2) => {
+    return date1.getDate() === date2.getDate() &&
+           date1.getMonth() === date2.getMonth() &&
+           date1.getFullYear() === date2.getFullYear();
+  };
+
+  // Filter matches by selected date and sport
+  const filteredMatches = upcomingMatches.filter(match => {
+    const matchDate = new Date(match.date);
+    const dateMatches = isSameDate(matchDate, selectedDate);
+
+    // Filter by sport - if selectedSport exists, only show matches for that sport
+    const sportMatches = !selectedSport ||
+                        match.sport?.toLowerCase() === selectedSport.id?.toLowerCase();
+
+    return dateMatches && sportMatches;
+  });
+
+  // Group matches by sport for display
+  const groupedMatches = filteredMatches.reduce((groups, match) => {
+    const sport = match.sport || 'other';
+    if (!groups[sport]) {
+      groups[sport] = [];
+    }
+    groups[sport].push(match);
+    return groups;
+  }, {});
+
+  const sportNames = {
+    padel: 'Padel',
+    tennis: 'Tennis',
+    pickleball: 'Pickleball',
+    basketball: 'Basketball',
+    other: 'Other'
+  };
 
   // Navigation animation refs
   const slideAnim = useRef(new Animated.Value(-width)).current;
@@ -439,7 +542,10 @@ export default function HomeScreen({ navigation }) {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.notificationButton}>
+            <TouchableOpacity
+              style={styles.notificationButton}
+              onPress={() => setShowNotificationModal(true)}
+            >
               <Ionicons name="notifications-outline" size={28} color={colors.text} />
             </TouchableOpacity>
           </View>
@@ -451,21 +557,29 @@ export default function HomeScreen({ navigation }) {
             style={styles.dateFilterContainer}
             contentContainerStyle={styles.dateFilterContent}
           >
-            <TouchableOpacity style={[styles.dateFilterPill, styles.dateFilterPillActive]}>
-              <Text style={[styles.dateFilterText, styles.dateFilterTextActive]}>Wed 08</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.dateFilterPill}>
-              <Text style={styles.dateFilterText}>Thu 09</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.dateFilterPill}>
-              <Text style={styles.dateFilterText}>Fri 10</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.dateFilterPill}>
-              <Text style={styles.dateFilterText}>Sat 11</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.dateFilterPill}>
-              <Text style={styles.dateFilterText}>Sun 12</Text>
-            </TouchableOpacity>
+            {dateButtons.map((date, index) => {
+              const isSelected = isSameDate(date, selectedDate);
+              return (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.dateFilterPill,
+                    isSelected && styles.dateFilterPillActive
+                  ]}
+                  onPress={() => setSelectedDate(date)}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[
+                      styles.dateFilterText,
+                      isSelected && styles.dateFilterTextActive
+                    ]}
+                  >
+                    {formatDateButton(date)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
         </View>
 
@@ -481,12 +595,20 @@ export default function HomeScreen({ navigation }) {
           <Text style={styles.sectionTitle}>Available Games</Text>
         </View>
 
-        {upcomingMatches.length > 0 ? (
-          upcomingMatches.map((match, index) => (
-            <View key={match.id}>
-              <TouchableOpacity
-                style={styles.matchCard}
-                onPress={() =>
+        {filteredMatches.length > 0 ? (
+          <>
+            {Object.entries(groupedMatches).map(([sport, matches]) => (
+              <View key={sport}>
+                {Object.keys(groupedMatches).length > 1 && (
+                  <Text style={styles.sportCategoryTitle}>
+                    {sportNames[sport] || sport}
+                  </Text>
+                )}
+                {matches.map((match, index) => (
+                  <View key={match.id}>
+                    <TouchableOpacity
+                      style={styles.matchCard}
+                      onPress={() =>
                   navigation.navigate('MatchDetail', { matchId: match.id })
                 }
               >
@@ -559,11 +681,16 @@ export default function HomeScreen({ navigation }) {
               </View>
               </TouchableOpacity>
             </View>
-          ))
+                ))}
+              </View>
+            ))}
+          </>
         ) : (
            <View style={styles.emptyState}>
              <Ionicons name="calendar-outline" size={48} color={colors.textSecondary} />
-             <Text style={styles.emptyStateText}>No upcoming {selectedSport.name.toLowerCase()} matches</Text>
+             <Text style={styles.emptyStateText}>
+               No {selectedSport.name.toLowerCase()} matches on {formatDateButton(selectedDate)}
+             </Text>
              <TouchableOpacity
                style={styles.createButton}
                onPress={() => navigation.navigate('Create')}
@@ -870,8 +997,8 @@ export default function HomeScreen({ navigation }) {
               ]}
             >
               <BlurView
-                intensity={isDarkMode ? 40 : 60}
-                tint={isDarkMode ? 'dark' : 'light'}
+                intensity={80}
+                tint="dark"
                 style={styles.skipCardBlur}
               >
                 <View style={styles.skipCard}>
@@ -893,6 +1020,48 @@ export default function HomeScreen({ navigation }) {
               </BlurView>
             </Animated.View>
           </Animated.View>
+        </Modal>
+
+        {/* Notification Modal */}
+        <Modal
+          visible={showNotificationModal}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowNotificationModal(false)}
+          statusBarTranslucent={true}
+        >
+          <View style={styles.skipModalOverlay}>
+            <BlurView intensity={50} style={StyleSheet.absoluteFill} tint="dark" />
+            <TouchableOpacity
+              style={styles.skipModalBackdrop}
+              activeOpacity={1}
+              onPress={() => setShowNotificationModal(false)}
+            />
+            <View style={styles.skipModalContainer}>
+              <BlurView
+                intensity={80}
+                tint="dark"
+                style={styles.skipCardBlur}
+              >
+                <View style={styles.skipCard}>
+                  <View style={styles.skipIconContainer}>
+                    <Ionicons name="notifications" size={56} color={colors.primary} />
+                  </View>
+                  <Text style={styles.skipTitle}>Notifications</Text>
+                  <Text style={styles.skipMessage}>
+                    Notifications feature coming soon!
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.skipContinueButton}
+                    onPress={() => setShowNotificationModal(false)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.skipContinueText}>OK</Text>
+                  </TouchableOpacity>
+                </View>
+              </BlurView>
+            </View>
+          </View>
         </Modal>
       </View>
     </AnimatedBackground>
@@ -1001,6 +1170,14 @@ const createStyles = (colors) => StyleSheet.create({
     color: colors.text,
     marginBottom: 16,
     letterSpacing: -0.5,
+  },
+  sportCategoryTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.primary,
+    marginTop: 8,
+    marginBottom: 12,
+    marginLeft: 4,
   },
   seeAllText: {
     fontSize: 14,
@@ -1132,7 +1309,7 @@ const createStyles = (colors) => StyleSheet.create({
   price: {
     fontSize: 24,
     fontWeight: '800',
-    color: colors.primary,
+    color: colors.white,
     letterSpacing: -0.5,
   },
   perPlayer: {
@@ -1602,11 +1779,17 @@ const createStyles = (colors) => StyleSheet.create({
     borderRadius: 24,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: colors.glassBorder,
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
   },
   skipCard: {
     padding: 32,
     alignItems: 'center',
+    backgroundColor: 'rgba(6, 95, 70, 0.4)',
   },
   skipIconContainer: {
     marginBottom: 20,
