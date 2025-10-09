@@ -15,7 +15,8 @@ import OnboardingScreen from './src/screens/OnboardingScreen';
 import PreferencesScreen from './src/screens/PreferencesScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import MatchesScreen from './src/screens/MatchesScreen';
-import CreateMatchScreen from './src/screens/CreateMatchScreen';
+import MessagesScreen from './src/screens/MessagesScreen';
+import ChatThreadScreen from './src/screens/ChatThreadScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import MatchDetailScreen from './src/screens/MatchDetailScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
@@ -101,8 +102,13 @@ function AppContent() {
                 options={{ headerShown: false }}
               />
               <Stack.Screen
-                name="Create"
-                component={ScreenWithNavButton({ component: CreateMatchScreen, currentScreen: 'Create' })}
+                name="Messages"
+                component={ScreenWithNavButton({ component: MessagesScreen, currentScreen: 'Messages' })}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="ChatThread"
+                component={ChatThreadScreen}
                 options={{ headerShown: false }}
               />
               <Stack.Screen

@@ -34,7 +34,7 @@ export default function NavigationButton({ navigation, currentScreen }) {
     { name: 'Home', icon: 'home', screen: 'Home' },
     { name: 'Leaderboard', icon: 'trophy', screen: 'Dashboard' },
     { name: 'Matches', icon: 'calendar', screen: 'Matches' },
-    { name: 'Create Match', icon: 'add-circle', screen: 'Create' },
+    { name: 'Messages', icon: 'chatbubbles', screen: 'Messages' },
     { name: 'Profile', icon: 'person', screen: 'Profile' },
   ];
 
