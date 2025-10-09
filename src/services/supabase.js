@@ -162,6 +162,34 @@ export const storageService = {
     }
   },
 
+  // Upload chat photo
+  uploadChatPhoto: async (userId, chatId, file) => {
+    try {
+      const fileExt = file.uri.split('.').pop();
+      const fileName = `${userId}/${chatId}_${Date.now()}.${fileExt}`;
+
+      const response = await fetch(file.uri);
+      const blob = await response.blob();
+
+      const { data, error } = await supabase.storage
+        .from('chat-photos')
+        .upload(fileName, blob, {
+          contentType: file.type || `image/${fileExt}`,
+        });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('chat-photos')
+        .getPublicUrl(fileName);
+
+      return publicUrl;
+    } catch (error) {
+      console.error('Error uploading chat photo:', error);
+      throw error;
+    }
+  },
+
   // Get storage usage for user
   getStorageUsage: async (userId) => {
     try {
@@ -990,6 +1018,522 @@ export const leaderboardService = {
 
     if (error) throw error;
     return data;
+  },
+};
+
+// =====================================================
+// CHAT SYSTEM
+// =====================================================
+
+export const chatService = {
+  // Get user's chats with metadata
+  getChatsByUser: async (userId) => {
+    try {
+      const { data, error } = await supabase
+        .rpc('get_user_chats', { p_user_id: userId });
+
+      if (error) {
+        // If function doesn't exist, fallback to basic query
+        if (error.code === '42883') {
+          console.warn('get_user_chats function not found, using fallback query');
+          return await chatService._getChatsByUserFallback(userId);
+        }
+        throw error;
+      }
+      return data || [];
+    } catch (error) {
+      console.error('Error getting user chats:', error);
+      // Return empty array to prevent app crashes
+      return [];
+    }
+  },
+
+  // Fallback method for getting user chats
+  _getChatsByUserFallback: async (userId) => {
+    const { data, error } = await supabase
+      .from('chat_members')
+      .select(`
+        chat:chats(
+          id,
+          court_session_id,
+          created_at,
+          last_message_at,
+          is_active,
+          session:matches(
+            id,
+            match_date,
+            match_time,
+            duration_minutes,
+            sport_id,
+            court:courts(name)
+          )
+        ),
+        unread_count
+      `)
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .order('chat.last_message_at', { ascending: false, nullsFirst: false });
+
+    if (error) throw error;
+    
+    // Transform data to match expected format
+    return (data || []).map(item => ({
+      chat_id: item.chat.id,
+      court_session_id: item.chat.court_session_id,
+      session_title: item.chat.session ? 
+        `${item.chat.session.court?.name || 'Court'} – ${new Date(item.chat.session.match_date).toLocaleDateString()}` : 
+        'Session',
+      session_date: item.chat.session?.match_date,
+      session_time: item.chat.session?.match_time,
+      session_duration: item.chat.session?.duration_minutes,
+      court_name: item.chat.session?.court?.name,
+      sport_id: item.chat.session?.sport_id,
+      last_message_at: item.chat.last_message_at,
+      unread_count: item.unread_count || 0,
+      is_happening_soon: item.chat.session ? 
+        new Date(item.chat.session.match_date) <= new Date(Date.now() + 2 * 24 * 60 * 60 * 1000) : false
+    }));
+  },
+
+  // Get messages for a specific chat
+  getChatMessages: async (chatId, limit = 50, before = null) => {
+    try {
+      let query = supabase
+        .from('messages')
+        .select(`
+          id,
+          chat_id,
+          user_id,
+          content,
+          message_type,
+          metadata,
+          created_at,
+          updated_at,
+          is_deleted,
+          user:profiles(
+            id,
+            username,
+            full_name,
+            avatar_url
+          )
+        `)
+        .eq('chat_id', chatId)
+        .eq('is_deleted', false)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (before) {
+        query = query.lt('created_at', before);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+      return (data || []).reverse(); // Reverse to show oldest first
+    } catch (error) {
+      console.error('Error getting chat messages:', error);
+      return [];
+    }
+  },
+
+  // Send a message
+  sendMessage: async (chatId, userId, content, messageType = 'text', metadata = {}) => {
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .insert({
+          chat_id: chatId,
+          user_id: userId,
+          content,
+          message_type: messageType,
+          metadata,
+        })
+        .select(`
+          id,
+          chat_id,
+          user_id,
+          content,
+          message_type,
+          metadata,
+          created_at,
+          updated_at,
+          is_deleted,
+          user:profiles(
+            id,
+            username,
+            full_name,
+            avatar_url
+          )
+        `)
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error sending message:', error);
+      throw error;
+    }
+  },
+
+  // Send quick action message
+  sendQuickAction: async (chatId, userId, actionType, metadata = {}) => {
+    const actionMessages = {
+      'on-my-way': 'On my way! 🏃‍♂️',
+      'running-late': 'Running late, be there soon! ⏰',
+      'arrived': 'I\'ve arrived! 📍',
+    };
+
+    const content = actionMessages[actionType] || `${actionType} update`;
+    
+    return await chatService.sendMessage(
+      chatId, 
+      userId, 
+      content, 
+      'status', 
+      { status: actionType, ...metadata }
+    );
+  },
+
+  // Send location message
+  sendLocation: async (chatId, userId, location) => {
+    const content = `📍 Shared location: ${location.address || 'Current location'}`;
+    
+    return await chatService.sendMessage(
+      chatId, 
+      userId, 
+      content, 
+      'location', 
+      { location }
+    );
+  },
+
+  // Send photo message
+  sendPhoto: async (chatId, userId, photoUrl, caption = '') => {
+    const content = caption || '📷 Shared a photo';
+    
+    return await chatService.sendMessage(
+      chatId, 
+      userId, 
+      content, 
+      'photo', 
+      { photo_url: photoUrl }
+    );
+  },
+
+  // Mark messages as read
+  markMessagesRead: async (chatId, userId) => {
+    try {
+      const { error } = await supabase
+        .rpc('mark_messages_read', {
+          p_chat_id: chatId,
+          p_user_id: userId
+        });
+
+      if (error) {
+        // Fallback if function doesn't exist
+        if (error.code === '42883') {
+          const { error: updateError } = await supabase
+            .from('chat_members')
+            .update({
+              last_read_at: new Date().toISOString(),
+              unread_count: 0
+            })
+            .eq('chat_id', chatId)
+            .eq('user_id', userId);
+          
+          if (updateError) throw updateError;
+        } else {
+          throw error;
+        }
+      }
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
+      throw error;
+    }
+  },
+
+  // Add user to chat
+  addUserToChat: async (chatId, userId) => {
+    try {
+      const { data, error } = await supabase
+        .from('chat_members')
+        .upsert({
+          chat_id: chatId,
+          user_id: userId,
+          is_active: true,
+          joined_at: new Date().toISOString(),
+          left_at: null
+        }, {
+          onConflict: 'chat_id,user_id'
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error adding user to chat:', error);
+      throw error;
+    }
+  },
+
+  // Remove user from chat
+  removeUserFromChat: async (chatId, userId) => {
+    try {
+      const { error } = await supabase
+        .from('chat_members')
+        .update({
+          is_active: false,
+          left_at: new Date().toISOString()
+        })
+        .eq('chat_id', chatId)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error removing user from chat:', error);
+      throw error;
+    }
+  },
+
+  // Get chat members
+  getChatMembers: async (chatId) => {
+    try {
+      const { data, error } = await supabase
+        .from('chat_members')
+        .select(`
+          id,
+          user_id,
+          joined_at,
+          is_active,
+          user:profiles(
+            id,
+            username,
+            full_name,
+            avatar_url
+          )
+        `)
+        .eq('chat_id', chatId)
+        .eq('is_active', true)
+        .order('joined_at', { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error getting chat members:', error);
+      return [];
+    }
+  },
+
+  // Subscribe to chat messages
+  subscribeToChatMessages: (chatId, callback) => {
+    const channel = supabase
+      .channel(`chat:${chatId}:messages`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `chat_id=eq.${chatId}`,
+        },
+        async (payload) => {
+          // Fetch the complete message with user data
+          const { data } = await supabase
+            .from('messages')
+            .select(`
+              id,
+              chat_id,
+              user_id,
+              content,
+              message_type,
+              metadata,
+              created_at,
+              updated_at,
+              is_deleted,
+              user:profiles(
+                id,
+                username,
+                full_name,
+                avatar_url
+              )
+            `)
+            .eq('id', payload.new.id)
+            .single();
+
+          if (data) {
+            callback(data);
+          }
+        }
+      )
+      .subscribe();
+
+    return channel;
+  },
+
+  // Subscribe to user's chats
+  subscribeToUserChats: (userId, callback) => {
+    const channel = supabase
+      .channel(`user:${userId}:chats`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'chat_members',
+          filter: `user_id=eq.${userId}`,
+        },
+        () => {
+          // Refresh user's chat list when membership changes
+          callback();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'chats',
+        },
+        () => {
+          // Refresh when any chat is updated (last_message_at changes)
+          callback();
+        }
+      )
+      .subscribe();
+
+    return channel;
+  },
+
+  // Subscribe to typing indicators
+  subscribeToTyping: (chatId, callback) => {
+    // This would require a separate typing_indicators table or real-time presence
+    // For now, we'll implement a simple version using a temporary table
+    const channel = supabase
+      .channel(`chat:${chatId}:typing`)
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState();
+        const typingUsers = Object.keys(state).filter(key => 
+          state[key][0]?.typing === true
+        );
+        callback(typingUsers);
+      })
+      .subscribe();
+
+    return channel;
+  },
+
+  // Set typing status
+  setTypingStatus: (chatId, userId, isTyping) => {
+    const channel = supabase.channel(`chat:${chatId}:typing`);
+    
+    if (isTyping) {
+      channel.track({ user_id: userId, typing: true });
+    } else {
+      channel.untrack();
+    }
+  },
+
+  // Get chat by session ID
+  getChatBySessionId: async (sessionId) => {
+    try {
+      const { data, error } = await supabase
+        .from('chats')
+        .select('*')
+        .eq('court_session_id', sessionId)
+        .eq('is_active', true)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return null; // No chat found
+        }
+        throw error;
+      }
+      return data;
+    } catch (error) {
+      console.error('Error getting chat by session ID:', error);
+      return null;
+    }
+  },
+};
+
+// =====================================================
+// ENHANCED MATCH SERVICE (Session-Chat Integration)
+// =====================================================
+
+// Extend existing matchService with chat integration
+const originalMatchService = { ...matchService };
+
+export const sessionService = {
+  ...originalMatchService,
+
+  // Create match with automatic chat creation
+  createSessionWithChat: async (matchData) => {
+    try {
+      // Create the match (this will trigger chat creation via database trigger)
+      const match = await originalMatchService.createMatch(matchData);
+      
+      // Wait a moment for the trigger to complete
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Get the created chat
+      const chat = await chatService.getChatBySessionId(match.id);
+      
+      return {
+        ...match,
+        chat
+      };
+    } catch (error) {
+      console.error('Error creating session with chat:', error);
+      throw error;
+    }
+  },
+
+  // Join session and chat
+  joinSessionAndChat: async (sessionId, userId, isHost = false) => {
+    try {
+      // Join the match (this will trigger chat membership via database trigger)
+      const result = await originalMatchService.joinMatch(sessionId, userId, isHost);
+      
+      // Wait a moment for the trigger to complete
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      return result;
+    } catch (error) {
+      console.error('Error joining session and chat:', error);
+      throw error;
+    }
+  },
+
+  // Leave session and chat
+  leaveSessionAndChat: async (sessionId, userId) => {
+    try {
+      // Leave the match (this will trigger chat removal via database trigger)
+      await originalMatchService.leaveMatch(sessionId, userId);
+      
+      // Wait a moment for the trigger to complete
+      await new Promise(resolve => setTimeout(resolve, 100));
+    } catch (error) {
+      console.error('Error leaving session and chat:', error);
+      throw error;
+    }
+  },
+
+  // Get session with chat data
+  getSessionWithChat: async (sessionId) => {
+    try {
+      const match = await originalMatchService.getMatch(sessionId);
+      const chat = await chatService.getChatBySessionId(sessionId);
+      
+      return {
+        ...match,
+        chat
+      };
+    } catch (error) {
+      console.error('Error getting session with chat:', error);
+      throw error;
+    }
   },
 };
 

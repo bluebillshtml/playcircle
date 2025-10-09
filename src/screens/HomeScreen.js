@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,9 +8,13 @@ import {
   Dimensions,
   Image,
   ActivityIndicator,
+  Modal,
+  Animated,
 } from 'react-native';
+import Slider from '@react-native-community/slider';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useSport } from '../context/SportContext';
@@ -26,29 +30,88 @@ const { width } = Dimensions.get('window');
 const UPCOMING_MATCHES = [
   {
     id: 1,
-    courtName: 'Downtown Padel Club',
-    date: '2025-10-03',
-    time: '18:00',
+    courtName: 'Center City Indoor',
+    location: 'Phield House',
+    distance: '85.2 mi away',
+    date: '2025-10-08',
+    time: '7:30pm to 8:30pm',
+    duration: 60,
+    type: 'casual',
+    skillLevel: 'Intermediate',
+    joinedPlayers: 3,
+    totalPlayers: 10,
+    pricePerPlayer: 17.50,
+    gameType: '5v5',
+    organizer: 'Plei',
+    image: 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800&h=600&fit=crop',
+  },
+  {
+    id: 2,
+    courtName: 'Sunset Sports Complex',
+    location: 'Downtown Arena',
+    distance: '12.3 mi away',
+    date: '2025-10-08',
+    time: '6:00pm to 7:00pm',
+    duration: 60,
+    type: 'competitive',
+    skillLevel: 'Advanced',
+    joinedPlayers: 8,
+    totalPlayers: 10,
+    pricePerPlayer: 15.00,
+    gameType: '5v5',
+    organizer: 'PlayCircle',
+    image: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&h=600&fit=crop',
+  },
+  {
+    id: 3,
+    courtName: 'Riverside Basketball Court',
+    location: 'City Park',
+    distance: '5.8 mi away',
+    date: '2025-10-09',
+    time: '5:00pm to 6:30pm',
     duration: 90,
+    type: 'casual',
+    skillLevel: 'Beginner',
+    joinedPlayers: 4,
+    totalPlayers: 8,
+    pricePerPlayer: 10.00,
+    gameType: '4v4',
+    organizer: 'Community',
+    image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800&h=600&fit=crop',
+  },
+  {
+    id: 4,
+    courtName: 'Elite Tennis Academy',
+    location: 'Tennis Center',
+    distance: '18.5 mi away',
+    date: '2025-10-09',
+    time: '4:00pm to 6:00pm',
+    duration: 120,
     type: 'competitive',
     skillLevel: 'Intermediate',
     joinedPlayers: 2,
     totalPlayers: 4,
-    pricePerPlayer: 10,
-    image: 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=400&h=300&fit=crop',
+    pricePerPlayer: 25.00,
+    gameType: 'Doubles',
+    organizer: 'Elite Academy',
+    image: 'https://images.unsplash.com/photo-1622163642998-1ea32b0bbc67?w=800&h=600&fit=crop',
   },
   {
-    id: 2,
-    courtName: 'Sunset Sports Center',
-    date: '2025-10-05',
-    time: '10:00',
-    duration: 60,
+    id: 5,
+    courtName: 'West Side Soccer Fields',
+    location: 'Memorial Park',
+    distance: '7.2 mi away',
+    date: '2025-10-10',
+    time: '7:00pm to 9:00pm',
+    duration: 120,
     type: 'casual',
-    skillLevel: 'Beginner',
-    joinedPlayers: 3,
-    totalPlayers: 4,
-    pricePerPlayer: 8.75,
-    image: 'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=400&h=300&fit=crop',
+    skillLevel: 'All Levels',
+    joinedPlayers: 12,
+    totalPlayers: 16,
+    pricePerPlayer: 12.50,
+    gameType: '8v8',
+    organizer: 'West Side FC',
+    image: 'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=800&h=600&fit=crop',
   },
 ];
 
@@ -100,10 +163,67 @@ export default function HomeScreen({ navigation }) {
   const [pastMatches, setPastMatches] = useState([]);
   const [userStats, setUserStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [navModalVisible, setNavModalVisible] = useState(false);
+
+  // Filter states
+  const [selectedDifficulties, setSelectedDifficulties] = useState([]);
+  const [selectedTimes, setSelectedTimes] = useState([]);
+  const [distanceRange, setDistanceRange] = useState(100);
+  const [sortBy, setSortBy] = useState('nearest');
+
+  // Navigation animation refs
+  const slideAnim = useRef(new Animated.Value(-width)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     loadData();
   }, [user]);
+
+  const navItems = [
+    { name: 'Home', icon: 'home', screen: 'Home' },
+    { name: 'Leaderboard', icon: 'trophy', screen: 'Dashboard' },
+    { name: 'Matches', icon: 'calendar', screen: 'Matches' },
+    { name: 'Messages', icon: 'chatbubbles', screen: 'Messages' },
+    { name: 'Profile', icon: 'person', screen: 'Profile' },
+  ];
+
+  const openNavModal = () => {
+    setNavModalVisible(true);
+    Animated.parallel([
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        damping: 20,
+        stiffness: 90,
+        mass: 1,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 350,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const closeNavModal = () => {
+    Animated.parallel([
+      Animated.spring(slideAnim, {
+        toValue: -width,
+        damping: 20,
+        stiffness: 90,
+        mass: 1,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setNavModalVisible(false);
+    });
+  };
 
 
 
@@ -117,6 +237,8 @@ export default function HomeScreen({ navigation }) {
         const transformedMatches = matches.map(match => ({
           id: match.id,
           courtName: match.court?.name || 'Unknown Court',
+          location: match.court?.address || 'Location',
+          distance: '5 mi away',
           date: match.match_date,
           time: match.match_time,
           duration: match.duration_minutes,
@@ -125,12 +247,14 @@ export default function HomeScreen({ navigation }) {
           joinedPlayers: match.current_players,
           totalPlayers: match.max_players,
           pricePerPlayer: parseFloat(match.price_per_player),
+          gameType: `${match.max_players/2}v${match.max_players/2}`,
+          organizer: 'PlayCircle',
           image: match.court?.image_url || 'https://images.unsplash.com/photo-1554068865-24cd4e34b8?w=400&h=300&fit=crop',
         }));
-        setUpcomingMatches(transformedMatches);
+        setUpcomingMatches(transformedMatches.length > 0 ? transformedMatches : UPCOMING_MATCHES);
       } catch (matchError) {
         console.error('Error loading matches:', matchError);
-        setUpcomingMatches([]);
+        setUpcomingMatches(UPCOMING_MATCHES);
       }
 
       // Load user's past matches if logged in
@@ -252,33 +376,52 @@ export default function HomeScreen({ navigation }) {
       <View style={styles.container}>
         {/* Fixed Header Section */}
         <View style={styles.fixedHeader}>
-          {/* Header */}
+          {/* Header with Menu, Search, and Notification */}
           <View style={styles.header}>
+            <TouchableOpacity style={styles.menuButton} onPress={openNavModal}>
+              <Ionicons name="menu" size={28} color={colors.text} />
+            </TouchableOpacity>
 
-            <View style={styles.headerText}>
-              <Text style={styles.greeting}>{getGreeting()}</Text>
-              <Text style={styles.subGreeting}>Ready to play {selectedSport.name}?</Text>
+            {/* Search Bar */}
+            <View style={styles.searchContainer}>
+              <Ionicons name="search" size={20} color={colors.textSecondary} />
+              <Text style={styles.searchPlaceholder}>Search games</Text>
+              <TouchableOpacity
+                style={styles.filterButton}
+                onPress={() => setFilterModalVisible(true)}
+              >
+                <Ionicons name="options-outline" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
             </View>
+
+            <TouchableOpacity style={styles.notificationButton}>
+              <Ionicons name="notifications-outline" size={28} color={colors.text} />
+            </TouchableOpacity>
           </View>
 
-          {/* Quick Stats */}
-          <View style={styles.quickStats}>
-            <View style={styles.statCard}>
-              <Ionicons name={selectedSport.icon} size={24} color={colors.primary} />
-              <Text style={styles.statNumber}>{userStats?.totalMatches || 0}</Text>
-              <Text style={styles.statLabel}>Matches</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Ionicons name="trophy" size={24} color={colors.warning} />
-              <Text style={styles.statNumber}>{userStats?.winRate || 0}%</Text>
-              <Text style={styles.statLabel}>Win Rate</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Ionicons name="time" size={24} color={colors.success} />
-              <Text style={styles.statNumber}>{userStats?.hoursPlayed || 0}h</Text>
-              <Text style={styles.statLabel}>Played</Text>
-            </View>
-          </View>
+          {/* Date Filter Pills */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.dateFilterContainer}
+            contentContainerStyle={styles.dateFilterContent}
+          >
+            <TouchableOpacity style={[styles.dateFilterPill, styles.dateFilterPillActive]}>
+              <Text style={[styles.dateFilterText, styles.dateFilterTextActive]}>Wed 08</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.dateFilterPill}>
+              <Text style={styles.dateFilterText}>Thu 09</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.dateFilterPill}>
+              <Text style={styles.dateFilterText}>Fri 10</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.dateFilterPill}>
+              <Text style={styles.dateFilterText}>Sat 11</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.dateFilterPill}>
+              <Text style={styles.dateFilterText}>Sun 12</Text>
+            </TouchableOpacity>
+          </ScrollView>
         </View>
 
         {/* Scrollable Content */}
@@ -287,13 +430,10 @@ export default function HomeScreen({ navigation }) {
           showsVerticalScrollIndicator={false}
         >
 
-      {/* Upcoming Matches Section */}
+      {/* Available Games Section */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Upcoming {selectedSport.name} Matches</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Matches')}>
-            <Text style={styles.seeAllText}>See All</Text>
-          </TouchableOpacity>
+          <Text style={styles.sectionTitle}>Available Games</Text>
         </View>
 
         {upcomingMatches.length > 0 ? (
@@ -389,78 +529,267 @@ export default function HomeScreen({ navigation }) {
         )}
       </View>
 
-      {/* Past Matches Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Recent Activity</Text>
-        {selectedSport.id === 'padel' && user ? (
-          <View style={styles.recentActivityCard}>
-            <PadelMatchHistory
-              userId={user.id}
-              onMatchSelect={(match) => {
-                // Navigate to match detail
-                navigation.navigate('MatchDetail', { matchId: match.id });
-              }}
-            />
-          </View>
-        ) : (
-          pastMatches.map((match, index) => (
-            <View key={match.id}>
-              <TouchableOpacity style={styles.pastMatchCard}>
-              <View style={styles.pastMatchLeft}>
-                <View
-                  style={[
-                    styles.resultBadge,
-                    match.result === 'Win'
-                      ? styles.resultBadgeWin
-                      : styles.resultBadgeLoss,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.resultText,
-                      match.result === 'Win'
-                        ? styles.resultTextWin
-                        : styles.resultTextLoss,
-                    ]}
-                  >
-                    {match.result}
-                  </Text>
-                </View>
-                <View style={styles.pastMatchInfo}>
-                  <Text style={styles.pastCourtName}>{match.courtName}</Text>
-                  <Text style={styles.pastMatchDetails}>
-                    {formatDate(match.date)} • {match.time}
-                  </Text>
-                   <View style={styles.partnerRow}>
-                     <Ionicons
-                       name="person-outline"
-                       size={12}
-                       color={colors.textSecondary}
-                     />
-                     <Text style={styles.partnerText}>with {match.partner}</Text>
-                   </View>
-                </View>
-              </View>
-              <Text style={styles.scoreText}>{match.score}</Text>
-              </TouchableOpacity>
-            </View>
-          ))
-        )}
-      </View>
-
-      {/* Quick Action */}
-      <View style={styles.actionsSection}>
-         <TouchableOpacity
-           style={styles.actionButton}
-           onPress={() => navigation.navigate('Matches')}
-         >
-           <Ionicons name="search" size={26} color={colors.white} />
-           <Text style={styles.actionButtonText}>Find {selectedSport.name} Players Near You</Text>
-         </TouchableOpacity>
-      </View>
 
           <View style={styles.bottomPadding} />
         </ScrollView>
+
+        {/* Navigation Modal */}
+        <Modal
+          visible={navModalVisible}
+          transparent={true}
+          animationType="none"
+          onRequestClose={closeNavModal}
+          statusBarTranslucent={true}
+        >
+          <Animated.View style={[styles.navModalOverlay, { opacity: fadeAnim }]}>
+            <TouchableOpacity
+              style={styles.navBackdrop}
+              activeOpacity={1}
+              onPress={closeNavModal}
+            />
+            <Animated.View 
+              style={[
+                styles.navDrawer, 
+                { 
+                  transform: [{ translateX: slideAnim }]
+                }
+              ]}
+            >
+              <BlurView intensity={25} style={styles.navBlurContainer}>
+                <View style={styles.navDrawerHeader}>
+                  <View style={styles.navDrawerHeaderContent}>
+                    <View style={styles.navAppIcon}>
+                      <Ionicons name="tennisball" size={28} color={colors.primary} />
+                    </View>
+                    <View style={styles.navAppInfo}>
+                      <Text style={styles.navAppName}>PlayCircle</Text>
+                      <Text style={styles.navAppSubtitle}>Sport Community</Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    onPress={closeNavModal}
+                    style={styles.navCloseButton}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="close" size={24} color={colors.text} />
+                  </TouchableOpacity>
+                </View>
+                
+                <View style={styles.navItemsContainer}>
+                  {navItems.map((item, index) => (
+                    <Animated.View
+                      key={item.screen}
+                      style={{
+                        transform: [{
+                          translateX: slideAnim.interpolate({
+                            inputRange: [-width, 0],
+                            outputRange: [-50 - (index * 20), 0],
+                            extrapolate: 'clamp',
+                          })
+                        }],
+                        opacity: slideAnim.interpolate({
+                          inputRange: [-width, -width + 100, 0],
+                          outputRange: [0, 0, 1],
+                          extrapolate: 'clamp',
+                        })
+                      }}
+                    >
+                      <TouchableOpacity
+                        style={[
+                          styles.navItem,
+                          'Home' === item.screen && styles.navItemActive
+                        ]}
+                        onPress={() => {
+                          closeNavModal();
+                          navigation.navigate(item.screen);
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <View style={[
+                          styles.navItemIcon,
+                          'Home' === item.screen && styles.navItemIconActive
+                        ]}>
+                          <Ionicons 
+                            name={item.icon} 
+                            size={24} 
+                            color={'Home' === item.screen ? colors.primary : colors.text} 
+                          />
+                        </View>
+                        <Text style={[
+                          styles.navItemText,
+                          'Home' === item.screen && styles.navItemTextActive
+                        ]}>
+                          {item.name}
+                        </Text>
+                        {'Home' === item.screen && (
+                          <View style={styles.navItemIndicator}>
+                            <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    </Animated.View>
+                  ))}
+                </View>
+
+                <View style={styles.navDrawerFooter}>
+                  <View style={styles.navUserInfo}>
+                    <View style={styles.navUserAvatar}>
+                      <Ionicons name="person" size={20} color={colors.text} />
+                    </View>
+                    <View style={styles.navUserDetails}>
+                      <Text style={styles.navUserName}>Player</Text>
+                      <Text style={styles.navUserStatus}>Online</Text>
+                    </View>
+                  </View>
+                </View>
+              </BlurView>
+            </Animated.View>
+          </Animated.View>
+        </Modal>
+
+        {/* Filter Modal */}
+        <Modal
+          visible={filterModalVisible}
+          animationType="slide"
+          transparent={false}
+          onRequestClose={() => setFilterModalVisible(false)}
+        >
+          <View style={styles.filterModal}>
+            <View style={styles.filterHeader}>
+              <TouchableOpacity onPress={() => setFilterModalVisible(false)}>
+                <Ionicons name="close" size={28} color={colors.text} />
+              </TouchableOpacity>
+              <View style={styles.filterTitleContainer}>
+                <Ionicons name="options" size={24} color={colors.text} />
+                <Text style={styles.filterTitle}>Filters</Text>
+              </View>
+            </View>
+
+            <ScrollView style={styles.filterContent} showsVerticalScrollIndicator={false}>
+              {/* Preferred Time */}
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionTitle}>Preferred time</Text>
+                {['Morning (6am - 12pm)', 'Afternoon (12pm - 5pm)', 'Evening (5pm - 10pm)', 'Late night (10pm - 2am)'].map((time) => (
+                  <TouchableOpacity
+                    key={time}
+                    style={styles.filterOption}
+                    onPress={() => {
+                      if (selectedTimes.includes(time)) {
+                        setSelectedTimes(selectedTimes.filter(t => t !== time));
+                      } else {
+                        setSelectedTimes([...selectedTimes, time]);
+                      }
+                    }}
+                  >
+                    <Text style={styles.filterOptionText}>{time}</Text>
+                    <View style={[styles.checkbox, selectedTimes.includes(time) && styles.checkboxChecked]}>
+                      {selectedTimes.includes(time) && <Ionicons name="checkmark" size={18} color="#10B981" />}
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Distance Slider */}
+              <View style={styles.filterSection}>
+                <View style={styles.distanceHeader}>
+                  <Text style={styles.filterSectionTitle}>Distance away</Text>
+                  <Text style={styles.distanceValue}>0 mi - {distanceRange} mi</Text>
+                </View>
+                <Text style={styles.distanceSubtitle}>See games based on proximity of your location</Text>
+                <Slider
+                  style={styles.slider}
+                  minimumValue={5}
+                  maximumValue={100}
+                  step={5}
+                  value={distanceRange}
+                  onValueChange={setDistanceRange}
+                  minimumTrackTintColor="#10B981"
+                  maximumTrackTintColor="rgba(255, 255, 255, 0.2)"
+                  thumbTintColor="#10B981"
+                />
+                <View style={styles.sliderLabels}>
+                  <Text style={styles.sliderLabel}>5</Text>
+                  <Text style={styles.sliderLabel}>100</Text>
+                </View>
+              </View>
+
+              {/* Game Difficulty */}
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionTitle}>Game Difficulty</Text>
+                {['Master', 'High-Level', 'Intermediate', 'Beginner', 'Friendly'].map((difficulty) => (
+                  <TouchableOpacity
+                    key={difficulty}
+                    style={styles.filterOption}
+                    onPress={() => {
+                      if (selectedDifficulties.includes(difficulty)) {
+                        setSelectedDifficulties(selectedDifficulties.filter(d => d !== difficulty));
+                      } else {
+                        setSelectedDifficulties([...selectedDifficulties, difficulty]);
+                      }
+                    }}
+                  >
+                    <Text style={styles.filterOptionText}>{difficulty}</Text>
+                    <View style={[styles.checkbox, selectedDifficulties.includes(difficulty) && styles.checkboxChecked]}>
+                      {selectedDifficulties.includes(difficulty) && <Ionicons name="checkmark" size={18} color="#10B981" />}
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Sort By */}
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionTitle}>Sort by</Text>
+                <Text style={styles.filterSubsectionTitle}>Distance</Text>
+                <TouchableOpacity
+                  style={styles.filterOption}
+                  onPress={() => setSortBy('nearest')}
+                >
+                  <Text style={styles.filterOptionText}>Nearest</Text>
+                  <View style={[styles.radioButton, sortBy === 'nearest' && styles.radioButtonSelected]} />
+                </TouchableOpacity>
+
+                <Text style={styles.filterSubsectionTitle}>Time</Text>
+                <TouchableOpacity
+                  style={styles.filterOption}
+                  onPress={() => setSortBy('earliest')}
+                >
+                  <Text style={styles.filterOptionText}>Earliest</Text>
+                  <View style={[styles.radioButton, sortBy === 'earliest' && styles.radioButtonSelected]} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.filterOption}
+                  onPress={() => setSortBy('latest')}
+                >
+                  <Text style={styles.filterOptionText}>Latest</Text>
+                  <View style={[styles.radioButton, sortBy === 'latest' && styles.radioButtonSelected]} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={{ height: 120 }} />
+            </ScrollView>
+
+            {/* Bottom Buttons */}
+            <View style={styles.filterFooter}>
+              <TouchableOpacity
+                style={styles.clearButton}
+                onPress={() => {
+                  setSelectedDifficulties([]);
+                  setSelectedTimes([]);
+                  setDistanceRange(100);
+                  setSortBy('nearest');
+                }}
+              >
+                <Text style={styles.clearButtonText}>Clear</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.applyButton}
+                onPress={() => setFilterModalVisible(false)}
+              >
+                <Text style={styles.applyButtonText}>See {upcomingMatches.length} Games</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </View>
     </AnimatedBackground>
   );
@@ -473,63 +802,83 @@ const createStyles = (colors) => StyleSheet.create({
   },
   fixedHeader: {
     backgroundColor: 'transparent',
-    paddingBottom: 16,
+    paddingBottom: 0,
   },
   scrollableContent: {
     flex: 1,
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 110,
-    paddingBottom: 16,
+    paddingTop: 60,
+    paddingBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
   },
-
-  headerText: {
-    width: '100%',
+  menuButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  greeting: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: colors.text,
-    marginBottom: 4,
-    letterSpacing: -0.5,
+  notificationButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  subGreeting: {
+  searchContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 24,
+    gap: 12,
+    height: 48,
+  },
+  searchPlaceholder: {
+    flex: 1,
     fontSize: 16,
     color: colors.textSecondary,
-    fontWeight: '400',
   },
-  quickStats: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    gap: 12,
-    marginBottom: 0,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: colors.card,
-    borderRadius: 16,
-    padding: 16,
+  filterButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.primary,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
+    justifyContent: 'center',
   },
-  statNumber: {
-    fontSize: 20,
-    fontWeight: '700',
+  dateFilterContainer: {
+    marginBottom: 16,
+  },
+  dateFilterContent: {
+    paddingHorizontal: 20,
+    gap: 12,
+  },
+  dateFilterPill: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 24,
+    backgroundColor: colors.card,
+  },
+  dateFilterPillActive: {
+    backgroundColor: colors.text,
+  },
+  dateFilterText: {
+    fontSize: 14,
+    fontWeight: '600',
     color: colors.text,
-    marginTop: 8,
-    marginBottom: 2,
   },
-  statLabel: {
-    fontSize: 11,
-    color: colors.textSecondary,
-    fontWeight: '500',
+  dateFilterTextActive: {
+    color: colors.background,
   },
   section: {
     paddingHorizontal: 16,
@@ -555,16 +904,15 @@ const createStyles = (colors) => StyleSheet.create({
     color: colors.primary,
   },
   matchCard: {
-    backgroundColor: colors.card,
-    borderRadius: 24,
+    backgroundColor: 'rgba(52, 73, 94, 0.8)',
+    borderRadius: 28,
     marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+    borderWidth: 0,
     overflow: 'hidden',
     position: 'relative',
   },
@@ -755,6 +1103,166 @@ const createStyles = (colors) => StyleSheet.create({
   resultBadgeWin: {
     backgroundColor: colors.winBackground,
   },
+  // Navigation Modal Styles
+  navModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-start',
+  },
+  navBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  navDrawer: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: width * 0.8,
+    maxWidth: 320,
+  },
+  navBlurContainer: {
+    flex: 1,
+    backgroundColor: colors.glass,
+    borderTopRightRadius: 24,
+    borderBottomRightRadius: 24,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    borderLeftWidth: 0,
+  },
+  navDrawerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 32,
+    paddingTop: 60,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.glassBorder,
+  },
+  navDrawerHeaderContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  navAppIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primary + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  navAppInfo: {
+    flex: 1,
+  },
+  navAppName: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: colors.text,
+    letterSpacing: -0.5,
+    marginBottom: 2,
+  },
+  navAppSubtitle: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  navCloseButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navItemsContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 24,
+  },
+  navItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderRadius: 16,
+    marginVertical: 6,
+    backgroundColor: 'transparent',
+  },
+  navItemActive: {
+    backgroundColor: colors.primary + '15',
+    borderWidth: 1,
+    borderColor: colors.primary + '30',
+  },
+  navItemIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  navItemIconActive: {
+    backgroundColor: colors.primary + '20',
+  },
+  navItemText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
+    letterSpacing: -0.3,
+    flex: 1,
+  },
+  navItemTextActive: {
+    color: colors.primary,
+    fontWeight: '700',
+  },
+  navItemIndicator: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.primary + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navDrawerFooter: {
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    borderTopWidth: 1,
+    borderTopColor: colors.glassBorder,
+  },
+  navUserInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  navUserAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.surfaceLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  navUserDetails: {
+    flex: 1,
+  },
+  navUserName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 2,
+  },
+  navUserStatus: {
+    fontSize: 12,
+    color: colors.success,
+    fontWeight: '500',
+  },
   resultBadgeLoss: {
     backgroundColor: colors.lossBackground,
   },
@@ -824,21 +1332,149 @@ const createStyles = (colors) => StyleSheet.create({
   bottomPadding: {
     height: 20,
   },
-  padelHistoryContainer: {
-    height: 300, // Fixed height for the padel history component
+  filterModal: {
+    flex: 1,
+    backgroundColor: colors.background,
   },
-  recentActivityCard: {
-    backgroundColor: colors.card,
-    borderRadius: 24,
-    padding: 0,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 8,
+  filterHeader: {
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  filterTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 20,
+  },
+  filterTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  filterContent: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  filterSection: {
+    marginTop: 32,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    paddingBottom: 24,
+  },
+  filterSectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 20,
+  },
+  filterSubsectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.6)',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  filterOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  filterOptionText: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: '400',
+  },
+  checkbox: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#10B981',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+  },
+  radioButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  radioButtonSelected: {
+    borderWidth: 7,
+    borderColor: '#10B981',
+  },
+  distanceHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  distanceValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#10B981',
+  },
+  distanceSubtitle: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.6)',
+    marginBottom: 16,
+  },
+  slider: {
+    width: '100%',
+    height: 40,
+  },
+  sliderLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  sliderLabel: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.6)',
+  },
+  filterFooter: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    paddingBottom: 40,
+    gap: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  clearButton: {
+    flex: 1,
+    paddingVertical: 18,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: colors.glassBorder,
-    overflow: 'hidden',
-    minHeight: 300,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  clearButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  applyButton: {
+    flex: 2,
+    paddingVertical: 18,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#10B981',
+  },
+  applyButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });

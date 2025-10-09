@@ -9,13 +9,13 @@ import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { SportProvider } from './src/context/SportContext';
 
 import SplashScreen from './src/screens/SplashScreen';
-import SignInScreen from './src/screens/SignInScreen';
 import SignUpScreen from './src/screens/SignUpScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import PreferencesScreen from './src/screens/PreferencesScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import MatchesScreen from './src/screens/MatchesScreen';
-import CreateMatchScreen from './src/screens/CreateMatchScreen';
+import MessagesScreen from './src/screens/MessagesScreen';
+import ChatThreadScreen from './src/screens/ChatThreadScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import MatchDetailScreen from './src/screens/MatchDetailScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
@@ -70,11 +70,6 @@ function AppContent() {
             // Auth Stack - Show when user is not logged in
             <>
               <Stack.Screen
-                name="SignIn"
-                component={SignInScreen}
-                options={{ headerShown: false }}
-              />
-              <Stack.Screen
                 name="SignUp"
                 component={SignUpScreen}
                 options={{ headerShown: false }}
@@ -92,7 +87,7 @@ function AppContent() {
             <>
               <Stack.Screen
                 name="Home"
-                component={ScreenWithNavButton({ component: HomeScreen, currentScreen: 'Home' })}
+                component={HomeScreen}
                 options={{ headerShown: false }}
               />
               <Stack.Screen
@@ -101,8 +96,13 @@ function AppContent() {
                 options={{ headerShown: false }}
               />
               <Stack.Screen
-                name="Create"
-                component={ScreenWithNavButton({ component: CreateMatchScreen, currentScreen: 'Create' })}
+                name="Messages"
+                component={ScreenWithNavButton({ component: MessagesScreen, currentScreen: 'Messages' })}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="ChatThread"
+                component={ChatThreadScreen}
                 options={{ headerShown: false }}
               />
               <Stack.Screen

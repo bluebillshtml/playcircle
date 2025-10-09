@@ -269,6 +269,19 @@ export default function PadelMatchDetailScreen({ navigation, route }) {
     });
   };
 
+  const calculateEndTime = (startTime, durationMinutes) => {
+    const [hours, minutes] = startTime.split(':').map(Number);
+    const totalMinutes = hours * 60 + minutes + durationMinutes;
+    const endHours = Math.floor(totalMinutes / 60) % 24;
+    const endMinutes = totalMinutes % 60;
+    const endTime = `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}:00`;
+    return new Date(`2000-01-01T${endTime}`).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+  };
+
   const openDirections = () => {
     if (!match?.court?.latitude || !match?.court?.longitude) {
       Alert.alert('Error', 'Court location not available');
@@ -423,276 +436,407 @@ export default function PadelMatchDetailScreen({ navigation, route }) {
   return (
     <AnimatedBackground>
       <View style={styles.container}>
-      <View style={styles.spacer} />
-
-      {/* Glassmorphic Court Preview Section */}
-      <View style={styles.courtPreviewSection}>
-        <ImageBackground
-          source={{
-            uri: match.court?.image_url || 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800'
-          }}
-          style={styles.courtImage}
-          imageStyle={styles.courtImageStyle}
-        >
-          <LinearGradient
-            colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.6)']}
-            style={styles.imageOverlay}
-          >
-            <View
-              style={[
-                styles.typeBadge,
-                match.match_type === 'competitive'
-                  ? styles.typeBadgeCompetitive
-                  : styles.typeBadgeCasual,
-              ]}
-            >
-              <BlurView intensity={20} tint="dark" style={styles.typeBadgeBlur}>
-                <Text style={styles.typeBadgeText}>
-                  {match.match_type === 'competitive' ? 'COMPETITIVE' : 'CASUAL'}
-                </Text>
-              </BlurView>
-            </View>
-          </LinearGradient>
-        </ImageBackground>
-
-        <BlurView intensity={colors.isDarkMode ? 40 : 60} tint={colors.isDarkMode ? 'dark' : 'light'} style={styles.courtInfoCard}>
-          <View style={styles.courtInfoHeader}>
-            <View style={styles.courtInfoLeft}>
-              <Text style={styles.courtNameLarge}>{match.court?.name || 'Unknown Court'}</Text>
-              <View style={styles.ratingRow}>
-                <Ionicons name="star" size={16} color={colors.warning} />
-                <Text style={styles.ratingText}>{match.court?.rating || 4.5}</Text>
-              </View>
-            </View>
-          </View>
-          <View style={styles.locationRow}>
-            <Ionicons name="location" size={14} color={colors.textSecondary} />
-            <Text style={styles.courtAddress}>
-              {match.court?.address || 'Address not available'}
-            </Text>
-          </View>
-          <View style={styles.courtQuickInfo}>
-            <View style={styles.quickInfoItem}>
-              <Ionicons name="calendar" size={14} color={colors.textSecondary} />
-              <Text style={styles.quickInfoText}>{formatDate(match.match_date)}</Text>
-            </View>
-            <View style={styles.quickInfoItem}>
-              <Ionicons name="time" size={14} color={colors.textSecondary} />
-              <Text style={styles.quickInfoText}>
-                {formatTime(match.match_time)} • {match.duration_minutes} min
-              </Text>
-            </View>
-          </View>
-        </BlurView>
-      </View>
-
-      {/* Glassmorphic Action Buttons */}
-      <View style={styles.actionButtonsSection}>
-        <TouchableOpacity style={styles.primaryActionButton} onPress={openDirections} activeOpacity={0.8}>
-          <LinearGradient
-            colors={[colors.primary, colors.primary + 'DD']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.primaryActionGradient}
-          >
-            <Ionicons name="navigate" size={20} color="#FFFFFF" />
-            <Text style={styles.primaryActionButtonText}>Get Directions</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-
-        <View style={styles.secondaryActionsRow}>
-          <TouchableOpacity style={styles.secondaryActionButton} onPress={callCourt} activeOpacity={0.7}>
-            <BlurView intensity={colors.isDarkMode ? 30 : 40} tint={colors.isDarkMode ? 'dark' : 'light'} style={styles.secondaryActionBlur}>
-              <Ionicons name="call" size={20} color={colors.primary} />
-              <Text style={styles.secondaryActionButtonText}>Call</Text>
-            </BlurView>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.secondaryActionButton} onPress={shareMatch} activeOpacity={0.7}>
-            <BlurView intensity={colors.isDarkMode ? 30 : 40} tint={colors.isDarkMode ? 'dark' : 'light'} style={styles.secondaryActionBlur}>
-              <Ionicons name="share-social" size={20} color={colors.primary} />
-              <Text style={styles.secondaryActionButtonText}>Share</Text>
-            </BlurView>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.secondaryActionButton} onPress={saveMatch} activeOpacity={0.7}>
-            <BlurView intensity={colors.isDarkMode ? 30 : 40} tint={colors.isDarkMode ? 'dark' : 'light'} style={styles.secondaryActionBlur}>
-              <Ionicons name="bookmark-outline" size={20} color={colors.primary} />
-              <Text style={styles.secondaryActionButtonText}>Save</Text>
-            </BlurView>
-          </TouchableOpacity>
+        <View style={styles.header}>
+          <View style={styles.headerSpacer} />
+          <View style={styles.headerSpacer} />
+          <View style={styles.headerSpacer} />
         </View>
-      </View>
 
-      {/* Tab Navigation */}
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'details' && styles.activeTab]}
-          onPress={() => setActiveTab('details')}
+        <ScrollView 
+          style={styles.scrollView} 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
         >
-          <Text style={[styles.tabText, activeTab === 'details' && styles.activeTabText]}>
-            Details
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'scoring' && styles.activeTab]}
-          onPress={() => setActiveTab('scoring')}
-        >
-          <Text style={[styles.tabText, activeTab === 'scoring' && styles.activeTabText]}>
-            Scoring
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'stats' && styles.activeTab]}
-          onPress={() => setActiveTab('stats')}
-        >
-          <Text style={[styles.tabText, activeTab === 'stats' && styles.activeTabText]}>
-            Stats
-          </Text>
-        </TouchableOpacity>
-      </View>
+          {/* Glassmorphic Court Preview Section */}
+          <View style={styles.courtPreviewSection}>
+            <ImageBackground
+              source={{
+                uri: match.court?.image_url || 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800'
+              }}
+              style={styles.courtImage}
+              imageStyle={styles.courtImageStyle}
+            >
+              <LinearGradient
+                colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.6)']}
+                style={styles.imageOverlay}
+              >
+                <View
+                  style={[
+                    styles.typeBadge,
+                    match.match_type === 'competitive'
+                      ? styles.typeBadgeCompetitive
+                      : styles.typeBadgeCasual,
+                  ]}
+                >
+                  <BlurView intensity={20} tint="dark" style={styles.typeBadgeBlur}>
+                    <Text style={styles.typeBadgeText}>
+                      {match.match_type === 'competitive' ? 'COMPETITIVE' : 'CASUAL'}
+                    </Text>
+                  </BlurView>
+                </View>
+              </LinearGradient>
+            </ImageBackground>
 
-      {/* Tab Content */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {activeTab === 'details' && (
-          <View style={styles.detailsTab}>
-            {/* Players Section */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Players ({match.current_players}/{match.max_players})</Text>
-              <View style={styles.playersList}>
-                {match.match_players?.map((player) => (
-                  <View key={player.id} style={styles.playerItem}>
-                    <View style={styles.playerInfo}>
-                      <Text style={styles.playerName}>
-                        {player.user?.full_name || player.user?.username || 'Unknown Player'}
+            <BlurView intensity={colors.isDarkMode ? 40 : 60} tint={colors.isDarkMode ? 'dark' : 'light'} style={styles.courtInfoCard}>
+              <View style={styles.courtInfoHeader}>
+                <View style={styles.courtInfoLeft}>
+                  <Text style={styles.courtNameLarge}>{match.court?.name || 'Unknown Court'}</Text>
+                  <View style={styles.ratingRow}>
+                    <Ionicons name="star" size={16} color={colors.warning} />
+                    <Text style={styles.ratingText}>{match.court?.rating || 4.5}</Text>
+                  </View>
+                </View>
+              </View>
+              <View style={styles.locationRow}>
+                <Ionicons name="location" size={14} color={colors.textSecondary} />
+                <Text style={styles.courtAddress}>
+                  {match.court?.address || 'Address not available'}
+                </Text>
+              </View>
+              <View style={styles.courtQuickInfo}>
+                <View style={styles.quickInfoItem}>
+                  <Ionicons name="calendar" size={14} color={colors.textSecondary} />
+                  <Text style={styles.quickInfoText}>{formatDate(match.match_date)}</Text>
+                </View>
+                <View style={styles.quickInfoItem}>
+                  <Ionicons name="time" size={14} color={colors.textSecondary} />
+                  <Text style={styles.quickInfoText}>
+                    {formatTime(match.match_time)} • {match.duration_minutes} min
+                  </Text>
+                </View>
+              </View>
+            </BlurView>
+          </View>
+
+          {/* Glassmorphic Action Buttons */}
+          <View style={styles.actionButtonsSection}>
+            <TouchableOpacity style={styles.primaryActionButton} onPress={openDirections} activeOpacity={0.8}>
+              <LinearGradient
+                colors={[colors.primary, colors.primary + 'DD']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.primaryActionGradient}
+              >
+                <Ionicons name="navigate" size={20} color="#FFFFFF" />
+                <Text style={styles.primaryActionButtonText}>Get Directions</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <View style={styles.secondaryActionsRow}>
+              <TouchableOpacity style={styles.secondaryActionButton} onPress={callCourt} activeOpacity={0.7}>
+                <BlurView intensity={colors.isDarkMode ? 30 : 40} tint={colors.isDarkMode ? 'dark' : 'light'} style={styles.secondaryActionBlur}>
+                  <Ionicons name="call" size={20} color={colors.primary} />
+                  <Text style={styles.secondaryActionButtonText}>Call</Text>
+                </BlurView>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.secondaryActionButton} onPress={shareMatch} activeOpacity={0.7}>
+                <BlurView intensity={colors.isDarkMode ? 30 : 40} tint={colors.isDarkMode ? 'dark' : 'light'} style={styles.secondaryActionBlur}>
+                  <Ionicons name="share-social" size={20} color={colors.primary} />
+                  <Text style={styles.secondaryActionButtonText}>Share</Text>
+                </BlurView>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.secondaryActionButton} onPress={saveMatch} activeOpacity={0.7}>
+                <BlurView intensity={colors.isDarkMode ? 30 : 40} tint={colors.isDarkMode ? 'dark' : 'light'} style={styles.secondaryActionBlur}>
+                  <Ionicons name="bookmark-outline" size={20} color={colors.primary} />
+                  <Text style={styles.secondaryActionButtonText}>Save</Text>
+                </BlurView>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Tab Navigation */}
+          <View style={styles.tabContainer}>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'details' && styles.activeTab]}
+              onPress={() => setActiveTab('details')}
+            >
+              <Text style={[styles.tabText, activeTab === 'details' && styles.activeTabText]}>
+                Details
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'scoring' && styles.activeTab]}
+              onPress={() => setActiveTab('scoring')}
+            >
+              <Text style={[styles.tabText, activeTab === 'scoring' && styles.activeTabText]}>
+                Scoring
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'stats' && styles.activeTab]}
+              onPress={() => setActiveTab('stats')}
+            >
+              <Text style={[styles.tabText, activeTab === 'stats' && styles.activeTabText]}>
+                Stats
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Tab Content */}
+          {activeTab === 'details' && (
+            <View style={styles.detailsTab}>
+              {/* Overview Section */}
+              <BlurView intensity={colors.isDarkMode ? 35 : 50} tint={colors.isDarkMode ? 'dark' : 'light'} style={styles.section}>
+                <Text style={styles.sectionTitle}>Overview</Text>
+                
+                <View style={styles.overviewCard}>
+                  <View style={styles.overviewRow}>
+                    <View style={styles.overviewItem}>
+                      <Ionicons name="calendar-outline" size={24} color={colors.primary} />
+                      <Text style={styles.overviewLabel}>
+                        {match.match_date && new Date(match.match_date).toDateString() === new Date().toDateString() 
+                          ? 'Today' 
+                          : match.match_date 
+                            ? new Date(match.match_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                            : 'Date TBD'}
                       </Text>
-                      {player.is_host && (
-                        <Text style={styles.hostBadge}>Host</Text>
-                      )}
                     </View>
-                    <Text style={styles.playerJoined}>
-                      Joined {new Date(player.joined_at).toLocaleDateString()}
+                    <View style={styles.overviewItem}>
+                      <Ionicons name="cash-outline" size={24} color={colors.primary} />
+                      <Text style={styles.overviewLabel}>
+                        ${match.price_per_player ? parseFloat(match.price_per_player).toFixed(2) : '0.00'}
+                      </Text>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.overviewRow}>
+                    <View style={styles.overviewItem}>
+                      <Ionicons name="time-outline" size={24} color={colors.primary} />
+                      <Text style={styles.overviewLabel}>
+                        {match.match_time && match.duration_minutes 
+                          ? `${formatTime(match.match_time)} - ${calculateEndTime(match.match_time, match.duration_minutes)}` 
+                          : 'Time TBD'}
+                      </Text>
+                    </View>
+                    <View style={styles.overviewItem}>
+                      <Ionicons name="people-outline" size={24} color={colors.primary} />
+                      <Text style={styles.overviewLabel}>
+                        {match.current_players || 0}-{match.max_players || 0} Players
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Spots Available */}
+                <View style={styles.spotsSection}>
+                  <View style={styles.spotsHeader}>
+                    <Text style={styles.spotsLabel}>Spots Available</Text>
+                    <Text style={styles.spotsCount}>
+                      {match.current_players || 0} of {match.max_players || 0}
                     </Text>
                   </View>
-                ))}
+                  
+                  {(match.max_players && match.current_players && match.max_players - match.current_players > 0) && (
+                    <View style={styles.spotsToGoBadge}>
+                      <Text style={styles.spotsToGoText}>
+                        {match.max_players - match.current_players} more to go!
+                      </Text>
+                    </View>
+                  )}
+                  
+                  <View style={styles.progressBarContainer}>
+                    <View style={styles.progressBarBg}>
+                      <LinearGradient
+                        colors={[colors.primary, colors.primary + 'CC']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={[styles.progressBarFill, { 
+                          width: `${match.current_players && match.max_players 
+                            ? (match.current_players / match.max_players) * 100 
+                            : 0}%` 
+                        }]}
+                      />
+                    </View>
+                  </View>
+                  
+                  <View style={styles.progressLabels}>
+                    <Text style={styles.progressLabel}>Scheduled</Text>
+                    <Text style={styles.progressLabel}>Confirmed</Text>
+                    <Text style={styles.progressLabel}>Game Full</Text>
+                  </View>
+                </View>
+              </BlurView>
+
+              {/* About This Event */}
+              <BlurView intensity={colors.isDarkMode ? 35 : 50} tint={colors.isDarkMode ? 'dark' : 'light'} style={styles.section}>
+                <Text style={styles.sectionTitle}>ABOUT THIS EVENT</Text>
+                <Text style={styles.aboutEventTitle}>{match.court?.name || 'Unknown Court'}</Text>
+                
+                {match.description && (
+                  <>
+                    <View style={styles.sectionDivider} />
+                    <Text style={styles.eventDescription}>{match.description}</Text>
+                  </>
+                )}
+                
+                <View style={styles.sectionDivider} />
+                
+                <Text style={styles.facilityRulesTitle}>Court Amenities:</Text>
+                <View style={styles.amenitiesGrid}>
+                  {match.court?.has_parking && (
+                    <View style={styles.amenityItem}>
+                      <Ionicons name="car" size={18} color={colors.primary} />
+                      <Text style={styles.amenityText}>Parking</Text>
+                    </View>
+                  )}
+                  {match.court?.has_lockers && (
+                    <View style={styles.amenityItem}>
+                      <Ionicons name="lock-closed" size={18} color={colors.primary} />
+                      <Text style={styles.amenityText}>Lockers</Text>
+                    </View>
+                  )}
+                  {match.court?.has_showers && (
+                    <View style={styles.amenityItem}>
+                      <Ionicons name="water" size={18} color={colors.primary} />
+                      <Text style={styles.amenityText}>Showers</Text>
+                    </View>
+                  )}
+                  {match.court?.has_pro_shop && (
+                    <View style={styles.amenityItem}>
+                      <Ionicons name="storefront" size={18} color={colors.primary} />
+                      <Text style={styles.amenityText}>Pro Shop</Text>
+                    </View>
+                  )}
+                  <View style={styles.amenityItem}>
+                    <Ionicons name="layers" size={18} color={colors.primary} />
+                    <Text style={styles.amenityText}>{match.court?.surface_type || 'Artificial Grass'}</Text>
+                  </View>
+                  <View style={styles.amenityItem}>
+                    <Ionicons name={match.court?.is_indoor ? "home" : "sunny"} size={18} color={colors.primary} />
+                    <Text style={styles.amenityText}>{match.court?.is_indoor ? 'Indoor Court' : 'Outdoor Court'}</Text>
+                  </View>
+                </View>
+                
+                <View style={styles.sectionDivider} />
+                
+                <Text style={styles.facilityRulesTitle}>Facility rules:</Text>
+                <View style={styles.facilityRuleItem}>
+                  <View style={styles.idBadge}>
+                    <Text style={styles.idBadgeText}>ID</Text>
+                  </View>
+                  <Text style={styles.facilityRuleText}>ID required to check out game ball and equipment</Text>
+                </View>
+                <View style={styles.facilityRuleItem}>
+                  <View style={styles.ruleBadge}>
+                    <Ionicons name="shirt" size={12} color="#FFFFFF" />
+                  </View>
+                  <Text style={styles.facilityRuleText}>Proper athletic attire and non-marking shoes required</Text>
+                </View>
+                <View style={styles.facilityRuleItem}>
+                  <View style={styles.ruleBadge}>
+                    <Ionicons name="time" size={12} color="#FFFFFF" />
+                  </View>
+                  <Text style={styles.facilityRuleText}>Please arrive 10 minutes before start time</Text>
+                </View>
+              </BlurView>
+
+              {/* What to Expect */}
+              <View style={styles.whatToExpectContainer}>
+                <Text style={styles.whatToExpectTitle}>What to expect</Text>
+                
+                <View style={styles.expectCardsRow}>
+                  <BlurView intensity={colors.isDarkMode ? 35 : 50} tint={colors.isDarkMode ? 'dark' : 'light'} style={styles.expectCard}>
+                    <Text style={styles.expectCardTitle}>GAME TYPE</Text>
+                    <Text style={styles.expectCardValue}>• {match.match_type === 'competitive' ? 'Co-ed' : 'Casual'}</Text>
+                    <Text style={styles.expectCardValue}>• Min 4v4 - Max 5v5</Text>
+                  </BlurView>
+                  
+                  <BlurView intensity={colors.isDarkMode ? 35 : 50} tint={colors.isDarkMode ? 'dark' : 'light'} style={styles.expectCard}>
+                    <Text style={styles.expectCardTitle}>GAME SKILL LEVEL</Text>
+                    <View style={styles.skillLevelBadge}>
+                      <Text style={styles.skillLevelText}>{match.skill_level || 'Intermediate'}</Text>
+                    </View>
+                  </BlurView>
+                </View>
               </View>
             </View>
+          )}
 
-            {/* Description */}
-            {match.description && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Description</Text>
-                <Text style={styles.description}>{match.description}</Text>
-              </View>
-            )}
-
-            {/* Court Details */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Court Information</Text>
-              <View style={styles.courtDetails}>
-                <Text style={styles.courtAddress}>{match.court?.address}</Text>
-                <Text style={styles.courtCity}>{match.court?.city}</Text>
-                <Text style={styles.courtSurface}>Surface: {match.court?.surface_type}</Text>
-                <Text style={styles.courtIndoor}>
-                  {match.court?.is_indoor ? 'Indoor' : 'Outdoor'} Court
-                </Text>
-              </View>
+          {activeTab === 'scoring' && (
+            <View style={styles.scoringTab}>
+              {teams ? (
+                <PadelScoring
+                  matchId={matchId}
+                  teams={teams}
+                  onScoreUpdate={loadMatchDetails}
+                />
+              ) : (
+                <View style={styles.noTeamsContainer}>
+                  <Ionicons name="people" size={48} color={colors.textSecondary} />
+                  <Text style={styles.noTeamsText}>Teams not set up yet</Text>
+                  <Text style={styles.noTeamsSubtext}>
+                    The host needs to organize teams before scoring can begin
+                  </Text>
+                </View>
+              )}
             </View>
+          )}
 
-            {/* Pricing */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Pricing</Text>
-              <View style={styles.pricingContainer}>
-                <Text style={styles.pricePerPlayer}>${match.price_per_player} per player</Text>
-                <Text style={styles.totalCost}>Total: ${match.total_cost}</Text>
-              </View>
+          {activeTab === 'stats' && (
+            <View style={styles.statsTab}>
+              {teams ? (
+                <PadelStats
+                  matchId={matchId}
+                  teams={teams}
+                />
+              ) : (
+                <View style={styles.noTeamsContainer}>
+                  <Ionicons name="people" size={48} color={colors.textSecondary} />
+                  <Text style={styles.noTeamsText}>Teams not set up yet</Text>
+                  <Text style={styles.noTeamsSubtext}>
+                    Statistics will be available once teams are organized
+                  </Text>
+                </View>
+              )}
             </View>
-          </View>
-        )}
+          )}
 
-        {activeTab === 'scoring' && (
-          <View style={styles.scoringTab}>
-            {teams ? (
-              <PadelScoring
-                matchId={matchId}
-                teams={teams}
-                onScoreUpdate={loadMatchDetails}
-              />
+          {/* Action Buttons */}
+          <View style={styles.actionButtons}>
+            {isUserInMatch() ? (
+              <TouchableOpacity
+                style={styles.leaveButton}
+                onPress={handleLeaveMatch}
+              >
+                <Ionicons name="exit" size={20} color={colors.error} />
+                <Text style={styles.leaveButtonText}>Leave Match</Text>
+              </TouchableOpacity>
             ) : (
-              <View style={styles.noTeamsContainer}>
-                <Ionicons name="people" size={48} color={colors.textSecondary} />
-                <Text style={styles.noTeamsText}>Teams not set up yet</Text>
-                <Text style={styles.noTeamsSubtext}>
-                  The host needs to organize teams before scoring can begin
+              <TouchableOpacity
+                style={styles.joinButton}
+                onPress={handleJoinMatch}
+                disabled={match.current_players >= match.max_players}
+              >
+                <Ionicons name="add" size={20} color={colors.white} />
+                <Text style={styles.joinButtonText}>
+                  Join Match
                 </Text>
-              </View>
+              </TouchableOpacity>
+            )}
+
+            {canStartMatch() && (
+              <TouchableOpacity
+                style={styles.startButton}
+                onPress={startMatch}
+              >
+                <Ionicons name="play" size={20} color={colors.white} />
+                <Text style={styles.startButtonText}>Start Match</Text>
+              </TouchableOpacity>
             )}
           </View>
-        )}
+        </ScrollView>
 
-        {activeTab === 'stats' && (
-          <View style={styles.statsTab}>
-            {teams ? (
-              <PadelStats
-                matchId={matchId}
-                teams={teams}
-              />
-            ) : (
-              <View style={styles.noTeamsContainer}>
-                <Ionicons name="people" size={48} color={colors.textSecondary} />
-                <Text style={styles.noTeamsText}>Teams not set up yet</Text>
-                <Text style={styles.noTeamsSubtext}>
-                  Statistics will be available once teams are organized
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
-      </ScrollView>
-
-      {/* Action Buttons */}
-      <View style={styles.actionButtons}>
-        {isUserInMatch() ? (
-          <TouchableOpacity
-            style={styles.leaveButton}
-            onPress={handleLeaveMatch}
-          >
-            <Ionicons name="exit" size={20} color={colors.error} />
-            <Text style={styles.leaveButtonText}>Leave Match</Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            style={styles.joinButton}
-            onPress={handleJoinMatch}
-            disabled={match.current_players >= match.max_players}
-          >
-            <Ionicons name="add" size={20} color={colors.white} />
-            <Text style={styles.joinButtonText}>
-              {match.current_players >= match.max_players ? 'Match Full' : 'Join Match'}
-            </Text>
-          </TouchableOpacity>
-        )}
-
-        {canStartMatch() && (
-          <TouchableOpacity
-            style={styles.startButton}
-            onPress={startMatch}
-          >
-            <Ionicons name="play" size={20} color={colors.white} />
-            <Text style={styles.startButtonText}>Start Match</Text>
-          </TouchableOpacity>
-        )}
+        {/* Team Bracket Modal */}
+        <TeamBracketOverlay
+          visible={bracketVisible}
+          onClose={() => setBracketVisible(false)}
+          matchData={match}
+          onConfirm={() => {
+            setBracketVisible(false);
+            loadMatchDetails();
+          }}
+        />
       </View>
-
-      {/* Team Bracket Modal */}
-      <TeamBracketOverlay
-        visible={bracketVisible}
-        onClose={() => setBracketVisible(false)}
-        matchData={match}
-        onConfirm={() => {
-          setBracketVisible(false);
-          loadMatchDetails();
-        }}
-      />
-    </View>
     </AnimatedBackground>
   );
 }
@@ -702,15 +846,24 @@ const createStyles = (colors) => StyleSheet.create({
     flex: 1,
     backgroundColor: 'transparent',
   },
-  spacer: {
-    height: 8,
-  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingTop: 5,
+    paddingBottom: 2,
+    height: 25,
+  },
+  headerSpacer: {
+    width: 40,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingTop: 0,
+    paddingBottom: 40,
   },
   courtPreviewSection: {
     marginBottom: 16,
@@ -893,11 +1046,6 @@ const createStyles = (colors) => StyleSheet.create({
     fontSize: 18,
     marginTop: 12,
   },
-  matchHeader: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    alignItems: 'center',
-  },
   courtName: {
     fontSize: 24,
     fontWeight: '700',
@@ -967,106 +1115,235 @@ const createStyles = (colors) => StyleSheet.create({
     color: colors.primary,
     fontWeight: '600',
   },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
   detailsTab: {
+    paddingHorizontal: 20,
     paddingBottom: 20,
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 16,
+    padding: 20,
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
   },
   sectionTitle: {
     fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 16,
+    letterSpacing: 0.3,
+  },
+  overviewCard: {
+    backgroundColor: colors.isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+    borderRadius: 16,
+    padding: 20,
+    gap: 20,
+    marginBottom: 24,
+  },
+  overviewRow: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  overviewItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  overviewLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+    flex: 1,
+  },
+  spotsSection: {
+    marginTop: 8,
+  },
+  spotsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  spotsLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  spotsCount: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  spotsToGoBadge: {
+    alignSelf: 'center',
+    backgroundColor: colors.isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    marginBottom: 12,
+  },
+  spotsToGoText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  progressBarContainer: {
+    marginBottom: 8,
+  },
+  progressBarBg: {
+    height: 24,
+    backgroundColor: colors.isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 12,
+  },
+  progressLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+  },
+  progressLabel: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  aboutEventTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  eventDescription: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    lineHeight: 20,
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: colors.isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+    marginVertical: 16,
+  },
+  facilityRulesTitle: {
+    fontSize: 14,
     fontWeight: '600',
     color: colors.text,
     marginBottom: 12,
   },
-  playersList: {
-    gap: 12,
-  },
-  playerItem: {
-    backgroundColor: colors.card,
-    padding: 16,
-    borderRadius: 12,
+  amenitiesGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 8,
   },
-  playerInfo: {
+  amenityItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    backgroundColor: colors.isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    minWidth: '45%',
   },
-  playerName: {
-    fontSize: 16,
+  amenityText: {
+    fontSize: 13,
     fontWeight: '500',
     color: colors.text,
   },
-  hostBadge: {
-    fontSize: 12,
-    color: colors.primary,
-    backgroundColor: colors.primary + '20',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  playerJoined: {
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
-  description: {
-    fontSize: 16,
-    color: colors.text,
-    lineHeight: 24,
-  },
-  courtDetails: {
-    backgroundColor: colors.card,
-    padding: 16,
-    borderRadius: 12,
-  },
-  courtAddress: {
-    fontSize: 16,
-    color: colors.text,
-    marginBottom: 4,
-  },
-  courtCity: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginBottom: 8,
-  },
-  courtSurface: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginBottom: 4,
-  },
-  courtIndoor: {
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
-  pricingContainer: {
-    backgroundColor: colors.card,
-    padding: 16,
-    borderRadius: 12,
+  facilityRuleItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 12,
+  },
+  idBadge: {
+    backgroundColor: '#9333EA',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    minWidth: 40,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  pricePerPlayer: {
-    fontSize: 16,
+  idBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+  ruleBadge: {
+    backgroundColor: '#9333EA',
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  facilityRuleText: {
+    flex: 1,
+    fontSize: 14,
     color: colors.text,
+    lineHeight: 20,
   },
-  totalCost: {
+  whatToExpectContainer: {
+    marginBottom: 16,
+  },
+  whatToExpectTitle: {
     fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 16,
+    paddingHorizontal: 0,
+  },
+  expectCardsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  expectCard: {
+    flex: 1,
+    padding: 20,
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+  },
+  expectCardTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    letterSpacing: 1,
+    marginBottom: 12,
+  },
+  expectCardValue: {
+    fontSize: 14,
+    color: colors.text,
+    marginBottom: 6,
+    lineHeight: 20,
+  },
+  skillLevelBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.primary + '20',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+    marginTop: 4,
+  },
+  skillLevelText: {
+    fontSize: 14,
     fontWeight: '600',
     color: colors.primary,
   },
   scoringTab: {
-    flex: 1,
+    paddingHorizontal: 20,
   },
   noTeamsContainer: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 60,
@@ -1082,12 +1359,10 @@ const createStyles = (colors) => StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     marginTop: 8,
+    paddingHorizontal: 20,
   },
   statsTab: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 60,
+    paddingHorizontal: 20,
   },
   comingSoon: {
     fontSize: 16,
@@ -1098,6 +1373,7 @@ const createStyles = (colors) => StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 20,
     paddingVertical: 16,
+    paddingBottom: 32,
     gap: 12,
   },
   joinButton: {

@@ -153,18 +153,18 @@ export default function CreateMatchScreen({ navigation }) {
       <View style={styles.container}>
         {/* Invisible Header Spacer */}
         <View style={styles.invisibleHeader} />
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Create Match</Text>
-      </View>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Create Match</Text>
+        </View>
       
-      {/* Sport Selector */}
-      <SportSelector navigation={navigation} userSports={userSports} />
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Sport Selector */}
+          <SportSelector navigation={navigation} userSports={userSports} />
         <View style={styles.section}>
         <Text style={styles.sectionTitle}>Select {selectedSport.name} Court</Text>
         {availableCourts.map((court) => (
@@ -366,7 +366,7 @@ const createStyles = (colors) => StyleSheet.create({
     backgroundColor: 'transparent',
   },
   invisibleHeader: {
-    height: 80,
+    height: 90,
     backgroundColor: 'transparent',
   },
   spacer: {

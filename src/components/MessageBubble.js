@@ -1,0 +1,313 @@
+import React, { useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Animated,
+  TouchableOpacity,
+  Image,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../context/ThemeContext';
+import MessageTypeIndicator from './MessageTypeIndicator';
+
+const MessageBubble = ({ 
+  message, 
+  isOwn, 
+  showAvatar = true, 
+  showTimestamp = true,
+  onRetry,
+  onLongPress 
+}) => {
+  const { colors } = useTheme();
+  const scaleAnim = useRef(new Animated.Value(0)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Gentle bubble pop animation on message appearance
+    Animated.parallel([
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 150,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  const formatTimestamp = (timestamp) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now - date) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return 'now';
+    if (diffInMinutes < 60) return `${diffInMinutes}m`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h`;
+    
+    return date.toLocaleDateString();
+  };
+
+  const renderMessageContent = () => {
+    switch (message.message_type) {
+      case 'photo':
+        return (
+          <View style={styles.photoContainer}>
+            {message.metadata?.photo?.photo_url && (
+              <Image 
+                source={{ uri: message.metadata.photo.photo_url }}
+                style={styles.photoMessage}
+                resizeMode="cover"
+              />
+            )}
+            {message.content && (
+              <Text style={[styles.messageText, { color: isOwn ? colors.white : colors.text }]}>
+                {message.content}
+              </Text>
+            )}
+          </View>
+        );
+      
+      case 'location':
+        return (
+          <View style={styles.locationContainer}>
+            <View style={styles.locationHeader}>
+              <Ionicons 
+                name="location" 
+                size={16} 
+                color={isOwn ? colors.white : colors.primary} 
+              />
+              <Text style={[styles.locationTitle, { color: isOwn ? colors.white : colors.text }]}>
+                Location Shared
+              </Text>
+            </View>
+            {message.metadata?.location?.address && (
+              <Text style={[styles.locationAddress, { color: isOwn ? colors.white : colors.textSecondary }]}>
+                {message.metadata.location.address}
+              </Text>
+            )}
+          </View>
+        );
+      
+      case 'status':
+        return (
+          <View style={styles.statusContainer}>
+            <MessageTypeIndicator 
+              messageType={message.message_type}
+              messageStatus={message.metadata?.status?.status}
+              size="large"
+              showText={true}
+            />
+            <Text style={[styles.messageText, { color: isOwn ? colors.white : colors.text }]}>
+              {message.content}
+            </Text>
+          </View>
+        );
+      
+      default:
+        return (
+          <Text style={[styles.messageText, { color: isOwn ? colors.white : colors.text }]}>
+            {message.content}
+          </Text>
+        );
+    }
+  };
+
+  const renderDeliveryStatus = () => {
+    if (!isOwn || !message.delivery_status) return null;
+    
+    let icon, color;
+    switch (message.delivery_status) {
+      case 'sending':
+        icon = 'time-outline';
+        color = colors.textSecondary;
+        break;
+      case 'sent':
+        icon = 'checkmark';
+        color = colors.success;
+        break;
+      case 'failed':
+        icon = 'alert-circle-outline';
+        color = colors.error;
+        break;
+      default:
+        return null;
+    }
+
+    return (
+      <TouchableOpacity 
+        onPress={message.delivery_status === 'failed' ? () => onRetry?.(message) : undefined}
+        style={styles.deliveryStatus}
+      >
+        <Ionicons name={icon} size={12} color={color} />
+      </TouchableOpacity>
+    );
+  };
+
+  const styles = createStyles(colors, isOwn);
+
+  return (
+    <Animated.View 
+      style={[
+        styles.container,
+        {
+          transform: [{ scale: scaleAnim }],
+          opacity: opacityAnim,
+        }
+      ]}
+    >
+      <View style={styles.messageRow}>
+        {/* Avatar for other users */}
+        {!isOwn && showAvatar && (
+          <View style={styles.avatarContainer}>
+            {message.user?.avatar_url ? (
+              <Image 
+                source={{ uri: message.user.avatar_url }}
+                style={styles.avatar}
+              />
+            ) : (
+              <View style={[styles.avatarPlaceholder, { backgroundColor: colors.lightGray }]}>
+                <Text style={[styles.avatarText, { color: colors.text }]}>
+                  {message.user?.full_name?.charAt(0) || '?'}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Message bubble */}
+        <TouchableOpacity
+          onLongPress={() => onLongPress?.(message)}
+          style={styles.bubbleContainer}
+          activeOpacity={0.8}
+        >
+          <View style={styles.bubble}>
+            {renderMessageContent()}
+          </View>
+          
+          {/* Timestamp and delivery status */}
+          {showTimestamp && (
+            <View style={styles.messageFooter}>
+              <Text style={styles.timestamp}>
+                {formatTimestamp(message.created_at)}
+              </Text>
+              {renderDeliveryStatus()}
+            </View>
+          )}
+        </TouchableOpacity>
+
+        {/* Spacer for own messages to push them right */}
+        {isOwn && <View style={styles.spacer} />}
+      </View>
+    </Animated.View>
+  );
+};
+
+const createStyles = (colors, isOwn) => StyleSheet.create({
+  container: {
+    marginVertical: 2,
+    paddingHorizontal: 16,
+  },
+  messageRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: isOwn ? 'flex-end' : 'flex-start',
+  },
+  avatarContainer: {
+    marginRight: 8,
+    marginBottom: 4,
+  },
+  avatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+  },
+  avatarPlaceholder: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  bubbleContainer: {
+    maxWidth: '75%',
+    alignItems: isOwn ? 'flex-end' : 'flex-start',
+  },
+  bubble: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: isOwn ? colors.primary : colors.surface,
+    // Subtle gradient effect using shadow
+    shadowColor: isOwn ? colors.primaryDark : colors.border,
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+    // Asymmetric border radius for chat bubble effect
+    borderBottomLeftRadius: isOwn ? 20 : 4,
+    borderBottomRightRadius: isOwn ? 4 : 20,
+  },
+  messageText: {
+    fontSize: 16,
+    lineHeight: 20,
+  },
+  photoContainer: {
+    gap: 8,
+  },
+  photoMessage: {
+    width: 200,
+    height: 150,
+    borderRadius: 12,
+  },
+  locationContainer: {
+    gap: 4,
+  },
+  locationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  locationTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  locationAddress: {
+    fontSize: 13,
+    marginLeft: 22,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  messageFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  timestamp: {
+    fontSize: 11,
+    color: colors.textSecondary,
+  },
+  deliveryStatus: {
+    padding: 2,
+  },
+  spacer: {
+    width: 40, // Space for avatar on the other side
+  },
+});
+
+export default MessageBubble;
