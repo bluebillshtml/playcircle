@@ -10,6 +10,7 @@ import { SportProvider } from './src/context/SportContext';
 
 import SplashScreen from './src/screens/SplashScreen';
 import SignUpScreen from './src/screens/SignUpScreen';
+import SignInScreen from './src/screens/SignInScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import PreferencesScreen from './src/screens/PreferencesScreen';
 import HomeScreen from './src/screens/HomeScreen';
@@ -36,8 +37,8 @@ function ScreenWithNavButton({ component: Component, currentScreen, ...rest }) {
     return (
       <View style={{ flex: 1 }}>
         <Component {...props} {...rest} />
-        <NavigationButton 
-          navigation={props.navigation} 
+        <NavigationButton
+          navigation={props.navigation}
           currentScreen={currentScreen}
         />
       </View>
@@ -57,7 +58,7 @@ function AppContent() {
 
   // Show loading while auth is initializing
   if (loading) {
-    return <SplashScreen onComplete={() => {}} />;
+    return <SplashScreen onComplete={() => { }} />;
   }
 
   // Check if user needs onboarding
@@ -77,6 +78,11 @@ function AppContent() {
               <Stack.Screen
                 name="SignUp"
                 component={SignUpScreen}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="SignIn"
+                component={SignInScreen}
                 options={{ headerShown: false }}
               />
             </>
