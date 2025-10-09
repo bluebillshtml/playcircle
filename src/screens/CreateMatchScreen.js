@@ -141,7 +141,7 @@ export default function CreateMatchScreen({ navigation }) {
     Alert.alert('Success!', 'Your match has been created and is now live!', [
       {
         text: 'OK',
-        onPress: () => navigation.navigate('Matches'),
+        onPress: () => navigation.navigate('Home'),
       },
     ]);
   };

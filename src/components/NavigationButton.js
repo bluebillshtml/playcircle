@@ -33,7 +33,7 @@ export default function NavigationButton({ navigation, currentScreen }) {
   const navItems = [
     { name: 'Home', icon: 'home', screen: 'Home' },
     { name: 'Leaderboard', icon: 'trophy', screen: 'Dashboard' },
-    { name: 'Matches', icon: 'calendar', screen: 'Matches' },
+    { name: 'Friends', icon: 'people', screen: 'Friends' },
     { name: 'Messages', icon: 'chatbubbles', screen: 'Messages' },
     { name: 'Profile', icon: 'person', screen: 'Profile' },
   ];
@@ -278,7 +278,7 @@ export default function NavigationButton({ navigation, currentScreen }) {
 const createStyles = (colors) => StyleSheet.create({
   navButtonContainer: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 50 : (StatusBar.currentHeight ? StatusBar.currentHeight + 15 : 55),
+    top: Platform.OS === 'ios' ? 60 : (StatusBar.currentHeight ? StatusBar.currentHeight + 25 : 65),
     left: 20,
     zIndex: 1000,
   },
