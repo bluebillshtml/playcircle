@@ -168,18 +168,15 @@ const MemberRow = ({
   user,
   onAddFriend,
   onMessage,
-  onInvite,
   loading = false,
   disabled = false,
   isMessageLoading = false,
-  isInviteLoading = false,
   showSeparator = true,
 }) => {
   const { colors } = useTheme();
   const [actionLoading, setActionLoading] = useState({
     addFriend: false,
     message: false,
-    invite: false,
   });
 
   // =====================================================
@@ -225,22 +222,7 @@ const MemberRow = ({
     }
   };
 
-  const handleInvite = async () => {
-    if (disabled || loading || actionLoading.invite || isInviteLoading) return;
 
-    try {
-      // Haptic feedback for invite action
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      
-      setActionLoading(prev => ({ ...prev, invite: true }));
-      await onInvite(user.id);
-    } catch (error) {
-      console.error('Error sending invite:', error);
-      Alert.alert('Error', 'Failed to send invite. Please try again.');
-    } finally {
-      setActionLoading(prev => ({ ...prev, invite: false }));
-    }
-  };
 
   // =====================================================
   // RENDER HELPERS
@@ -303,17 +285,6 @@ const MemberRow = ({
           colors={colors}
           variant="default"
           accessibilityLabel={`Message ${user.full_name || user.username}`}
-        />
-        
-        {/* Invite Button */}
-        <ActionButton
-          icon="person-add-outline"
-          onPress={handleInvite}
-          disabled={disabled || loading}
-          loading={actionLoading.invite || isInviteLoading}
-          colors={colors}
-          variant="default"
-          accessibilityLabel={`Invite ${user.full_name || user.username} to game`}
         />
         
         {/* Add Friend Button */}

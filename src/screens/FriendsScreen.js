@@ -453,10 +453,8 @@ const FriendsScreen = ({ navigation }) => {
             user={member}
             onAddFriend={handleAddFriend}
             onMessage={handleMessage}
-            onInvite={handleInvite}
             showSeparator={index < membersToShow.length - 1}
             isMessageLoading={actionLoading === `message-${member.id}`}
-            isInviteLoading={actionLoading === `invite-${member.id}`}
           />
         ))}
       </View>
