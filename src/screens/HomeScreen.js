@@ -246,7 +246,7 @@ export default function HomeScreen({ navigation }) {
            date1.getFullYear() === date2.getFullYear();
   };
 
-  // Filter matches by selected date and sport
+  // Filter matches by selected date, sport, difficulty, time, and distance
   const filteredMatches = upcomingMatches.filter(match => {
     const matchDate = new Date(match.date);
     const dateMatches = isSameDate(matchDate, selectedDate);
@@ -255,11 +255,54 @@ export default function HomeScreen({ navigation }) {
     const sportMatches = !selectedSport ||
                         match.sport?.toLowerCase() === selectedSport.id?.toLowerCase();
 
-    return dateMatches && sportMatches;
+    // Filter by difficulty (skill level)
+    const difficultyMatches = selectedDifficulties.length === 0 ||
+                             selectedDifficulties.includes(match.skillLevel);
+
+    // Filter by time
+    let timeMatches = selectedTimes.length === 0;
+    if (selectedTimes.length > 0) {
+      const matchTime = match.time.split(' ')[0]; // Get start time like "7:30pm"
+      const hour = parseInt(matchTime.split(':')[0]);
+      const isPM = matchTime.toLowerCase().includes('pm');
+      const hour24 = isPM && hour !== 12 ? hour + 12 : (!isPM && hour === 12 ? 0 : hour);
+
+      timeMatches = selectedTimes.some(timeRange => {
+        if (timeRange === 'Morning' && hour24 >= 6 && hour24 < 12) return true;
+        if (timeRange === 'Afternoon' && hour24 >= 12 && hour24 < 17) return true;
+        if (timeRange === 'Evening' && hour24 >= 17 && hour24 < 21) return true;
+        if (timeRange === 'Night' && (hour24 >= 21 || hour24 < 6)) return true;
+        return false;
+      });
+    }
+
+    // Filter by distance (in this mock we'll assume all are within range)
+    // In production, you'd calculate actual distance
+    const distanceMatches = true;
+
+    return dateMatches && sportMatches && difficultyMatches && timeMatches && distanceMatches;
+  });
+
+  // Sort filtered matches
+  const sortedMatches = [...filteredMatches].sort((a, b) => {
+    if (sortBy === 'nearest') {
+      // Sort by distance (parse the distance string)
+      const distA = parseFloat(a.distance);
+      const distB = parseFloat(b.distance);
+      return distA - distB;
+    } else if (sortBy === 'earliest') {
+      // Sort by time
+      return a.time.localeCompare(b.time);
+    } else if (sortBy === 'price-low') {
+      return a.pricePerPlayer - b.pricePerPlayer;
+    } else if (sortBy === 'price-high') {
+      return b.pricePerPlayer - a.pricePerPlayer;
+    }
+    return 0;
   });
 
   // Group matches by sport for display
-  const groupedMatches = filteredMatches.reduce((groups, match) => {
+  const groupedMatches = sortedMatches.reduce((groups, match) => {
     const sport = match.sport || 'other';
     if (!groups[sport]) {
       groups[sport] = [];
@@ -826,48 +869,86 @@ export default function HomeScreen({ navigation }) {
           transparent={false}
           onRequestClose={() => setFilterModalVisible(false)}
         >
-          <View style={styles.filterModal}>
-            <View style={styles.filterHeader}>
-              <TouchableOpacity onPress={() => setFilterModalVisible(false)}>
-                <Ionicons name="close" size={28} color={colors.text} />
-              </TouchableOpacity>
-              <View style={styles.filterTitleContainer}>
-                <Ionicons name="options" size={24} color={colors.text} />
-                <Text style={styles.filterTitle}>Filters</Text>
+          <LinearGradient
+            colors={['#0a0a0a', '#1a1a1a', '#0f0f0f']}
+            style={styles.filterModal}
+          >
+            {/* Header with glassmorphism */}
+            <BlurView intensity={60} tint="dark" style={styles.filterHeader}>
+              <View style={styles.filterHeaderRow}>
+                <TouchableOpacity
+                  onPress={() => setFilterModalVisible(false)}
+                  style={styles.filterCloseButton}
+                >
+                  <Ionicons name="close-circle" size={28} color={colors.primary} />
+                </TouchableOpacity>
+                <View style={styles.filterTitleContainer}>
+                  <View style={styles.filterIconBadge}>
+                    <Ionicons name="options" size={18} color={colors.primary} />
+                  </View>
+                  <View>
+                    <Text style={styles.filterTitle}>Filters</Text>
+                    <Text style={styles.filterSubtitle}>Customize your search</Text>
+                  </View>
+                </View>
               </View>
-            </View>
+            </BlurView>
 
             <ScrollView style={styles.filterContent} showsVerticalScrollIndicator={false}>
               {/* Preferred Time */}
-              <View style={styles.filterSection}>
-                <Text style={styles.filterSectionTitle}>Preferred time</Text>
-                {['Morning (6am - 12pm)', 'Afternoon (12pm - 5pm)', 'Evening (5pm - 10pm)', 'Late night (10pm - 2am)'].map((time) => (
-                  <TouchableOpacity
-                    key={time}
-                    style={styles.filterOption}
-                    onPress={() => {
-                      if (selectedTimes.includes(time)) {
-                        setSelectedTimes(selectedTimes.filter(t => t !== time));
-                      } else {
-                        setSelectedTimes([...selectedTimes, time]);
-                      }
-                    }}
-                  >
-                    <Text style={styles.filterOptionText}>{time}</Text>
-                    <View style={[styles.checkbox, selectedTimes.includes(time) && styles.checkboxChecked]}>
-                      {selectedTimes.includes(time) && <Ionicons name="checkmark" size={18} color="#10B981" />}
-                    </View>
-                  </TouchableOpacity>
-                ))}
+              <View style={styles.filterSectionCard}>
+                <View style={styles.filterSectionHeader}>
+                  <Ionicons name="time" size={20} color={colors.primary} />
+                  <Text style={styles.filterSectionTitle}>Preferred Time</Text>
+                </View>
+                <View style={styles.filterChipsContainer}>
+                  {[
+                    { label: 'Morning', icon: 'sunny', value: 'Morning' },
+                    { label: 'Afternoon', icon: 'partly-sunny', value: 'Afternoon' },
+                    { label: 'Evening', icon: 'moon', value: 'Evening' },
+                    { label: 'Night', icon: 'moon-outline', value: 'Night' }
+                  ].map((time) => (
+                    <TouchableOpacity
+                      key={time.value}
+                      style={[
+                        styles.filterChip,
+                        selectedTimes.includes(time.value) && styles.filterChipActive
+                      ]}
+                      onPress={() => {
+                        if (selectedTimes.includes(time.value)) {
+                          setSelectedTimes(selectedTimes.filter(t => t !== time.value));
+                        } else {
+                          setSelectedTimes([...selectedTimes, time.value]);
+                        }
+                      }}
+                    >
+                      <Ionicons
+                        name={time.icon}
+                        size={18}
+                        color={selectedTimes.includes(time.value) ? '#FFFFFF' : colors.primary}
+                      />
+                      <Text style={[
+                        styles.filterChipText,
+                        selectedTimes.includes(time.value) && styles.filterChipTextActive
+                      ]}>
+                        {time.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
 
               {/* Distance Slider */}
-              <View style={styles.filterSection}>
-                <View style={styles.distanceHeader}>
-                  <Text style={styles.filterSectionTitle}>Distance away</Text>
-                  <Text style={styles.distanceValue}>0 mi - {distanceRange} mi</Text>
+              <View style={styles.filterSectionCard}>
+                <View style={styles.filterSectionHeader}>
+                  <Ionicons name="location" size={20} color={colors.primary} />
+                  <Text style={styles.filterSectionTitle}>Distance Away</Text>
                 </View>
-                <Text style={styles.distanceSubtitle}>See games based on proximity of your location</Text>
+                <View style={styles.distanceValueContainer}>
+                  <View style={styles.distanceValueBadge}>
+                    <Text style={styles.distanceValue}>{distanceRange} miles</Text>
+                  </View>
+                </View>
                 <Slider
                   style={styles.slider}
                   minimumValue={5}
@@ -875,73 +956,101 @@ export default function HomeScreen({ navigation }) {
                   step={5}
                   value={distanceRange}
                   onValueChange={setDistanceRange}
-                  minimumTrackTintColor="#10B981"
-                  maximumTrackTintColor="rgba(255, 255, 255, 0.2)"
-                  thumbTintColor="#10B981"
+                  minimumTrackTintColor={colors.primary}
+                  maximumTrackTintColor="rgba(255, 255, 255, 0.1)"
+                  thumbTintColor={colors.primary}
                 />
                 <View style={styles.sliderLabels}>
-                  <Text style={styles.sliderLabel}>5</Text>
-                  <Text style={styles.sliderLabel}>100</Text>
+                  <Text style={styles.sliderLabel}>5 mi</Text>
+                  <Text style={styles.sliderLabel}>100 mi</Text>
                 </View>
               </View>
 
               {/* Game Difficulty */}
-              <View style={styles.filterSection}>
-                <Text style={styles.filterSectionTitle}>Game Difficulty</Text>
-                {['Master', 'High-Level', 'Intermediate', 'Beginner', 'Friendly'].map((difficulty) => (
-                  <TouchableOpacity
-                    key={difficulty}
-                    style={styles.filterOption}
-                    onPress={() => {
-                      if (selectedDifficulties.includes(difficulty)) {
-                        setSelectedDifficulties(selectedDifficulties.filter(d => d !== difficulty));
-                      } else {
-                        setSelectedDifficulties([...selectedDifficulties, difficulty]);
-                      }
-                    }}
-                  >
-                    <Text style={styles.filterOptionText}>{difficulty}</Text>
-                    <View style={[styles.checkbox, selectedDifficulties.includes(difficulty) && styles.checkboxChecked]}>
-                      {selectedDifficulties.includes(difficulty) && <Ionicons name="checkmark" size={18} color="#10B981" />}
-                    </View>
-                  </TouchableOpacity>
-                ))}
+              <View style={styles.filterSectionCard}>
+                <View style={styles.filterSectionHeader}>
+                  <Ionicons name="trophy" size={20} color={colors.primary} />
+                  <Text style={styles.filterSectionTitle}>Skill Level</Text>
+                </View>
+                <View style={styles.filterChipsContainer}>
+                  {[
+                    { label: 'Beginner', color: '#3B82F6' },
+                    { label: 'Intermediate', color: '#10B981' },
+                    { label: 'Advanced', color: '#F59E0B' },
+                    { label: 'Expert', color: '#EF4444' }
+                  ].map((difficulty) => (
+                    <TouchableOpacity
+                      key={difficulty.label}
+                      style={[
+                        styles.filterChip,
+                        selectedDifficulties.includes(difficulty.label) && styles.filterChipActive,
+                        selectedDifficulties.includes(difficulty.label) && { backgroundColor: difficulty.color }
+                      ]}
+                      onPress={() => {
+                        if (selectedDifficulties.includes(difficulty.label)) {
+                          setSelectedDifficulties(selectedDifficulties.filter(d => d !== difficulty.label));
+                        } else {
+                          setSelectedDifficulties([...selectedDifficulties, difficulty.label]);
+                        }
+                      }}
+                    >
+                      <View style={[
+                        styles.difficultyDot,
+                        { backgroundColor: selectedDifficulties.includes(difficulty.label) ? '#FFFFFF' : difficulty.color }
+                      ]} />
+                      <Text style={[
+                        styles.filterChipText,
+                        selectedDifficulties.includes(difficulty.label) && styles.filterChipTextActive
+                      ]}>
+                        {difficulty.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
 
               {/* Sort By */}
-              <View style={styles.filterSection}>
-                <Text style={styles.filterSectionTitle}>Sort by</Text>
-                <Text style={styles.filterSubsectionTitle}>Distance</Text>
-                <TouchableOpacity
-                  style={styles.filterOption}
-                  onPress={() => setSortBy('nearest')}
-                >
-                  <Text style={styles.filterOptionText}>Nearest</Text>
-                  <View style={[styles.radioButton, sortBy === 'nearest' && styles.radioButtonSelected]} />
-                </TouchableOpacity>
-
-                <Text style={styles.filterSubsectionTitle}>Time</Text>
-                <TouchableOpacity
-                  style={styles.filterOption}
-                  onPress={() => setSortBy('earliest')}
-                >
-                  <Text style={styles.filterOptionText}>Earliest</Text>
-                  <View style={[styles.radioButton, sortBy === 'earliest' && styles.radioButtonSelected]} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.filterOption}
-                  onPress={() => setSortBy('latest')}
-                >
-                  <Text style={styles.filterOptionText}>Latest</Text>
-                  <View style={[styles.radioButton, sortBy === 'latest' && styles.radioButtonSelected]} />
-                </TouchableOpacity>
+              <View style={styles.filterSectionCard}>
+                <View style={styles.filterSectionHeader}>
+                  <Ionicons name="swap-vertical" size={20} color={colors.primary} />
+                  <Text style={styles.filterSectionTitle}>Sort By</Text>
+                </View>
+                <View style={styles.sortOptionsGrid}>
+                  {[
+                    { label: 'Nearest', icon: 'navigate', value: 'nearest' },
+                    { label: 'Earliest', icon: 'time', value: 'earliest' },
+                    { label: 'Price Low', icon: 'arrow-down', value: 'price-low' },
+                    { label: 'Price High', icon: 'arrow-up', value: 'price-high' }
+                  ].map((sort) => (
+                    <TouchableOpacity
+                      key={sort.value}
+                      style={[
+                        styles.sortOption,
+                        sortBy === sort.value && styles.sortOptionActive
+                      ]}
+                      onPress={() => setSortBy(sort.value)}
+                    >
+                      <Ionicons
+                        name={sort.icon}
+                        size={22}
+                        color={sortBy === sort.value ? '#FFFFFF' : colors.primary}
+                      />
+                      <Text style={[
+                        styles.sortOptionText,
+                        sortBy === sort.value && styles.sortOptionTextActive
+                      ]}>
+                        {sort.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
 
               <View style={{ height: 120 }} />
             </ScrollView>
 
-            {/* Bottom Buttons */}
-            <View style={styles.filterFooter}>
+            {/* Bottom Buttons with Blur */}
+            <BlurView intensity={80} tint="dark" style={styles.filterFooter}>
               <TouchableOpacity
                 style={styles.clearButton}
                 onPress={() => {
@@ -951,16 +1060,18 @@ export default function HomeScreen({ navigation }) {
                   setSortBy('nearest');
                 }}
               >
-                <Text style={styles.clearButtonText}>Clear</Text>
+                <Ionicons name="refresh" size={20} color={colors.text} />
+                <Text style={styles.clearButtonText}>Clear All</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.applyButton}
                 onPress={() => setFilterModalVisible(false)}
               >
-                <Text style={styles.applyButtonText}>See {upcomingMatches.length} Games</Text>
+                <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                <Text style={styles.applyButtonText}>Apply Filters</Text>
               </TouchableOpacity>
-            </View>
-          </View>
+            </BlurView>
+          </LinearGradient>
         </Modal>
 
         {/* Skip Notification Modal */}
@@ -1615,29 +1726,33 @@ const createStyles = (colors) => StyleSheet.create({
   },
   filterModal: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   filterHeader: {
     paddingTop: 60,
     paddingHorizontal: 20,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    paddingBottom: 12,
+    borderBottomWidth: 0,
+  },
+  filterHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
   },
   filterTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginTop: 20,
+    gap: 8,
+    flex: 1,
   },
   filterTitle: {
-    fontSize: 28,
-    fontWeight: '800',
+    fontSize: 18,
+    fontWeight: '600',
     color: '#FFFFFF',
   },
   filterContent: {
     flex: 1,
     paddingHorizontal: 20,
+    paddingTop: 20,
   },
   filterSection: {
     marginTop: 32,
@@ -1724,16 +1839,15 @@ const createStyles = (colors) => StyleSheet.create({
   filterFooter: {
     flexDirection: 'row',
     paddingHorizontal: 20,
-    paddingVertical: 20,
-    paddingBottom: 40,
+    paddingVertical: 16,
+    paddingBottom: 32,
     gap: 12,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    borderTopWidth: 0,
   },
   clearButton: {
     flex: 1,
-    paddingVertical: 18,
-    borderRadius: 16,
+    paddingVertical: 14,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
@@ -1741,21 +1855,21 @@ const createStyles = (colors) => StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   clearButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '600',
     color: '#FFFFFF',
   },
   applyButton: {
     flex: 2,
-    paddingVertical: 18,
-    borderRadius: 16,
+    paddingVertical: 14,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#10B981',
   },
   applyButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '600',
     color: '#FFFFFF',
   },
   skipModalOverlay: {
@@ -1820,5 +1934,119 @@ const createStyles = (colors) => StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: colors.white,
+  },
+  filterSectionCard: {
+    backgroundColor: 'rgba(30, 30, 30, 0.8)',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.15)',
+  },
+  filterSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
+  },
+  filterIconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterSubtitle: {
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.5)',
+    marginTop: 0,
+  },
+  filterCloseButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterChipsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  filterChipActive: {
+    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+    borderColor: 'rgba(16, 185, 129, 0.4)',
+  },
+  filterChipText: {
+    fontSize: 15,
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontWeight: '600',
+  },
+  filterChipTextActive: {
+    color: '#10B981',
+    fontWeight: '700',
+  },
+  difficultyDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 4,
+  },
+  distanceValueContainer: {
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  distanceValueBadge: {
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+  },
+  sortOptionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  sortOption: {
+    flex: 1,
+    minWidth: '45%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  sortOptionActive: {
+    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+    borderColor: 'rgba(16, 185, 129, 0.4)',
+  },
+  sortOptionText: {
+    fontSize: 15,
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontWeight: '600',
+    flex: 1,
+  },
+  sortOptionTextActive: {
+    color: '#10B981',
+    fontWeight: '700',
   },
 });
