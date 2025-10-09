@@ -16,7 +16,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import EmailConfirmationOverlay from '../components/EmailConfirmationOverlay';
-import AnimatedBackground from '../components/AnimatedBackground';
 
 export default function SignUpScreen({ navigation }) {
   const [firstName, setFirstName] = useState('');
@@ -89,10 +88,10 @@ export default function SignUpScreen({ navigation }) {
   };
 
   return (
-    <AnimatedBackground>
+    <View style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
+        style={styles.keyboardView}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
@@ -111,148 +110,176 @@ export default function SignUpScreen({ navigation }) {
             {/* Logo */}
             <View style={styles.logoContainer}>
               <View style={styles.iconCircle}>
-                <Ionicons name="tennisball" size={48} color="#1B3C53" />
+                <Ionicons name="tennisball" size={44} color="#FFFFFF" />
               </View>
               <Text style={styles.brandName}>PlayCircle</Text>
+              <Text style={styles.tagline}>Your Ultimate Sport Community</Text>
             </View>
 
-            {/* Card */}
-            <View style={styles.card}>
-              <Text style={styles.title}>Sign up</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('SignIn')}>
-                <Text style={styles.toggleText}>
-                  Already have an account?{' '}
-                  <Text style={styles.toggleLink}>Sign in</Text>
+            {/* Welcome Card */}
+            <View style={styles.welcomeCard}>
+              <View style={styles.welcomeHeader}>
+                <Ionicons name="sparkles" size={32} color="#FFFFFF" style={styles.sparkleIcon} />
+                <Text style={styles.welcomeTitle}>Create Account</Text>
+                <Text style={styles.welcomeSubtitle}>
+                  Join the community and start playing
                 </Text>
-              </TouchableOpacity>
-
-              {/* First Name Input */}
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>First Name</Text>
-                <View style={styles.inputWrapper}>
-                  <Ionicons name="person-outline" size={20} color="#999" style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Enter your first name"
-                    placeholderTextColor="#999"
-                    value={firstName}
-                    onChangeText={setFirstName}
-                    autoCapitalize="words"
-                    autoCorrect={false}
-                  />
-                </View>
               </View>
 
-              {/* Last Name Input */}
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Last Name</Text>
-                <View style={styles.inputWrapper}>
-                  <Ionicons name="person-outline" size={20} color="#999" style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Enter your last name"
-                    placeholderTextColor="#999"
-                    value={lastName}
-                    onChangeText={setLastName}
-                    autoCapitalize="words"
-                    autoCorrect={false}
-                  />
-                </View>
-              </View>
-
-              {/* Email Input */}
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Email address</Text>
-                <View style={styles.inputWrapper}>
-                  <Ionicons name="mail-outline" size={20} color="#999" style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Enter email to get started"
-                    placeholderTextColor="#999"
-                    value={email}
-                    onChangeText={setEmail}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-                </View>
-              </View>
-
-              {/* Password Input */}
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Password</Text>
-                <View style={styles.inputWrapper}>
-                  <Ionicons name="lock-closed-outline" size={20} color="#999" style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Create a password"
-                    placeholderTextColor="#999"
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry={!showPassword}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-                  <TouchableOpacity
-                    onPress={() => setShowPassword(!showPassword)}
-                    style={styles.eyeIcon}
-                  >
-                    <Ionicons
-                      name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                      size={20}
-                      color="#999"
+              {/* Sign Up Form */}
+              <View style={styles.formCard}>
+                {/* First Name Input */}
+                <View style={styles.inputContainer}>
+                  <Text style={styles.label}>First Name</Text>
+                  <View style={styles.inputWrapper}>
+                    <Ionicons name="person-outline" size={20} color="#999" style={styles.inputIcon} />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Enter your first name"
+                      placeholderTextColor="#999"
+                      value={firstName}
+                      onChangeText={setFirstName}
+                      autoCapitalize="words"
+                      autoCorrect={false}
                     />
-                  </TouchableOpacity>
+                  </View>
                 </View>
-              </View>
 
-              {/* Confirm Password Input */}
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Confirm Password</Text>
-                <View style={styles.inputWrapper}>
-                  <Ionicons name="lock-closed-outline" size={20} color="#999" style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Confirm your password"
-                    placeholderTextColor="#999"
-                    value={confirmPassword}
-                    onChangeText={setConfirmPassword}
-                    secureTextEntry={!showConfirmPassword}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-                  <TouchableOpacity
-                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                    style={styles.eyeIcon}
-                  >
-                    <Ionicons
-                      name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
-                      size={20}
-                      color="#999"
+                {/* Last Name Input */}
+                <View style={styles.inputContainer}>
+                  <Text style={styles.label}>Last Name</Text>
+                  <View style={styles.inputWrapper}>
+                    <Ionicons name="person-outline" size={20} color="#999" style={styles.inputIcon} />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Enter your last name"
+                      placeholderTextColor="#999"
+                      value={lastName}
+                      onChangeText={setLastName}
+                      autoCapitalize="words"
+                      autoCorrect={false}
                     />
-                  </TouchableOpacity>
+                  </View>
                 </View>
-              </View>
 
-              {/* Sign Up Button */}
-              <TouchableOpacity
-                style={styles.signUpButton}
-                onPress={handleSignUp}
-                disabled={loading}
-              >
-                <LinearGradient
-                  colors={['#A855F7', '#6366F1', '#3B82F6']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.gradientButton}
+                {/* Email Input */}
+                <View style={styles.inputContainer}>
+                  <Text style={styles.label}>Email address</Text>
+                  <View style={styles.inputWrapper}>
+                    <Ionicons name="mail-outline" size={20} color="#999" style={styles.inputIcon} />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Enter email to get started"
+                      placeholderTextColor="#999"
+                      value={email}
+                      onChangeText={setEmail}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                  </View>
+                </View>
+
+                {/* Password Input */}
+                <View style={styles.inputContainer}>
+                  <Text style={styles.label}>Password</Text>
+                  <View style={styles.inputWrapper}>
+                    <Ionicons name="lock-closed-outline" size={20} color="#999" style={styles.inputIcon} />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Create a password"
+                      placeholderTextColor="#999"
+                      value={password}
+                      onChangeText={setPassword}
+                      secureTextEntry={!showPassword}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                    <TouchableOpacity
+                      onPress={() => setShowPassword(!showPassword)}
+                      style={styles.eyeIcon}
+                    >
+                      <Ionicons
+                        name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                        size={20}
+                        color="#999"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Confirm Password Input */}
+                <View style={styles.inputContainer}>
+                  <Text style={styles.label}>Confirm Password</Text>
+                  <View style={styles.inputWrapper}>
+                    <Ionicons name="lock-closed-outline" size={20} color="#999" style={styles.inputIcon} />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Confirm your password"
+                      placeholderTextColor="#999"
+                      value={confirmPassword}
+                      onChangeText={setConfirmPassword}
+                      secureTextEntry={!showConfirmPassword}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                    <TouchableOpacity
+                      onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                      style={styles.eyeIcon}
+                    >
+                      <Ionicons
+                        name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                        size={20}
+                        color="#999"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Sign Up Button */}
+                <TouchableOpacity
+                  style={styles.signUpButton}
+                  onPress={handleSignUp}
+                  disabled={loading}
                 >
-                  {loading ? (
-                    <ActivityIndicator color="#FFFFFF" />
-                  ) : (
-                    <Text style={styles.signUpButtonText}>Create Account</Text>
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
+                  <LinearGradient
+                    colors={['#10B981', '#059669']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.gradientButton}
+                  >
+                    {loading ? (
+                      <ActivityIndicator color="#FFFFFF" />
+                    ) : (
+                      <Text style={styles.signUpButtonText}>Create Account</Text>
+                    )}
+                  </LinearGradient>
+                </TouchableOpacity>
+
+                {/* Divider */}
+                <View style={styles.divider}>
+                  <View style={styles.dividerLine} />
+                  <Text style={styles.dividerText}>OR</Text>
+                  <View style={styles.dividerLine} />
+                </View>
+
+                {/* Sign In Button */}
+                <TouchableOpacity
+                  style={styles.signInButton}
+                  onPress={() => navigation.navigate('SignIn')}
+                >
+                  <Text style={styles.signInButtonText}>Already have an account? Sign In</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Footer */}
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>
+                By continuing, you agree to our{' '}
+                <Text style={styles.footerLink}>Terms</Text> and{' '}
+                <Text style={styles.footerLink}>Privacy Policy</Text>
+              </Text>
             </View>
           </Animated.View>
         </ScrollView>
@@ -264,157 +291,167 @@ export default function SignUpScreen({ navigation }) {
         onClose={handleCloseConfirmation}
         email={email}
       />
-    </AnimatedBackground>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  gradient: {
-    flex: 1,
-  },
   container: {
+    flex: 1,
+    backgroundColor: '#1F2937',
+  },
+  keyboardView: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
     padding: 20,
-    paddingTop: 40,
-    paddingBottom: 40,
+    paddingTop: 60,
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 40,
   },
   iconCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#FFFFFF',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#10B981',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 5,
+    marginBottom: 16,
   },
   brandName: {
-    fontSize: 24,
+    fontSize: 36,
     fontWeight: '800',
     color: '#FFFFFF',
     letterSpacing: -0.5,
+    marginBottom: 8,
   },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: 10,
+  tagline: {
+    fontSize: 16,
+    color: '#9CA3AF',
+    fontWeight: '400',
   },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#1F2937',
-    marginBottom: 4,
+  welcomeCard: {
+    backgroundColor: '#374151',
+    borderRadius: 24,
+    padding: 24,
+    marginBottom: 24,
   },
-  toggleText: {
-    fontSize: 13,
-    color: '#6B7280',
-    marginBottom: 16,
+  welcomeHeader: {
+    alignItems: 'center',
+    marginBottom: 24,
   },
-  toggleLink: {
-    color: '#3B82F6',
-    fontWeight: '600',
-  },
-  inputContainer: {
+  sparkleIcon: {
     marginBottom: 12,
   },
+  welcomeTitle: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 8,
+  },
+  welcomeSubtitle: {
+    fontSize: 15,
+    color: '#D1D5DB',
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  formCard: {
+    backgroundColor: '#1F2937',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+  },
+  inputContainer: {
+    marginBottom: 16,
+  },
   label: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
-    marginBottom: 6,
+    color: '#E5E7EB',
+    marginBottom: 8,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F3F4F6',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    height: 44,
+    backgroundColor: '#374151',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 52,
   },
   inputIcon: {
-    marginRight: 10,
+    marginRight: 12,
   },
   input: {
     flex: 1,
-    fontSize: 14,
-    color: '#1F2937',
+    fontSize: 15,
+    color: '#FFFFFF',
   },
   eyeIcon: {
     padding: 4,
   },
   signUpButton: {
     marginTop: 8,
-    marginBottom: 14,
-    borderRadius: 10,
+    borderRadius: 12,
     overflow: 'hidden',
-    shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
   },
   gradientButton: {
-    paddingVertical: 13,
+    paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   signUpButtonText: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
   },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 14,
+    marginVertical: 16,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: '#4B5563',
   },
   dividerText: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#9CA3AF',
-    marginHorizontal: 10,
+    marginHorizontal: 12,
     fontWeight: '500',
   },
-  socialButton: {
-    flexDirection: 'row',
+  signInButton: {
+    backgroundColor: '#374151',
+    borderRadius: 12,
+    paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    borderRadius: 10,
-    paddingVertical: 11,
-    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#4B5563',
   },
-  socialButtonText: {
-    fontSize: 14,
+  signInButtonText: {
+    fontSize: 15,
     fontWeight: '600',
-    color: '#374151',
-    marginLeft: 8,
+    color: '#10B981',
+  },
+  footer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  footerText: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  footerLink: {
+    color: '#10B981',
+    fontWeight: '500',
   },
 });
