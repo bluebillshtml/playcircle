@@ -10,16 +10,25 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        loadProfile(session.user.id, session);
-      } else {
-        setLoading(false);
-      }
+    // TEMPORARY: Force sign out on app start to always show sign-in screen
+    // TODO: Remove this when you want to enable persistent sessions
+    supabase.auth.signOut().then(() => {
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      setLoading(false);
     });
+
+    // Get initial session (DISABLED TEMPORARILY)
+    // supabase.auth.getSession().then(({ data: { session } }) => {
+    //   setSession(session);
+    //   setUser(session?.user ?? null);
+    //   if (session?.user) {
+    //     loadProfile(session.user.id, session);
+    //   } else {
+    //     setLoading(false);
+    //   }
+    // });
 
     // Listen for auth changes
     const {
@@ -133,6 +142,34 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
+  const devBypass = () => {
+    // Create mock user and profile for development
+    const mockUser = {
+      id: 'dev-user-' + Date.now(),
+      email: 'dev@playcircle.com',
+      user_metadata: {
+        username: 'DevUser',
+        full_name: 'Dev User',
+      },
+    };
+
+    const mockProfile = {
+      id: mockUser.id,
+      username: 'DevUser',
+      full_name: 'Dev User',
+      first_name: 'Dev',
+      last_name: 'User',
+      email: 'dev@playcircle.com',
+      onboarding_completed: false, // This will show onboarding screen
+      skill_level: 'Beginner',
+    };
+
+    setUser(mockUser);
+    setProfile(mockProfile);
+    setSession({ user: mockUser });
+    console.log('✅ Dev bypass activated - navigating to onboarding');
+  };
+
   const value = {
     user,
     profile,
@@ -144,6 +181,7 @@ export const AuthProvider = ({ children }) => {
     signOut,
     resendConfirmation,
     loadProfile,
+    devBypass,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

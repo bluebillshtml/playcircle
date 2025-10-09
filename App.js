@@ -61,6 +61,14 @@ function AppContent() {
   // Check if user needs onboarding
   const needsOnboarding = user && (!profile?.onboarding_completed);
 
+  // Debug auth state
+  console.log('🔍 Auth State:', {
+    hasUser: !!user,
+    hasProfile: !!profile,
+    needsOnboarding,
+    onboardingCompleted: profile?.onboarding_completed
+  });
+
   return (
     <View style={{ flex: 1, backgroundColor: '#1a1a1a' }}>
       <NavigationContainer theme={{
