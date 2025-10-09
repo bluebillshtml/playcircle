@@ -278,16 +278,16 @@ export default function NavigationButton({ navigation, currentScreen }) {
 const createStyles = (colors) => StyleSheet.create({
   navButtonContainer: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 40 : (StatusBar.currentHeight ? StatusBar.currentHeight + 5 : 45),
+    top: Platform.OS === 'ios' ? 50 : (StatusBar.currentHeight ? StatusBar.currentHeight + 15 : 55),
     left: 20,
     zIndex: 1000,
   },
   navButton: {
-    width: 52,
-    height: 52,
+    width: 64,
+    height: 64,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 8,
+    padding: 16,
     backgroundColor: colors.card,
     borderRadius: 26,
     borderWidth: 0,
