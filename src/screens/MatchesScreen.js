@@ -289,7 +289,7 @@ const createStyles = (colors) => StyleSheet.create({
     backgroundColor: 'transparent',
   },
   spacer: {
-    height: 60,
+    height: 100,
     backgroundColor: 'transparent',
   },
   header: {

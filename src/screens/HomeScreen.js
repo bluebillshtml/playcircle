@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,10 +9,12 @@ import {
   Image,
   ActivityIndicator,
   Modal,
+  Animated,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useSport } from '../context/SportContext';
@@ -162,6 +164,7 @@ export default function HomeScreen({ navigation }) {
   const [userStats, setUserStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [navModalVisible, setNavModalVisible] = useState(false);
 
   // Filter states
   const [selectedDifficulties, setSelectedDifficulties] = useState([]);
@@ -169,9 +172,58 @@ export default function HomeScreen({ navigation }) {
   const [distanceRange, setDistanceRange] = useState(100);
   const [sortBy, setSortBy] = useState('nearest');
 
+  // Navigation animation refs
+  const slideAnim = useRef(new Animated.Value(-width)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
     loadData();
   }, [user]);
+
+  const navItems = [
+    { name: 'Home', icon: 'home', screen: 'Home' },
+    { name: 'Leaderboard', icon: 'trophy', screen: 'Dashboard' },
+    { name: 'Matches', icon: 'calendar', screen: 'Matches' },
+    { name: 'Create Match', icon: 'add-circle', screen: 'Create' },
+    { name: 'Profile', icon: 'person', screen: 'Profile' },
+  ];
+
+  const openNavModal = () => {
+    setNavModalVisible(true);
+    Animated.parallel([
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        damping: 20,
+        stiffness: 90,
+        mass: 1,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 350,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const closeNavModal = () => {
+    Animated.parallel([
+      Animated.spring(slideAnim, {
+        toValue: -width,
+        damping: 20,
+        stiffness: 90,
+        mass: 1,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setNavModalVisible(false);
+    });
+  };
 
 
 
@@ -326,7 +378,7 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.fixedHeader}>
           {/* Header with Menu, Search, and Notification */}
           <View style={styles.header}>
-            <TouchableOpacity style={styles.menuButton}>
+            <TouchableOpacity style={styles.menuButton} onPress={openNavModal}>
               <Ionicons name="menu" size={28} color={colors.text} />
             </TouchableOpacity>
 
@@ -480,6 +532,120 @@ export default function HomeScreen({ navigation }) {
 
           <View style={styles.bottomPadding} />
         </ScrollView>
+
+        {/* Navigation Modal */}
+        <Modal
+          visible={navModalVisible}
+          transparent={true}
+          animationType="none"
+          onRequestClose={closeNavModal}
+          statusBarTranslucent={true}
+        >
+          <Animated.View style={[styles.navModalOverlay, { opacity: fadeAnim }]}>
+            <TouchableOpacity
+              style={styles.navBackdrop}
+              activeOpacity={1}
+              onPress={closeNavModal}
+            />
+            <Animated.View 
+              style={[
+                styles.navDrawer, 
+                { 
+                  transform: [{ translateX: slideAnim }]
+                }
+              ]}
+            >
+              <BlurView intensity={25} style={styles.navBlurContainer}>
+                <View style={styles.navDrawerHeader}>
+                  <View style={styles.navDrawerHeaderContent}>
+                    <View style={styles.navAppIcon}>
+                      <Ionicons name="tennisball" size={28} color={colors.primary} />
+                    </View>
+                    <View style={styles.navAppInfo}>
+                      <Text style={styles.navAppName}>PlayCircle</Text>
+                      <Text style={styles.navAppSubtitle}>Sport Community</Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    onPress={closeNavModal}
+                    style={styles.navCloseButton}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="close" size={24} color={colors.text} />
+                  </TouchableOpacity>
+                </View>
+                
+                <View style={styles.navItemsContainer}>
+                  {navItems.map((item, index) => (
+                    <Animated.View
+                      key={item.screen}
+                      style={{
+                        transform: [{
+                          translateX: slideAnim.interpolate({
+                            inputRange: [-width, 0],
+                            outputRange: [-50 - (index * 20), 0],
+                            extrapolate: 'clamp',
+                          })
+                        }],
+                        opacity: slideAnim.interpolate({
+                          inputRange: [-width, -width + 100, 0],
+                          outputRange: [0, 0, 1],
+                          extrapolate: 'clamp',
+                        })
+                      }}
+                    >
+                      <TouchableOpacity
+                        style={[
+                          styles.navItem,
+                          'Home' === item.screen && styles.navItemActive
+                        ]}
+                        onPress={() => {
+                          closeNavModal();
+                          navigation.navigate(item.screen);
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <View style={[
+                          styles.navItemIcon,
+                          'Home' === item.screen && styles.navItemIconActive
+                        ]}>
+                          <Ionicons 
+                            name={item.icon} 
+                            size={24} 
+                            color={'Home' === item.screen ? colors.primary : colors.text} 
+                          />
+                        </View>
+                        <Text style={[
+                          styles.navItemText,
+                          'Home' === item.screen && styles.navItemTextActive
+                        ]}>
+                          {item.name}
+                        </Text>
+                        {'Home' === item.screen && (
+                          <View style={styles.navItemIndicator}>
+                            <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    </Animated.View>
+                  ))}
+                </View>
+
+                <View style={styles.navDrawerFooter}>
+                  <View style={styles.navUserInfo}>
+                    <View style={styles.navUserAvatar}>
+                      <Ionicons name="person" size={20} color={colors.text} />
+                    </View>
+                    <View style={styles.navUserDetails}>
+                      <Text style={styles.navUserName}>Player</Text>
+                      <Text style={styles.navUserStatus}>Online</Text>
+                    </View>
+                  </View>
+                </View>
+              </BlurView>
+            </Animated.View>
+          </Animated.View>
+        </Modal>
 
         {/* Filter Modal */}
         <Modal
@@ -936,6 +1102,166 @@ const createStyles = (colors) => StyleSheet.create({
   },
   resultBadgeWin: {
     backgroundColor: colors.winBackground,
+  },
+  // Navigation Modal Styles
+  navModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-start',
+  },
+  navBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  navDrawer: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: width * 0.8,
+    maxWidth: 320,
+  },
+  navBlurContainer: {
+    flex: 1,
+    backgroundColor: colors.glass,
+    borderTopRightRadius: 24,
+    borderBottomRightRadius: 24,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    borderLeftWidth: 0,
+  },
+  navDrawerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 32,
+    paddingTop: 60,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.glassBorder,
+  },
+  navDrawerHeaderContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  navAppIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primary + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  navAppInfo: {
+    flex: 1,
+  },
+  navAppName: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: colors.text,
+    letterSpacing: -0.5,
+    marginBottom: 2,
+  },
+  navAppSubtitle: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  navCloseButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navItemsContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 24,
+  },
+  navItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderRadius: 16,
+    marginVertical: 6,
+    backgroundColor: 'transparent',
+  },
+  navItemActive: {
+    backgroundColor: colors.primary + '15',
+    borderWidth: 1,
+    borderColor: colors.primary + '30',
+  },
+  navItemIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  navItemIconActive: {
+    backgroundColor: colors.primary + '20',
+  },
+  navItemText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
+    letterSpacing: -0.3,
+    flex: 1,
+  },
+  navItemTextActive: {
+    color: colors.primary,
+    fontWeight: '700',
+  },
+  navItemIndicator: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.primary + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navDrawerFooter: {
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    borderTopWidth: 1,
+    borderTopColor: colors.glassBorder,
+  },
+  navUserInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  navUserAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.surfaceLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  navUserDetails: {
+    flex: 1,
+  },
+  navUserName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 2,
+  },
+  navUserStatus: {
+    fontSize: 12,
+    color: colors.success,
+    fontWeight: '500',
   },
   resultBadgeLoss: {
     backgroundColor: colors.lossBackground,

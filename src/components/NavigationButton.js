@@ -8,6 +8,7 @@ import {
   Animated,
   Dimensions,
   StatusBar,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
@@ -277,25 +278,32 @@ export default function NavigationButton({ navigation, currentScreen }) {
 const createStyles = (colors) => StyleSheet.create({
   navButtonContainer: {
     position: 'absolute',
-    top: 50,
+    top: Platform.OS === 'ios' ? 40 : (StatusBar.currentHeight ? StatusBar.currentHeight + 5 : 45),
     left: 20,
     zIndex: 1000,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   navButton: {
-    width: 50,
-    height: 50,
+    width: 52,
+    height: 52,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 8,
     backgroundColor: colors.card,
-    borderRadius: 25,
-    borderWidth: 1,
+    borderRadius: 26,
+    borderWidth: 1.5,
     borderColor: colors.glassBorder,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    // Add backdrop blur effect for better visibility
+    backdropFilter: 'blur(10px)',
   },
   hamburgerContainer: {
     width: 24,
@@ -304,11 +312,11 @@ const createStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
   },
   hamburgerLine: {
-    height: 2,
+    height: 2.5,
     backgroundColor: colors.text,
-    borderRadius: 1,
+    borderRadius: 1.25,
     width: '100%',
-    opacity: 0.8,
+    opacity: 0.9,
   },
   hamburgerLine1: {
     transformOrigin: 'center',

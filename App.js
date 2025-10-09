@@ -92,7 +92,7 @@ function AppContent() {
             <>
               <Stack.Screen
                 name="Home"
-                component={ScreenWithNavButton({ component: HomeScreen, currentScreen: 'Home' })}
+                component={HomeScreen}
                 options={{ headerShown: false }}
               />
               <Stack.Screen
