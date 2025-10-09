@@ -191,19 +191,19 @@ export default function SignInScreen({ navigation }) {
               <View style={styles.featuresList}>
                 <View style={styles.featureItem}>
                   <View style={styles.checkIcon}>
-                    <Ionicons name="checkmark" size={16} color="#10B981" />
+                    <Ionicons name="checkmark" size={14} color="#10B981" />
                   </View>
                   <Text style={styles.featureText}>Find players near you</Text>
                 </View>
                 <View style={styles.featureItem}>
                   <View style={styles.checkIcon}>
-                    <Ionicons name="checkmark" size={16} color="#10B981" />
+                    <Ionicons name="checkmark" size={14} color="#10B981" />
                   </View>
                   <Text style={styles.featureText}>Join or create matches</Text>
                 </View>
                 <View style={styles.featureItem}>
                   <View style={styles.checkIcon}>
-                    <Ionicons name="checkmark" size={16} color="#10B981" />
+                    <Ionicons name="checkmark" size={14} color="#10B981" />
                   </View>
                   <Text style={styles.featureText}>Track your stats & progress</Text>
                 </View>
@@ -236,69 +236,72 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   content: {
-    flex: 1,
+    width: '100%',
+    maxWidth: 400,
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 20,
   },
   iconCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
     backgroundColor: '#10B981',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   brandName: {
-    fontSize: 36,
+    fontSize: 28,
     fontWeight: '800',
     color: '#FFFFFF',
     letterSpacing: -0.5,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   tagline: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#9CA3AF',
     fontWeight: '400',
   },
   welcomeCard: {
     backgroundColor: 'rgba(55, 65, 81, 0.7)',
     borderRadius: 24,
-    padding: 24,
-    marginBottom: 24,
+    padding: 20,
+    marginBottom: 16,
   },
   welcomeHeader: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 16,
   },
   sparkleIcon: {
-    marginBottom: 12,
-  },
-  welcomeTitle: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#FFFFFF',
     marginBottom: 8,
   },
+  welcomeTitle: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 6,
+  },
   welcomeSubtitle: {
-    fontSize: 15,
+    fontSize: 14,
     color: '#D1D5DB',
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 20,
   },
   formCard: {
     backgroundColor: '#1F2937',
     borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
+    padding: 16,
+    marginBottom: 16,
   },
   inputContainer: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   label: {
     fontSize: 14,
@@ -323,7 +326,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#374151',
     borderRadius: 12,
     paddingHorizontal: 16,
-    height: 52,
+    height: 48,
   },
   inputIcon: {
     marginRight: 12,
@@ -342,7 +345,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   gradientButton: {
-    paddingVertical: 16,
+    paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -354,7 +357,7 @@ const styles = StyleSheet.create({
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 16,
+    marginVertical: 12,
   },
   dividerLine: {
     flex: 1,
@@ -370,7 +373,7 @@ const styles = StyleSheet.create({
   signUpButton: {
     backgroundColor: '#374151',
     borderRadius: 12,
-    paddingVertical: 14,
+    paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -382,35 +385,35 @@ const styles = StyleSheet.create({
     color: '#10B981',
   },
   featuresList: {
-    gap: 12,
+    gap: 8,
   },
   featureItem: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   checkIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: '#1F2937',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   featureText: {
-    fontSize: 15,
+    fontSize: 13,
     color: '#E5E7EB',
     fontWeight: '500',
   },
   footer: {
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   footerText: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#9CA3AF',
     textAlign: 'center',
-    lineHeight: 18,
+    lineHeight: 16,
   },
   footerLink: {
     color: '#10B981',
