@@ -10,42 +10,49 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import MessageBubble from '../components/MessageBubble';
 
 // Mock message data generator
 const generateMockMessages = (count = 15) => {
   const messages = [];
   const users = [
     { id: 'user1', name: 'You', avatar: null },
-    { id: 'user2', name: 'Alice', avatar: null },
-    { id: 'user3', name: 'Bob', avatar: null },
-    { id: 'user4', name: 'Carol', avatar: null },
+    { id: 'user2', name: 'Alice', avatar: 'https://i.pravatar.cc/150?img=1' },
+    { id: 'user3', name: 'Bob', avatar: 'https://i.pravatar.cc/150?img=2' },
+    { id: 'user4', name: 'Carol', avatar: 'https://i.pravatar.cc/150?img=3' },
   ];
 
-  const messageTexts = [
-    'Hey everyone! Looking forward to the game!',
-    'What time should we meet?',
-    'I will bring some water bottles',
-    'The weather looks perfect for playing',
-    'See you all there!',
-    'On my way!',
-    'Running a bit late, be there in 10 minutes',
-    'Great game everyone!',
-    'Thanks for organizing this',
-    'Count me in for next time',
+  const messageTypes = [
+    { type: 'text', content: 'Hey everyone! Looking forward to the game!' },
+    { type: 'text', content: 'What time should we meet?' },
+    { type: 'text', content: 'I will bring some water bottles' },
+    { type: 'text', content: 'The weather looks perfect for playing' },
+    { type: 'text', content: 'See you all there!' },
+    { type: 'status', content: 'On my way! 🏃‍♂️', metadata: { status: { status: 'on-my-way' } } },
+    { type: 'status', content: 'Running late, be there soon! ⏰', metadata: { status: { status: 'running-late' } } },
+    { type: 'status', content: 'I\'ve arrived! 📍', metadata: { status: { status: 'arrived' } } },
+    { type: 'location', content: '', metadata: { location: { lat: 37.7749, lng: -122.4194, address: 'Golden Gate Park Tennis Courts, San Francisco, CA' } } },
+    { type: 'photo', content: 'Check out this court!', metadata: { photo: { photo_url: 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=400&h=300&fit=crop' } } },
+    { type: 'text', content: 'Great game everyone!' },
+    { type: 'text', content: 'Thanks for organizing this' },
+    { type: 'text', content: 'Count me in for next time' },
   ];
 
   for (let i = 0; i < count; i++) {
     const user = users[Math.floor(Math.random() * users.length)];
     const isOwn = user.id === 'user1';
+    const messageTemplate = messageTypes[Math.floor(Math.random() * messageTypes.length)];
     
     messages.push({
       id: `msg_${i}`,
-      content: messageTexts[Math.floor(Math.random() * messageTexts.length)],
+      content: messageTemplate.content,
+      message_type: messageTemplate.type,
+      metadata: messageTemplate.metadata || {},
       user_id: user.id,
       user: user,
       created_at: new Date(Date.now() - (count - i) * 60000 * 5).toISOString(),
       isOwn,
-      delivery_status: isOwn ? 'sent' : 'sent',
+      delivery_status: isOwn ? (Math.random() > 0.9 ? 'failed' : 'sent') : 'sent',
     });
   }
 
@@ -85,15 +92,28 @@ export default function ChatThreadScreen({ navigation, route }) {
     const newMessage = {
       id: `msg_${Date.now()}`,
       content: inputText.trim(),
+      message_type: 'text',
+      metadata: {},
       user_id: 'user1',
       user: { id: 'user1', name: 'You', avatar: null },
       created_at: new Date().toISOString(),
       isOwn: true,
-      delivery_status: 'sent',
+      delivery_status: 'sending', // Start as sending, then update to sent
     };
 
     setMessages(prev => [...prev, newMessage]);
     setInputText('');
+
+    // Simulate message sending delay
+    setTimeout(() => {
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.id === newMessage.id 
+            ? { ...msg, delivery_status: 'sent' }
+            : msg
+        )
+      );
+    }, 1000);
 
     setTimeout(() => {
       flatListRef.current?.scrollToEnd({ animated: true });
@@ -109,19 +129,46 @@ export default function ChatThreadScreen({ navigation, route }) {
   ];
 
   const handleQuickAction = (action) => {
-    let message = '';
+    let messageData = {};
+    
     switch (action.id) {
       case 'on-my-way':
-        message = 'On my way!';
+        messageData = {
+          content: 'On my way! 🏃‍♂️',
+          message_type: 'status',
+          metadata: { status: { status: 'on-my-way' } },
+        };
         break;
       case 'running-late':
-        message = 'Running late, be there soon!';
+        messageData = {
+          content: 'Running late, be there soon! ⏰',
+          message_type: 'status',
+          metadata: { status: { status: 'running-late' } },
+        };
         break;
       case 'location':
-        message = 'Shared location';
+        messageData = {
+          content: '',
+          message_type: 'location',
+          metadata: { 
+            location: { 
+              lat: 37.7749, 
+              lng: -122.4194, 
+              address: 'Current Location' 
+            } 
+          },
+        };
         break;
       case 'photo':
-        message = 'Shared a photo';
+        messageData = {
+          content: 'Shared a photo of the court',
+          message_type: 'photo',
+          metadata: { 
+            photo: { 
+              photo_url: 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=400&h=300&fit=crop' 
+            } 
+          },
+        };
         break;
       default:
         return;
@@ -129,7 +176,7 @@ export default function ChatThreadScreen({ navigation, route }) {
 
     const newMessage = {
       id: `msg_${Date.now()}`,
-      content: message,
+      ...messageData,
       user_id: 'user1',
       user: { id: 'user1', name: 'You', avatar: null },
       created_at: new Date().toISOString(),
@@ -148,50 +195,42 @@ export default function ChatThreadScreen({ navigation, route }) {
     const showTimestamp = !previousMessage || 
       new Date(item.created_at).getTime() - new Date(previousMessage.created_at).getTime() > 300000;
 
-    const isOwn = item.isOwn;
+    // Convert the mock message format to match the MessageBubble expected format
+    const messageForBubble = {
+      ...item,
+      message_type: item.message_type || 'text',
+      metadata: item.metadata || {},
+      is_deleted: false,
+      user: {
+        ...item.user,
+        full_name: item.user?.name || 'Unknown User',
+        username: item.user?.name?.toLowerCase() || 'unknown',
+      },
+    };
     
     return (
-      <View style={[styles.messageContainer, isOwn && styles.ownMessageContainer]}>
-        {showTimestamp && (
-          <Text style={styles.timestamp}>
-            {new Date(item.created_at).toLocaleTimeString('en-US', {
-              hour: 'numeric',
-              minute: '2-digit',
-              hour12: true,
-            })}
-          </Text>
-        )}
-        
-        <View style={[styles.messageRow, isOwn && styles.ownMessageRow]}>
-          {!isOwn && showAvatar && (
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {item.user?.name?.charAt(0) || 'U'}
-              </Text>
-            </View>
-          )}
-          
-          {!isOwn && !showAvatar && <View style={styles.avatarSpacer} />}
-          
-          <View style={[styles.messageBubble, isOwn ? styles.ownBubble : styles.otherBubble]}>
-            {!isOwn && showAvatar && (
-              <Text style={styles.senderName}>
-                {item.user?.name || 'Unknown'}
-              </Text>
-            )}
-            
-            <Text style={[styles.messageText, isOwn ? styles.ownMessageText : styles.otherMessageText]}>
-              {item.content}
-            </Text>
-            
-            {isOwn && (
-              <View style={styles.messageStatus}>
-                <Ionicons name="checkmark" size={12} color="rgba(255,255,255,0.7)" />
-              </View>
-            )}
-          </View>
-        </View>
-      </View>
+      <MessageBubble
+        message={messageForBubble}
+        isOwn={item.isOwn}
+        showAvatar={showAvatar}
+        showTimestamp={showTimestamp}
+        onRetry={(message) => {
+          // Handle message retry logic
+          console.log('Retrying message:', message.id);
+        }}
+        onLongPress={(message) => {
+          // Handle long press actions (copy, delete, etc.)
+          Alert.alert(
+            'Message Options',
+            'What would you like to do with this message?',
+            [
+              { text: 'Copy', onPress: () => console.log('Copy message') },
+              { text: 'Delete', onPress: () => console.log('Delete message'), style: 'destructive' },
+              { text: 'Cancel', style: 'cancel' },
+            ]
+          );
+        }}
+      />
     );
   };
 
@@ -406,77 +445,7 @@ const createStyles = (colors) => StyleSheet.create({
     paddingVertical: 16,
   },
   
-  // Message styles
-  messageContainer: {
-    marginVertical: 2,
-    paddingHorizontal: 16,
-  },
-  ownMessageContainer: {
-    alignItems: 'flex-end',
-  },
-  timestamp: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginVertical: 8,
-  },
-  messageRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    maxWidth: '80%',
-  },
-  ownMessageRow: {
-    flexDirection: 'row-reverse',
-  },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.surfaceLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
-  },
-  avatarSpacer: {
-    width: 40,
-  },
-  avatarText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  messageBubble: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 20,
-    maxWidth: '100%',
-  },
-  ownBubble: {
-    backgroundColor: colors.primary,
-  },
-  otherBubble: {
-    backgroundColor: colors.surfaceLight,
-  },
-  senderName: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.primary,
-    marginBottom: 4,
-  },
-  messageText: {
-    fontSize: 16,
-    lineHeight: 20,
-  },
-  ownMessageText: {
-    color: '#FFFFFF',
-  },
-  otherMessageText: {
-    color: colors.text,
-  },
-  messageStatus: {
-    alignSelf: 'flex-end',
-    marginTop: 4,
-  },
+  // Message styles (now handled by MessageBubble component)
   
   // Quick actions styles
   quickActionsContainer: {

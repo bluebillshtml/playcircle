@@ -60,7 +60,8 @@
   - Create floating scroll-to-latest FAB when user is not at bottom
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
 
-- [ ] 7. Create MessageBubble component with modern styling
+- [-] 7. Create MessageBubble component with modern styling
+
   - Implement MessageBubble component with rounded bubbles and subtle gradients
   - Add proper message alignment (own messages vs others)
   - Include avatar display logic and timestamp handling
