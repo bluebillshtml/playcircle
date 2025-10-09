@@ -5,12 +5,15 @@ import {
   StyleSheet,
   TouchableOpacity,
   Animated,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
 import { getSportIcon, formatTime, getRelativeTime } from '../services/chatUtils';
+import ParticipantStack from './ParticipantStack';
+import MessageTypeIndicator from './MessageTypeIndicator';
 
 const ChatCard = ({ 
   chat, 
@@ -21,6 +24,7 @@ const ChatCard = ({
 }) => {
   const { colors } = useTheme();
   const scaleAnim = React.useRef(new Animated.Value(1)).current;
+  const unreadBadgeAnim = React.useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {
@@ -57,6 +61,26 @@ const ChatCard = ({
   
   // Determine if we should show unread badge
   const showUnreadBadge = chat.unread_count > 0;
+
+  // Animate unread badge when count changes
+  React.useEffect(() => {
+    if (showUnreadBadge) {
+      Animated.sequence([
+        Animated.spring(unreadBadgeAnim, {
+          toValue: 1.2,
+          useNativeDriver: true,
+          tension: 300,
+          friction: 10,
+        }),
+        Animated.spring(unreadBadgeAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+          tension: 300,
+          friction: 10,
+        }),
+      ]).start();
+    }
+  }, [chat.unread_count, showUnreadBadge, unreadBadgeAnim]);
   
   // Format last message preview
   const lastMessagePreview = chat.last_message_content 
@@ -64,6 +88,39 @@ const ChatCard = ({
       ? `${chat.last_message_content.substring(0, 50)}...`
       : chat.last_message_content
     : 'No messages yet';
+
+  // Mock participants data (in real implementation, this would come from chat.participants)
+  // Generate mock participants based on chat data
+  const generateMockParticipants = (count) => {
+    const names = ['Alice Johnson', 'Bob Smith', 'Carol Davis', 'David Wilson', 'Emma Brown', 'Frank Miller'];
+    const participants = [];
+    
+    for (let i = 0; i < Math.min(count, names.length); i++) {
+      participants.push({
+        id: `participant_${i}`,
+        full_name: names[i],
+        username: names[i].toLowerCase().replace(' ', '.'),
+        avatar_url: Math.random() > 0.3 ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${names[i].toLowerCase()}` : null,
+        is_online: i === 0 && Math.random() > 0.5, // First participant sometimes online
+      });
+    }
+    
+    return participants;
+  };
+
+  const mockParticipants = generateMockParticipants(chat.member_count || 2);
+
+  // Determine message type from content
+  const getMessageType = () => {
+    if (!chat.last_message_content) return 'text';
+    if (chat.last_message_content.includes('📷') || chat.last_message_content.includes('photo')) return 'photo';
+    if (chat.last_message_content.includes('📍') || chat.last_message_content.includes('location')) return 'location';
+    if (chat.last_message_content.includes('🏃‍♂️') || chat.last_message_content.includes('⏰') || 
+        chat.last_message_content.includes('On my way') || chat.last_message_content.includes('Running late')) return 'status';
+    return 'text';
+  };
+
+  const messageType = getMessageType();
 
   const styles = createStyles(colors, isHappeningSoon);
 
@@ -122,15 +179,19 @@ const ChatCard = ({
                         </Text>
                       </>
                     )}
-                    {chat.member_count > 0 && (
-                      <>
-                        <Text style={styles.separator}>•</Text>
-                        <Ionicons name="people-outline" size={12} color={colors.textSecondary} />
-                        <Text style={styles.memberCountText}>
-                          {chat.member_count}
-                        </Text>
-                      </>
-                    )}
+                  </View>
+                  
+                  {/* Participant Stack */}
+                  <View style={styles.participantSection}>
+                    <ParticipantStack 
+                      participants={mockParticipants}
+                      maxVisible={3}
+                      size={20}
+                      showCount={false}
+                    />
+                    <Text style={styles.memberCountText}>
+                      {chat.member_count} {chat.member_count === 1 ? 'player' : 'players'}
+                    </Text>
                   </View>
                 </View>
               </View>
@@ -143,9 +204,13 @@ const ChatCard = ({
                       {chat.last_message_user_name}
                     </Text>
                   )}
-                  <Text style={styles.lastMessageContent} numberOfLines={2}>
-                    {lastMessagePreview}
-                  </Text>
+                  <View style={styles.messageContent}>
+                    <MessageTypeIndicator 
+                      messageType={messageType}
+                      content={lastMessagePreview}
+                      size="small"
+                    />
+                  </View>
                   {relativeTime && (
                     <Text style={styles.relativeTime}>
                       {relativeTime}
@@ -163,7 +228,14 @@ const ChatCard = ({
                   )}
                   
                   {showUnreadBadge && (
-                    <Animated.View style={styles.unreadBadge}>
+                    <Animated.View 
+                      style={[
+                        styles.unreadBadge,
+                        {
+                          transform: [{ scale: unreadBadgeAnim }],
+                        },
+                      ]}
+                    >
                       <Text style={styles.unreadText}>
                         {chat.unread_count > 99 ? '99+' : chat.unread_count}
                       </Text>
@@ -173,9 +245,16 @@ const ChatCard = ({
               </View>
             </View>
 
-            {/* Happening soon indicator line */}
+            {/* Status indicators */}
             {isHappeningSoon && (
               <View style={styles.happeningSoonIndicator} />
+            )}
+            
+            {/* Active session pulse indicator */}
+            {isHappeningSoon && (
+              <View style={styles.pulseIndicator}>
+                <Animated.View style={styles.pulseRing} />
+              </View>
             )}
           </LinearGradient>
         </BlurView>
@@ -244,6 +323,12 @@ const createStyles = (colors, isHappeningSoon) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    marginBottom: 8,
+  },
+  participantSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   timeText: {
     fontSize: 14,
@@ -259,9 +344,9 @@ const createStyles = (colors, isHappeningSoon) => StyleSheet.create({
     color: colors.textSecondary,
   },
   memberCountText: {
-    fontSize: 12,
+    fontSize: 11,
     color: colors.textSecondary,
-    marginLeft: 2,
+    fontWeight: '500',
   },
   rightSection: {
     alignItems: 'flex-end',
@@ -278,6 +363,10 @@ const createStyles = (colors, isHappeningSoon) => StyleSheet.create({
     fontWeight: '600',
     color: colors.primary,
     marginBottom: 2,
+  },
+  messageContent: {
+    alignItems: 'flex-end',
+    maxWidth: '100%',
   },
   lastMessageContent: {
     fontSize: 13,
@@ -336,6 +425,20 @@ const createStyles = (colors, isHappeningSoon) => StyleSheet.create({
     backgroundColor: colors.primary,
     borderTopLeftRadius: 24,
     borderBottomLeftRadius: 24,
+  },
+  pulseIndicator: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 8,
+    height: 8,
+  },
+  pulseRing: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+    opacity: 0.8,
   },
 });
 
