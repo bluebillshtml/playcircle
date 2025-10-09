@@ -33,12 +33,12 @@ const generateMockMessages = (count = 15) => {
     { type: 'text', content: 'See you all there!' },
     { type: 'status', content: 'On my way! 🏃‍♂️', metadata: { status: { status: 'on-my-way' } } },
     { type: 'status', content: 'Running late, be there soon! ⏰', metadata: { status: { status: 'running-late' } } },
-    { type: 'status', content: 'I\'ve arrived! 📍', metadata: { status: { status: 'arrived' } } },
-    { type: 'location', content: '', metadata: { location: { lat: 37.7749, lng: -122.4194, address: 'Golden Gate Park Tennis Courts, San Francisco, CA' } } },
-    { type: 'photo', content: 'Check out this court!', metadata: { photo: { photo_url: 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=400&h=300&fit=crop' } } },
+    { type: 'status', content: 'I\'m here! 📍', metadata: { status: { status: 'arrived' } } },
     { type: 'text', content: 'Great game everyone!' },
     { type: 'text', content: 'Thanks for organizing this' },
     { type: 'text', content: 'Count me in for next time' },
+    { type: 'text', content: 'Anyone need a ride?' },
+    { type: 'text', content: 'Court looks good!' },
   ];
 
   for (let i = 0; i < count; i++) {
@@ -129,10 +129,9 @@ export default function ChatThreadScreen({ navigation, route }) {
 
   // Quick actions
   const quickActions = [
-    { id: 'location', icon: 'location-outline', label: 'Location', color: '#3B82F6' },
     { id: 'on-my-way', icon: 'car-outline', label: 'On my way', color: '#10B981' },
     { id: 'running-late', icon: 'time-outline', label: 'Running late', color: '#F59E0B' },
-    { id: 'photo', icon: 'camera-outline', label: 'Photo', color: '#8B5CF6' },
+    { id: 'im-here', icon: 'checkmark-circle-outline', label: "I'm here", color: '#059669' },
   ];
 
   const handleQuickAction = (action) => {
@@ -153,28 +152,11 @@ export default function ChatThreadScreen({ navigation, route }) {
           metadata: { status: { status: 'running-late' } },
         };
         break;
-      case 'location':
+      case 'im-here':
         messageData = {
-          content: '',
-          message_type: 'location',
-          metadata: { 
-            location: { 
-              lat: 37.7749, 
-              lng: -122.4194, 
-              address: 'Current Location' 
-            } 
-          },
-        };
-        break;
-      case 'photo':
-        messageData = {
-          content: 'Shared a photo of the court',
-          message_type: 'photo',
-          metadata: { 
-            photo: { 
-              photo_url: 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=400&h=300&fit=crop' 
-            } 
-          },
+          content: 'I\'m here! 📍',
+          message_type: 'status',
+          metadata: { status: { status: 'arrived' } },
         };
         break;
       default:
