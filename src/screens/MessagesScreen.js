@@ -13,10 +13,80 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { groupChats } from '../services/chatUtils';
-import { transformChatList } from '../utils/chatTransformers';
-import { createMockChatListScenario } from '../utils/chatFactory';
-import AnimatedBackground from '../components/AnimatedBackground';
-import ChatCard from '../components/ChatCard';
+
+// Simple mock data function as fallback
+const createMockChatListScenario = (count = 8) => {
+  const mockChats = [];
+  for (let i = 0; i < count; i++) {
+    mockChats.push({
+      chat_id: `chat_${i}`,
+      court_session_id: `session_${i}`,
+      session_title: `Court ${i + 1} – Today 7:00 PM`,
+      session_date: new Date().toISOString().split('T')[0],
+      session_time: '19:00',
+      session_duration: 90,
+      court_name: `Court ${i + 1}`,
+      sport_id: 'padel',
+      last_message_content: i % 3 === 0 ? 'See you there!' : i % 3 === 1 ? 'On my way! 🏃‍♂️' : 'Great game everyone!',
+      last_message_at: new Date(Date.now() - i * 60000).toISOString(),
+      last_message_user_name: 'Player',
+      unread_count: i % 4 === 0 ? Math.floor(Math.random() * 3) + 1 : 0,
+      member_count: Math.floor(Math.random() * 4) + 2,
+      is_happening_soon: i < count / 3,
+      sport_icon: 'tennisball',
+      time_display: '7:00 PM',
+      relative_time: `${i + 1}h ago`,
+    });
+  }
+  return mockChats;
+};
+// Simple ChatCard component for testing
+const SimpleChatCard = ({ chat, onPress, style, isHappeningSoon }) => {
+  const { colors } = useTheme();
+  
+  return (
+    <TouchableOpacity
+      style={[{
+        backgroundColor: colors.surface,
+        margin: 16,
+        padding: 20,
+        borderRadius: 16,
+        borderLeftWidth: isHappeningSoon ? 4 : 0,
+        borderLeftColor: colors.primary,
+      }, style]}
+      onPress={() => onPress(chat.chat_id)}
+    >
+      <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700', marginBottom: 8 }}>
+        {chat.session_title}
+      </Text>
+      <Text style={{ color: colors.textSecondary, fontSize: 14, marginBottom: 4 }}>
+        {chat.time_display} • {chat.member_count} players
+      </Text>
+      {chat.last_message_content && (
+        <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
+          {chat.last_message_content}
+        </Text>
+      )}
+      {chat.unread_count > 0 && (
+        <View style={{
+          position: 'absolute',
+          top: 16,
+          right: 16,
+          backgroundColor: colors.primary,
+          borderRadius: 10,
+          paddingHorizontal: 6,
+          paddingVertical: 2,
+          minWidth: 20,
+          alignItems: 'center',
+        }}>
+          <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>
+            {chat.unread_count}
+          </Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+};
 
 export default function MessagesScreen({ navigation }) {
   const { colors } = useTheme();
@@ -30,22 +100,42 @@ export default function MessagesScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Ensure we have valid colors
+  if (!colors) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#1a1a1a', justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ color: '#fff' }}>Loading...</Text>
+      </View>
+    );
+  }
+
   // Load mock data
   useEffect(() => {
     const loadMockData = async () => {
       try {
+        console.log('Loading mock data...');
         setLoading(true);
         // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 500));
         
+        console.log('User:', user);
         if (user) {
-          // Create mock chat data
-          const mockChats = createMockChatListScenario(8);
+          // Create mock chat data with enhanced fields
+          const mockChats = createMockChatListScenario(8).map(chat => ({
+            ...chat,
+            last_message_type: Math.random() > 0.7 ? 
+              ['photo', 'location', 'status'][Math.floor(Math.random() * 3)] : 'text',
+            last_message_status: Math.random() > 0.8 ? 
+              ['on-my-way', 'running-late', 'arrived'][Math.floor(Math.random() * 3)] : null,
+          }));
+          console.log('Mock chats created:', mockChats.length);
           setChats(mockChats);
         } else {
+          console.log('No user, setting empty chats');
           setChats([]);
         }
       } catch (err) {
+        console.error('Error loading mock data:', err);
         setError('Failed to load chats');
       } finally {
         setLoading(false);
@@ -58,7 +148,13 @@ export default function MessagesScreen({ navigation }) {
   const refreshChats = useCallback(async () => {
     try {
       if (user) {
-        const mockChats = createMockChatListScenario(8);
+        const mockChats = createMockChatListScenario(8).map(chat => ({
+          ...chat,
+          last_message_type: Math.random() > 0.7 ? 
+            ['photo', 'location', 'status'][Math.floor(Math.random() * 3)] : 'text',
+          last_message_status: Math.random() > 0.8 ? 
+            ['on-my-way', 'running-late', 'arrived'][Math.floor(Math.random() * 3)] : null,
+        }));
         setChats(mockChats);
       }
     } catch (err) {
@@ -128,40 +224,36 @@ export default function MessagesScreen({ navigation }) {
   // Loading state
   if (loading && !refreshing) {
     return (
-      <AnimatedBackground>
-        <View style={styles.container}>
-          <View style={styles.invisibleHeader} />
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>Messages</Text>
-          </View>
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={styles.loadingText}>Loading your chats...</Text>
-          </View>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={styles.invisibleHeader} />
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Messages</Text>
         </View>
-      </AnimatedBackground>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Loading your chats...</Text>
+        </View>
+      </View>
     );
   }
 
   // Error state
   if (error && !refreshing) {
     return (
-      <AnimatedBackground>
-        <View style={styles.container}>
-          <View style={styles.invisibleHeader} />
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>Messages</Text>
-          </View>
-          <View style={styles.errorContainer}>
-            <Ionicons name="alert-circle-outline" size={48} color={colors.textSecondary} />
-            <Text style={styles.errorTitle}>Unable to load chats</Text>
-            <Text style={styles.errorMessage}>{error}</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={refreshChats}>
-              <Text style={styles.retryButtonText}>Try Again</Text>
-            </TouchableOpacity>
-          </View>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={styles.invisibleHeader} />
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Messages</Text>
         </View>
-      </AnimatedBackground>
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle-outline" size={48} color={colors.textSecondary} />
+          <Text style={styles.errorTitle}>Unable to load chats</Text>
+          <Text style={styles.errorMessage}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={refreshChats}>
+            <Text style={styles.retryButtonText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     );
   }
 
@@ -169,46 +261,43 @@ export default function MessagesScreen({ navigation }) {
   const totalChats = groupedChats.happeningSoon.length + groupedChats.recent.length;
   if (totalChats === 0 && !loading) {
     return (
-      <AnimatedBackground>
-        <View style={styles.container}>
-          <View style={styles.invisibleHeader} />
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>Messages</Text>
-          </View>
-          <ScrollView
-            contentContainerStyle={styles.emptyScrollContent}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                tintColor={colors.primary}
-                colors={[colors.primary]}
-              />
-            }
-          >
-            <View style={styles.emptyContainer}>
-              <Ionicons name="chatbubbles-outline" size={64} color={colors.textSecondary} />
-              <Text style={styles.emptyTitle}>No chats yet</Text>
-              <Text style={styles.emptyMessage}>
-                Join a session to start chatting with other players!
-              </Text>
-              <TouchableOpacity 
-                style={styles.exploreButton}
-                onPress={() => navigation.navigate('Home')}
-              >
-                <Ionicons name="search-outline" size={20} color="#FFFFFF" />
-                <Text style={styles.exploreButtonText}>Find Sessions</Text>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={styles.invisibleHeader} />
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Messages</Text>
         </View>
-      </AnimatedBackground>
+        <ScrollView
+          contentContainerStyle={styles.emptyScrollContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
+        >
+          <View style={styles.emptyContainer}>
+            <Ionicons name="chatbubbles-outline" size={64} color={colors.textSecondary} />
+            <Text style={styles.emptyTitle}>No chats yet</Text>
+            <Text style={styles.emptyMessage}>
+              Join a session to start chatting with other players!
+            </Text>
+            <TouchableOpacity 
+              style={styles.exploreButton}
+              onPress={() => navigation.navigate('Home')}
+            >
+              <Ionicons name="search-outline" size={20} color="#FFFFFF" />
+              <Text style={styles.exploreButtonText}>Find Sessions</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </View>
     );
   }
 
   return (
-    <AnimatedBackground>
-      <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Invisible Header Spacer */}
         <View style={styles.invisibleHeader} />
         
@@ -247,15 +336,10 @@ export default function MessagesScreen({ navigation }) {
                   </View>
                 </View>
                 {filteredGroupedChats.happeningSoon.map((chat, index) => (
-                  <ChatCard
+                  <SimpleChatCard
                     key={chat.chat_id}
                     chat={chat}
-                    onPress={() => handleChatPress(chat.chat_id, chat.session_title)}
-                    style={[
-                      styles.chatCard,
-                      index === 0 && styles.firstChatCard,
-                      index === filteredGroupedChats.happeningSoon.length - 1 && styles.lastChatCard,
-                    ]}
+                    onPress={handleChatPress}
                     isHappeningSoon={true}
                   />
                 ))}
@@ -274,15 +358,10 @@ export default function MessagesScreen({ navigation }) {
                   </View>
                 </View>
                 {filteredGroupedChats.recent.map((chat, index) => (
-                  <ChatCard
+                  <SimpleChatCard
                     key={chat.chat_id}
                     chat={chat}
-                    onPress={() => handleChatPress(chat.chat_id, chat.session_title)}
-                    style={[
-                      styles.chatCard,
-                      index === 0 && styles.firstChatCard,
-                      index === filteredGroupedChats.recent.length - 1 && styles.lastChatCard,
-                    ]}
+                    onPress={handleChatPress}
                     isHappeningSoon={false}
                   />
                 ))}
@@ -306,14 +385,12 @@ export default function MessagesScreen({ navigation }) {
           </ScrollView>
         </Animated.View>
       </View>
-    </AnimatedBackground>
   );
 }
 
 const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
   },
   invisibleHeader: {
     height: 90,
