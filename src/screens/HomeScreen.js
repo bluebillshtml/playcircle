@@ -350,7 +350,7 @@ export default function HomeScreen({ navigation }) {
   }, []);
 
   const navItems = [
-    { name: 'Home', icon: 'home', screen: 'Home' },
+    { name: 'Discover', icon: 'home', screen: 'Home' },
     { name: 'Leaderboard', icon: 'trophy', screen: 'Dashboard' },
     { name: 'Friends', icon: 'people', screen: 'Friends' },
     { name: 'Messages', icon: 'chatbubbles', screen: 'Messages' },
@@ -762,19 +762,19 @@ export default function HomeScreen({ navigation }) {
               activeOpacity={1}
               onPress={closeNavModal}
             />
-            <Animated.View 
+            <Animated.View
               style={[
-                styles.navDrawer, 
-                { 
+                styles.navDrawer,
+                {
                   transform: [{ translateX: slideAnim }]
                 }
               ]}
             >
-              <BlurView intensity={25} style={styles.navBlurContainer}>
+              <BlurView intensity={80} tint="dark" style={styles.navBlurContainer}>
                 <View style={styles.navDrawerHeader}>
                   <View style={styles.navDrawerHeaderContent}>
                     <View style={styles.navAppIcon}>
-                      <Ionicons name="tennisball" size={28} color={colors.primary} />
+                      <Ionicons name="tennisball" size={28} color="#FFFFFF" />
                     </View>
                     <View style={styles.navAppInfo}>
                       <Text style={styles.navAppName}>PlayCircle</Text>
@@ -786,7 +786,7 @@ export default function HomeScreen({ navigation }) {
                     style={styles.navCloseButton}
                     activeOpacity={0.7}
                   >
-                    <Ionicons name="close" size={24} color={colors.text} />
+                    <Ionicons name="close" size={24} color="#FFFFFF" />
                   </TouchableOpacity>
                 </View>
                 
@@ -824,10 +824,10 @@ export default function HomeScreen({ navigation }) {
                           styles.navItemIcon,
                           'Home' === item.screen && styles.navItemIconActive
                         ]}>
-                          <Ionicons 
-                            name={item.icon} 
-                            size={24} 
-                            color={'Home' === item.screen ? colors.primary : colors.text} 
+                          <Ionicons
+                            name={item.icon}
+                            size={28}
+                            color="#FFFFFF"
                           />
                         </View>
                         <Text style={[
@@ -849,7 +849,7 @@ export default function HomeScreen({ navigation }) {
                 <View style={styles.navDrawerFooter}>
                   <View style={styles.navUserInfo}>
                     <View style={styles.navUserAvatar}>
-                      <Ionicons name="person" size={20} color={colors.text} />
+                      <Ionicons name="person" size={20} color="#FFFFFF" />
                     </View>
                     <View style={styles.navUserDetails}>
                       <Text style={styles.navUserName}>Player</Text>
@@ -1518,11 +1518,11 @@ const createStyles = (colors) => StyleSheet.create({
   },
   navBlurContainer: {
     flex: 1,
-    backgroundColor: colors.glass,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
     borderTopRightRadius: 24,
     borderBottomRightRadius: 24,
     borderWidth: 1,
-    borderColor: colors.glassBorder,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
     borderLeftWidth: 0,
   },
   navDrawerHeader: {
@@ -1532,8 +1532,7 @@ const createStyles = (colors) => StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 32,
     paddingTop: 60,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.glassBorder,
+    borderBottomWidth: 0,
   },
   navDrawerHeaderContent: {
     flexDirection: 'row',
@@ -1544,7 +1543,7 @@ const createStyles = (colors) => StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: colors.primary + '20',
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
@@ -1555,13 +1554,13 @@ const createStyles = (colors) => StyleSheet.create({
   navAppName: {
     fontSize: 24,
     fontWeight: '800',
-    color: colors.text,
+    color: '#FFFFFF',
     letterSpacing: -0.5,
     marginBottom: 2,
   },
   navAppSubtitle: {
     fontSize: 14,
-    color: colors.textSecondary,
+    color: 'rgba(255, 255, 255, 0.7)',
     fontWeight: '500',
   },
   navCloseButton: {
@@ -1581,37 +1580,36 @@ const createStyles = (colors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderRadius: 16,
-    marginVertical: 6,
-    backgroundColor: 'transparent',
+    paddingVertical: 18,
+    borderRadius: 20,
+    marginVertical: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   navItemActive: {
-    backgroundColor: colors.primary + '15',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderWidth: 1,
-    borderColor: colors.primary + '30',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   navItemIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
   },
   navItemIconActive: {
-    backgroundColor: colors.primary + '20',
   },
   navItemText: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
-    color: colors.text,
+    color: '#FFFFFF',
     letterSpacing: -0.3,
     flex: 1,
   },
   navItemTextActive: {
-    color: colors.primary,
+    color: '#FFFFFF',
     fontWeight: '700',
   },
   navItemIndicator: {
@@ -1625,8 +1623,7 @@ const createStyles = (colors) => StyleSheet.create({
   navDrawerFooter: {
     paddingHorizontal: 24,
     paddingVertical: 20,
-    borderTopWidth: 1,
-    borderTopColor: colors.glassBorder,
+    borderTopWidth: 0,
   },
   navUserInfo: {
     flexDirection: 'row',
@@ -1647,12 +1644,12 @@ const createStyles = (colors) => StyleSheet.create({
   navUserName: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.text,
+    color: '#FFFFFF',
     marginBottom: 2,
   },
   navUserStatus: {
     fontSize: 12,
-    color: colors.success,
+    color: 'rgba(255, 255, 255, 0.7)',
     fontWeight: '500',
   },
   resultBadgeLoss: {
