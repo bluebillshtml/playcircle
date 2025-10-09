@@ -26,6 +26,7 @@ import LanguagesScreen from './src/screens/LanguagesScreen';
 import AppSettingsScreen from './src/screens/AppSettingsScreen';
 import HelpCenterScreen from './src/screens/HelpCenterScreen';
 import NavigationButton from './src/components/NavigationButton';
+import AuthBackgroundVideo from './src/components/AuthBackgroundVideo';
 
 const Stack = createNativeStackNavigator();
 
@@ -64,9 +65,12 @@ function AppContent() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#1a1a1a' }}>
-      <NavigationContainer>
-        <StatusBar style="light" backgroundColor="#1a1a1a" />
-        <Stack.Navigator>
+      {/* Background video for auth screens only */}
+      {!user && <AuthBackgroundVideo />}
+
+      <NavigationContainer theme={{ ...DarkTheme, colors: { ...DarkTheme.colors, background: 'transparent' } }}>
+        <StatusBar style="light" backgroundColor="transparent" translucent />
+        <Stack.Navigator screenOptions={{ contentStyle: { backgroundColor: 'transparent' } }}>
           {!user ? (
             // Auth Stack - Show when user is not logged in
             <>
