@@ -194,25 +194,10 @@ export default function HomeScreen({ navigation }) {
         await AsyncStorage.removeItem('show_skip_notification');
         setShowSkipNotification(true);
 
-        // Animate in
-        Animated.parallel([
-          Animated.timing(skipFadeAnim, {
-            toValue: 1,
-            duration: 300,
-            useNativeDriver: true,
-          }),
-          Animated.spring(skipScaleAnim, {
-            toValue: 1,
-            friction: 8,
-            tension: 40,
-            useNativeDriver: true,
-          }),
-          Animated.timing(skipSlideAnim, {
-            toValue: 0,
-            duration: 400,
-            useNativeDriver: true,
-          }),
-        ]).start();
+        // Animate in - instant
+        skipFadeAnim.setValue(1);
+        skipScaleAnim.setValue(1);
+        skipSlideAnim.setValue(0);
       }
     };
     checkSkipNotification();
@@ -865,6 +850,8 @@ export default function HomeScreen({ navigation }) {
               { opacity: skipFadeAnim }
             ]}
           >
+            {/* Blurred background */}
+            <BlurView intensity={50} style={StyleSheet.absoluteFill} tint="dark" />
             <TouchableOpacity
               style={styles.skipModalBackdrop}
               activeOpacity={1}

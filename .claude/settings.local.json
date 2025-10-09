@@ -60,7 +60,17 @@
       "Read(//var/folders/zh/mgnlh1hn21b0xgd16v22vh140000gn/T/TemporaryItems/NSIRD_screencaptureui_YEftO8/**)",
       "Read(//var/folders/zh/mgnlh1hn21b0xgd16v22vh140000gn/T/TemporaryItems/NSIRD_screencaptureui_Ni7oqa/**)",
       "Bash(npx react-native log-ios:*)",
-      "Read(//var/folders/zh/mgnlh1hn21b0xgd16v22vh140000gn/T/TemporaryItems/NSIRD_screencaptureui_0jFjr5/**)"
+      "Read(//var/folders/zh/mgnlh1hn21b0xgd16v22vh140000gn/T/TemporaryItems/NSIRD_screencaptureui_0jFjr5/**)",
+      "Read(//var/folders/zh/mgnlh1hn21b0xgd16v22vh140000gn/T/TemporaryItems/NSIRD_screencaptureui_gKW2u3/**)",
+      "Read(//var/folders/zh/mgnlh1hn21b0xgd16v22vh140000gn/T/TemporaryItems/NSIRD_screencaptureui_jGs66U/**)",
+      "Read(//var/folders/zh/mgnlh1hn21b0xgd16v22vh140000gn/T/TemporaryItems/NSIRD_screencaptureui_bCLDyr/**)",
+      "Read(//var/folders/zh/mgnlh1hn21b0xgd16v22vh140000gn/T/TemporaryItems/NSIRD_screencaptureui_zTI40D/**)",
+      "Read(//var/folders/zh/mgnlh1hn21b0xgd16v22vh140000gn/T/TemporaryItems/NSIRD_screencaptureui_3x75Sp/**)",
+      "Read(//var/folders/zh/mgnlh1hn21b0xgd16v22vh140000gn/T/TemporaryItems/NSIRD_screencaptureui_ezbuTp/**)",
+      "Read(//var/folders/zh/mgnlh1hn21b0xgd16v22vh140000gn/T/TemporaryItems/NSIRD_screencaptureui_VhmekR/**)",
+      "Read(//var/folders/zh/mgnlh1hn21b0xgd16v22vh140000gn/T/TemporaryItems/NSIRD_screencaptureui_QthELE/**)",
+      "Read(//var/folders/zh/mgnlh1hn21b0xgd16v22vh140000gn/T/TemporaryItems/NSIRD_screencaptureui_5qHhmW/**)",
+      "Read(//var/folders/zh/mgnlh1hn21b0xgd16v22vh140000gn/T/TemporaryItems/NSIRD_screencaptureui_rIf3kG/**)"
     ],
     "deny": [],
     "ask": []

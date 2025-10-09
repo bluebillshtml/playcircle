@@ -7,9 +7,11 @@ import {
   ScrollView,
   Animated,
   Modal,
+  ImageBackground,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useSport } from '../context/SportContext';
@@ -18,13 +20,42 @@ import AnimatedBackground from '../components/AnimatedBackground';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SPORTS = [
-  { id: 'padel', name: 'Padel', icon: 'tennisball' },
-  { id: 'tennis', name: 'Tennis', icon: 'tennisball-outline' },
-  { id: 'pickleball', name: 'Pickleball', icon: 'baseball' },
-  { id: 'basketball', name: 'Basketball', icon: 'basketball' },
+  {
+    id: 'padel',
+    name: 'Padel',
+    icon: 'tennisball',
+    gradient: ['rgba(16, 185, 129, 0.3)', 'rgba(5, 150, 105, 0.4)'],
+    // image: require('../assets/sports/padel.jpg'), // Add your image here
+  },
+  {
+    id: 'tennis',
+    name: 'Tennis',
+    icon: 'tennisball-outline',
+    gradient: ['rgba(59, 130, 246, 0.3)', 'rgba(37, 99, 235, 0.4)'],
+    // image: require('../assets/sports/tennis.jpg'), // Add your image here
+  },
+  {
+    id: 'pickleball',
+    name: 'Pickleball',
+    icon: 'baseball',
+    gradient: ['rgba(245, 158, 11, 0.3)', 'rgba(217, 119, 6, 0.4)'],
+    // image: require('../assets/sports/pickleball.jpg'), // Add your image here
+  },
+  {
+    id: 'basketball',
+    name: 'Basketball',
+    icon: 'basketball',
+    gradient: ['rgba(239, 68, 68, 0.3)', 'rgba(220, 38, 38, 0.4)'],
+    // image: require('../assets/sports/basketball.jpg'), // Add your image here
+  },
 ];
 
-const SKILL_LEVELS = ['Beginner', 'Intermediate', 'Advanced', 'Expert'];
+const SKILL_LEVELS = [
+  { level: 'Beginner', color: '#3B82F6', bgColor: 'rgba(59, 130, 246, 0.15)' },
+  { level: 'Intermediate', color: '#10B981', bgColor: 'rgba(16, 185, 129, 0.15)' },
+  { level: 'Advanced', color: '#F59E0B', bgColor: 'rgba(245, 158, 11, 0.15)' },
+  { level: 'Expert', color: '#EF4444', bgColor: 'rgba(239, 68, 68, 0.15)' },
+];
 
 const POSITIONS = {
   padel: ['Left Side', 'Right Side', 'No Preference'],
@@ -42,6 +73,10 @@ export default function OnboardingScreen({ navigation }) {
   const [skillLevels, setSkillLevels] = useState({});
   const [positions, setPositions] = useState({});
   const [loading, setLoading] = useState(false);
+  const [backgroundOpacity] = useState(new Animated.Value(0));
+  const gradientAnimation1 = useRef(new Animated.Value(0)).current;
+  const gradientAnimation2 = useRef(new Animated.Value(0)).current;
+  const gradientAnimation3 = useRef(new Animated.Value(0)).current;
 
   // Animation refs for intro screen
   const introFadeAnim = useRef(new Animated.Value(0)).current;
@@ -90,6 +125,59 @@ export default function OnboardingScreen({ navigation }) {
   }, [currentStep]);
 
 
+  // Start the flowing gradient animations with different speeds
+  useEffect(() => {
+    if (selectedSports.length > 0) {
+      // First layer - slow movement
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(gradientAnimation1, {
+            toValue: 1,
+            duration: 10000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(gradientAnimation1, {
+            toValue: 0,
+            duration: 10000,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+
+      // Second layer - medium movement
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(gradientAnimation2, {
+            toValue: 1,
+            duration: 7000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(gradientAnimation2, {
+            toValue: 0,
+            duration: 7000,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+
+      // Third layer - faster movement
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(gradientAnimation3, {
+            toValue: 1,
+            duration: 5000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(gradientAnimation3, {
+            toValue: 0,
+            duration: 5000,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    }
+  }, [selectedSports.length]);
+
   const handleSportToggle = (sport) => {
     if (selectedSports.find(s => s.id === sport.id)) {
       setSelectedSports(selectedSports.filter(s => s.id !== sport.id));
@@ -100,9 +188,46 @@ export default function OnboardingScreen({ navigation }) {
       delete newPositions[sport.id];
       setSkillLevels(newSkillLevels);
       setPositions(newPositions);
+
+      // Fade out background if no sports selected
+      if (selectedSports.length === 1) {
+        Animated.timing(backgroundOpacity, {
+          toValue: 0,
+          duration: 400,
+          useNativeDriver: false,
+        }).start();
+      }
     } else {
       setSelectedSports([...selectedSports, sport]);
+      // Animate background fade in
+      Animated.timing(backgroundOpacity, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: false,
+      }).start();
     }
+  };
+
+  // Get gradient colors based on ALL selected sports
+  const getGradientColors = () => {
+    if (selectedSports.length === 0) {
+      return [];
+    }
+
+    // If one sport, use its gradient
+    if (selectedSports.length === 1) {
+      return [...selectedSports[0].gradient, 'rgba(0, 0, 0, 0.7)'];
+    }
+
+    // If multiple sports, blend their colors
+    const colors = [];
+    selectedSports.forEach((sport, index) => {
+      colors.push(sport.gradient[0]);
+      colors.push(sport.gradient[1]);
+    });
+    colors.push('rgba(0, 0, 0, 0.7)');
+
+    return colors;
   };
 
   const handleSkillLevelSelect = (sportId, level) => {
@@ -139,6 +264,16 @@ export default function OnboardingScreen({ navigation }) {
         }),
       ]).start(() => {
         setCurrentStep(currentStep + 1);
+
+        // If moving from intro to step 1 and sports are selected, fade in background
+        if (currentStep === 0 && selectedSports.length > 0) {
+          Animated.timing(backgroundOpacity, {
+            toValue: 1,
+            duration: 600,
+            useNativeDriver: false,
+          }).start();
+        }
+
         // Reset and animate in new step
         stepSlideAnim.setValue(30);
         Animated.parallel([
@@ -300,70 +435,103 @@ export default function OnboardingScreen({ navigation }) {
 
   const renderStep1 = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>What sports do you play?</Text>
-      <Text style={styles.stepSubtitle}>Select all that apply</Text>
-      
-      <View style={styles.sportsGrid}>
-        {SPORTS.map((sport) => {
-          const isSelected = selectedSports.find(s => s.id === sport.id);
-          return (
-            <TouchableOpacity
-              key={sport.id}
-              style={[
-                styles.sportCard,
-                isSelected && styles.sportCardSelected,
-              ]}
-              onPress={() => handleSportToggle(sport)}
-            >
-              <Ionicons
-                name={sport.icon}
-                size={32}
-                color={isSelected ? colors.white : colors.primary}
-              />
-              <Text style={[
-                styles.sportName,
-                isSelected && styles.sportNameSelected,
-              ]}>
-                {sport.name}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+      <View style={styles.stepHeader}>
+        <Text style={styles.stepTitle}>What sports do you play?</Text>
+        <Text style={styles.stepSubtitle}>Select all that apply</Text>
+      </View>
+
+      <View style={styles.sportsGridContainer}>
+        <View style={styles.sportsGrid}>
+          {SPORTS.map((sport) => {
+            const isSelected = selectedSports.find(s => s.id === sport.id);
+            return (
+              <TouchableOpacity
+                key={sport.id}
+                style={[
+                  styles.sportCard,
+                  isSelected && styles.sportCardSelected,
+                ]}
+                onPress={() => handleSportToggle(sport)}
+                activeOpacity={0.7}
+              >
+                <View style={[
+                  styles.sportIconCircle,
+                  isSelected && styles.sportIconCircleSelected
+                ]}>
+                  <Ionicons
+                    name={sport.icon}
+                    size={36}
+                    color={isSelected ? '#FFFFFF' : '#10B981'}
+                  />
+                </View>
+                <Text style={[
+                  styles.sportName,
+                  isSelected && styles.sportNameSelected,
+                ]}>
+                  {sport.name}
+                </Text>
+                {isSelected && (
+                  <View style={styles.sportCheckmark}>
+                    <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
     </View>
   );
 
   const renderStep2 = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>What's your skill level?</Text>
-      <Text style={styles.stepSubtitle}>Select for each sport</Text>
-      
-      <ScrollView style={styles.sportsList}>
+      <View style={styles.stepHeader}>
+        <Text style={styles.stepTitle}>What's your skill level?</Text>
+        <Text style={styles.stepSubtitle}>Select for each sport</Text>
+      </View>
+
+      <ScrollView
+        style={styles.sportsList}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.sportsListContent}
+      >
         {selectedSports.map((sport) => (
-          <View key={sport.id} style={styles.sportSection}>
+          <View key={sport.id} style={styles.sportSectionCard}>
             <View style={styles.sportHeader}>
-              <Ionicons name={sport.icon} size={24} color={colors.primary} />
+              <View style={styles.sportIconBadgeSmall}>
+                <Ionicons name={sport.icon} size={20} color="#10B981" />
+              </View>
               <Text style={styles.sportSectionTitle}>{sport.name}</Text>
             </View>
-            
+
             <View style={styles.skillLevelGrid}>
-              {SKILL_LEVELS.map((level) => {
-                const isSelected = skillLevels[sport.id] === level;
+              {SKILL_LEVELS.map((skillLevel) => {
+                const isSelected = skillLevels[sport.id] === skillLevel.level;
                 return (
                   <TouchableOpacity
-                    key={level}
+                    key={skillLevel.level}
                     style={[
                       styles.skillLevelCard,
-                      isSelected && styles.skillLevelCardSelected,
+                      {
+                        backgroundColor: isSelected ? skillLevel.color : skillLevel.bgColor,
+                        borderColor: isSelected ? skillLevel.color : '#374151',
+                      }
                     ]}
-                    onPress={() => handleSkillLevelSelect(sport.id, level)}
+                    onPress={() => handleSkillLevelSelect(sport.id, skillLevel.level)}
+                    activeOpacity={0.7}
                   >
-                    <Text style={[
-                      styles.skillLevelText,
-                      isSelected && styles.skillLevelTextSelected,
-                    ]}>
-                      {level}
-                    </Text>
+                    <View style={styles.skillLevelContent}>
+                      <View style={[styles.skillLevelDot, { backgroundColor: skillLevel.color }]} />
+                      <Text style={[
+                        styles.skillLevelText,
+                        { color: isSelected ? '#FFFFFF' : skillLevel.color }
+                      ]}>
+                        {skillLevel.level}
+                      </Text>
+                    </View>
+                    {isSelected && (
+                      <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" style={styles.checkmark} />
+                    )}
                   </TouchableOpacity>
                 );
               })}
@@ -376,17 +544,25 @@ export default function OnboardingScreen({ navigation }) {
 
   const renderStep3 = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>Preferred positions?</Text>
-      <Text style={styles.stepSubtitle}>Select for each sport</Text>
-      
-      <ScrollView style={styles.sportsList}>
+      <View style={styles.stepHeader}>
+        <Text style={styles.stepTitle}>Preferred positions?</Text>
+        <Text style={styles.stepSubtitle}>Select for each sport</Text>
+      </View>
+
+      <ScrollView
+        style={styles.sportsList}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.sportsListContent}
+      >
         {selectedSports.map((sport) => (
-          <View key={sport.id} style={styles.sportSection}>
+          <View key={sport.id} style={styles.sportSectionCard}>
             <View style={styles.sportHeader}>
-              <Ionicons name={sport.icon} size={24} color={colors.primary} />
+              <View style={styles.sportIconBadgeSmall}>
+                <Ionicons name={sport.icon} size={20} color="#10B981" />
+              </View>
               <Text style={styles.sportSectionTitle}>{sport.name}</Text>
             </View>
-            
+
             <View style={styles.positionGrid}>
               {POSITIONS[sport.id]?.map((position) => {
                 const isSelected = positions[sport.id] === position;
@@ -398,6 +574,7 @@ export default function OnboardingScreen({ navigation }) {
                       isSelected && styles.positionCardSelected,
                     ]}
                     onPress={() => handlePositionSelect(sport.id, position)}
+                    activeOpacity={0.7}
                   >
                     <Text style={[
                       styles.positionText,
@@ -405,6 +582,9 @@ export default function OnboardingScreen({ navigation }) {
                     ]}>
                       {position}
                     </Text>
+                    {isSelected && (
+                      <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" style={styles.checkmark} />
+                    )}
                   </TouchableOpacity>
                 );
               })}
@@ -432,7 +612,7 @@ export default function OnboardingScreen({ navigation }) {
         ]}
       >
         <View style={styles.introIconContainer}>
-          <Ionicons name="tennisball" size={64} color={colors.primary} />
+          <Ionicons name="tennisball" size={64} color="#10B981" />
         </View>
         <Text style={styles.introTitle}>Welcome to PlayCircle</Text>
         <Text style={styles.introSubtitle}>
@@ -463,7 +643,7 @@ export default function OnboardingScreen({ navigation }) {
             ]}
           >
             <View style={styles.sportIconBadge}>
-              <Ionicons name={sport.icon} size={28} color={colors.primary} />
+              <Ionicons name={sport.icon} size={28} color="#10B981" />
             </View>
           </Animated.View>
         ))}
@@ -471,7 +651,7 @@ export default function OnboardingScreen({ navigation }) {
 
       <View style={styles.introInfoCard}>
         <View style={styles.infoHeader}>
-          <Ionicons name="information-circle" size={24} color={colors.primary} />
+          <Ionicons name="information-circle" size={24} color="#10B981" />
           <Text style={styles.infoTitle}>Let's set up your profile</Text>
         </View>
 
@@ -505,7 +685,7 @@ export default function OnboardingScreen({ navigation }) {
         activeOpacity={0.8}
       >
         <Text style={styles.introStartButtonText}>Let's Get Started</Text>
-        <Ionicons name="arrow-forward" size={20} color={colors.white} />
+        <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
       </TouchableOpacity>
     </Animated.View>
   );
@@ -513,7 +693,28 @@ export default function OnboardingScreen({ navigation }) {
   const renderStep4 = () => (
     <View style={styles.stepContainer}>
       <View style={styles.welcomeContainer}>
-        <Ionicons name="checkmark-circle" size={80} color={colors.success} />
+        <Animated.View
+          style={[
+            styles.successIconWrapper,
+            {
+              transform: [
+                {
+                  scale: stepFadeAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.5, 1],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <View style={styles.successIconOuter}>
+            <View style={styles.successIconInner}>
+              <Ionicons name="checkmark" size={48} color="#FFFFFF" />
+            </View>
+          </View>
+        </Animated.View>
+
         <Text style={styles.welcomeTitle}>Welcome to PlayCircle!</Text>
         <Text style={styles.welcomeSubtitle}>
           You're all set up and ready to find players and join matches.
@@ -524,13 +725,24 @@ export default function OnboardingScreen({ navigation }) {
         </Text>
 
         <View style={styles.summaryContainer}>
-          <Text style={styles.summaryTitle}>Your Profile:</Text>
-          {selectedSports.map((sport) => (
+          <View style={styles.summaryHeader}>
+            <Ionicons name="person-circle" size={24} color="#10B981" />
+            <Text style={styles.summaryTitle}>Your Profile</Text>
+          </View>
+          {selectedSports.map((sport, index) => (
             <View key={sport.id} style={styles.summaryItem}>
-              <Ionicons name={sport.icon} size={20} color={colors.primary} />
-              <Text style={styles.summaryText}>
-                {sport.name} • {skillLevels[sport.id]} • {positions[sport.id]}
-              </Text>
+              <View style={styles.summaryIconBadge}>
+                <Ionicons name={sport.icon} size={18} color="#10B981" />
+              </View>
+              <View style={styles.summaryTextContainer}>
+                <Text style={styles.summaryMainText}>{sport.name}</Text>
+                <Text style={styles.summarySubText}>
+                  {skillLevels[sport.id]} • {positions[sport.id]}
+                </Text>
+              </View>
+              <View style={styles.summaryCheckBadge}>
+                <Ionicons name="checkmark" size={14} color="#10B981" />
+              </View>
             </View>
           ))}
         </View>
@@ -538,8 +750,49 @@ export default function OnboardingScreen({ navigation }) {
     </View>
   );
 
+  const gradientColors = getGradientColors();
+
   return (
     <AnimatedBackground>
+      {/* Sport-specific gradient overlay */}
+      {selectedSports.length > 0 && (
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFill,
+            { opacity: backgroundOpacity }
+          ]}
+          pointerEvents="none"
+        >
+          {selectedSports.map((sport, index) => {
+            // Different gradient directions for each sport
+            const directions = [
+              { start: { x: 0, y: 0 }, end: { x: 1, y: 1 } },   // Top-left to bottom-right
+              { start: { x: 1, y: 0 }, end: { x: 0, y: 1 } },   // Top-right to bottom-left
+              { start: { x: 0, y: 1 }, end: { x: 1, y: 0 } },   // Bottom-left to top-right
+              { start: { x: 0.5, y: 0 }, end: { x: 0.5, y: 1 } }, // Top to bottom
+            ];
+
+            const direction = directions[index % directions.length];
+
+            return (
+              <LinearGradient
+                key={sport.id}
+                colors={[...sport.gradient, 'rgba(0, 0, 0, 0)']}
+                style={StyleSheet.absoluteFill}
+                start={direction.start}
+                end={direction.end}
+              />
+            );
+          })}
+
+          {/* Dark overlay for readability */}
+          <LinearGradient
+            colors={['rgba(0, 0, 0, 0.4)', 'rgba(0, 0, 0, 0.6)']}
+            style={StyleSheet.absoluteFill}
+          />
+        </Animated.View>
+      )}
+
       <View style={styles.container}>
         {/* Skip button on intro screen */}
         {currentStep === 0 && (
@@ -687,29 +940,29 @@ const createStyles = (colors) => StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: colors.card,
+    backgroundColor: '#374151',
     borderWidth: 1,
-    borderColor: colors.glassBorder,
+    borderColor: '#4B5563',
   },
   skipButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.textSecondary,
+    color: '#9CA3AF',
   },
   progressBar: {
     height: 4,
-    backgroundColor: colors.glassBorder,
+    backgroundColor: '#4B5563',
     borderRadius: 2,
     marginBottom: 8,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: colors.primary,
+    backgroundColor: '#10B981',
     borderRadius: 2,
   },
   progressText: {
     fontSize: 14,
-    color: colors.textSecondary,
+    color: '#9CA3AF',
     textAlign: 'center',
   },
   content: {
@@ -719,113 +972,172 @@ const createStyles = (colors) => StyleSheet.create({
   stepContainer: {
     flex: 1,
   },
+  stepHeader: {
+    marginBottom: 24,
+  },
   stepTitle: {
     fontSize: 28,
     fontWeight: '800',
-    color: colors.text,
+    color: '#FFFFFF',
     marginBottom: 8,
     textAlign: 'center',
   },
   stepSubtitle: {
     fontSize: 16,
-    color: colors.textSecondary,
+    color: '#9CA3AF',
     textAlign: 'center',
-    marginBottom: 32,
+  },
+  sportsGridContainer: {
+    flex: 1,
+    justifyContent: 'flex-start',
+    paddingTop: 20,
   },
   sportsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 16,
+    gap: 12,
     justifyContent: 'center',
+    paddingHorizontal: 10,
   },
   sportCard: {
-    backgroundColor: colors.card,
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: 'rgba(55, 65, 81, 0.7)',
+    borderRadius: 20,
+    padding: 24,
     alignItems: 'center',
-    minWidth: 100,
+    width: '47%',
+    minHeight: 160,
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: '#374151',
+    position: 'relative',
   },
   sportCardSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+    borderColor: '#10B981',
+  },
+  sportIconCircle: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: '#1F2937',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: '#374151',
+  },
+  sportIconCircleSelected: {
+    backgroundColor: '#10B981',
+    borderColor: '#10B981',
   },
   sportName: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
-    color: colors.text,
-    marginTop: 8,
+    color: '#E5E7EB',
+    textAlign: 'center',
   },
   sportNameSelected: {
-    color: colors.white,
+    color: '#FFFFFF',
+  },
+  sportCheckmark: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
   },
   sportsList: {
     flex: 1,
   },
+  sportsListContent: {
+    paddingBottom: 20,
+  },
   sportSection: {
     marginBottom: 24,
+  },
+  sportSectionCard: {
+    backgroundColor: 'rgba(55, 65, 81, 0.7)',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#4B5563',
   },
   sportHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
-    gap: 8,
+    marginBottom: 16,
+    gap: 12,
+  },
+  sportIconBadgeSmall: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#1F2937',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#374151',
   },
   sportSectionTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
-    color: colors.text,
+    color: '#FFFFFF',
+    flex: 1,
   },
   skillLevelGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+    flexDirection: 'column',
+    gap: 10,
   },
   skillLevelCard: {
-    backgroundColor: colors.card,
     borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderWidth: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  skillLevelCardSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+  skillLevelContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  skillLevelDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   skillLevelText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
-    color: colors.text,
   },
-  skillLevelTextSelected: {
-    color: colors.white,
+  checkmark: {
+    marginLeft: 8,
   },
   positionGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+    flexDirection: 'column',
+    gap: 10,
   },
   positionCard: {
-    backgroundColor: colors.card,
+    backgroundColor: '#1F2937',
     borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderWidth: 2,
+    borderColor: '#374151',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   positionCardSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: '#10B981',
+    borderColor: '#10B981',
   },
   positionText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
-    color: colors.text,
+    color: '#E5E7EB',
   },
   positionTextSelected: {
-    color: colors.white,
+    color: '#FFFFFF',
   },
   welcomeContainer: {
     flex: 1,
@@ -833,52 +1145,111 @@ const createStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
   },
+  successIconWrapper: {
+    marginBottom: 24,
+  },
+  successIconOuter: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: 'rgba(16, 185, 129, 0.4)',
+  },
+  successIconInner: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: '#10B981',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   welcomeTitle: {
     fontSize: 32,
     fontWeight: '800',
-    color: colors.text,
-    marginTop: 24,
+    color: '#FFFFFF',
     marginBottom: 16,
     textAlign: 'center',
   },
   welcomeSubtitle: {
-    fontSize: 18,
-    color: colors.textSecondary,
+    fontSize: 17,
+    color: '#D1D5DB',
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
     lineHeight: 24,
+    paddingHorizontal: 10,
   },
   settingsNote: {
-    fontSize: 14,
-    color: colors.textSecondary,
+    fontSize: 13,
+    color: '#9CA3AF',
     textAlign: 'center',
     marginBottom: 32,
     fontStyle: 'italic',
+    paddingHorizontal: 20,
   },
   summaryContainer: {
-    backgroundColor: colors.card,
-    borderRadius: 16,
+    backgroundColor: 'rgba(55, 65, 81, 0.7)',
+    borderRadius: 20,
     padding: 20,
     width: '100%',
     borderWidth: 1,
-    borderColor: colors.glassBorder,
+    borderColor: '#4B5563',
+  },
+  summaryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#374151',
   },
   summaryTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
-    color: colors.text,
-    marginBottom: 16,
+    color: '#FFFFFF',
   },
   summaryItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    backgroundColor: '#1F2937',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
     gap: 12,
+    borderWidth: 1,
+    borderColor: '#374151',
   },
-  summaryText: {
-    fontSize: 16,
-    color: colors.text,
+  summaryIconBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  summaryTextContainer: {
     flex: 1,
+  },
+  summaryMainText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  summarySubText: {
+    fontSize: 13,
+    color: '#9CA3AF',
+  },
+  summaryCheckBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   navigation: {
     flexDirection: 'row',
@@ -888,36 +1259,36 @@ const createStyles = (colors) => StyleSheet.create({
   },
   backButton: {
     flex: 1,
-    backgroundColor: colors.card,
+    backgroundColor: '#374151',
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.glassBorder,
+    borderColor: '#4B5563',
   },
   backButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.text,
+    color: '#E5E7EB',
   },
   nextButton: {
     flex: 2,
-    backgroundColor: colors.primary,
+    backgroundColor: '#10B981',
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: 'center',
   },
   nextButtonDisabled: {
-    backgroundColor: colors.glassBorder,
+    backgroundColor: '#4B5563',
   },
   nextButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: colors.white,
+    color: '#FFFFFF',
   },
   completeButton: {
     flex: 1,
-    backgroundColor: colors.success,
+    backgroundColor: '#10B981',
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: 'center',
@@ -925,7 +1296,7 @@ const createStyles = (colors) => StyleSheet.create({
   completeButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: colors.white,
+    color: '#FFFFFF',
   },
   introContainer: {
     flex: 1,
@@ -942,23 +1313,23 @@ const createStyles = (colors) => StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: colors.primary + '20',
+    backgroundColor: 'rgba(16, 185, 129, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
     borderWidth: 2,
-    borderColor: colors.primary + '40',
+    borderColor: 'rgba(16, 185, 129, 0.4)',
   },
   introTitle: {
     fontSize: 36,
     fontWeight: '900',
-    color: colors.text,
+    color: '#FFFFFF',
     marginBottom: 12,
     textAlign: 'center',
   },
   introSubtitle: {
     fontSize: 18,
-    color: colors.textSecondary,
+    color: '#9CA3AF',
     textAlign: 'center',
     lineHeight: 24,
   },
@@ -977,19 +1348,19 @@ const createStyles = (colors) => StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: colors.card,
+    backgroundColor: '#1F2937',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: colors.glassBorder,
+    borderColor: '#4B5563',
   },
   introInfoCard: {
-    backgroundColor: colors.card,
+    backgroundColor: 'rgba(55, 65, 81, 0.7)',
     borderRadius: 20,
     padding: 24,
     width: '100%',
     borderWidth: 1,
-    borderColor: colors.glassBorder,
+    borderColor: '#4B5563',
     marginBottom: 32,
   },
   infoHeader: {
@@ -1001,7 +1372,7 @@ const createStyles = (colors) => StyleSheet.create({
   infoTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: colors.text,
+    color: '#FFFFFF',
     flex: 1,
   },
   infoSteps: {
@@ -1016,23 +1387,23 @@ const createStyles = (colors) => StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: colors.primary,
+    backgroundColor: '#10B981',
     alignItems: 'center',
     justifyContent: 'center',
   },
   stepNumberText: {
     fontSize: 16,
     fontWeight: '700',
-    color: colors.white,
+    color: '#FFFFFF',
   },
   infoStepText: {
     fontSize: 16,
-    color: colors.text,
+    color: '#E5E7EB',
     flex: 1,
     fontWeight: '500',
   },
   introStartButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: '#10B981',
     paddingHorizontal: 32,
     paddingVertical: 16,
     borderRadius: 16,
@@ -1045,6 +1416,6 @@ const createStyles = (colors) => StyleSheet.create({
   introStartButtonText: {
     fontSize: 18,
     fontWeight: '700',
-    color: colors.white,
+    color: '#FFFFFF',
   },
 });

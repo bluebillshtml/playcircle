@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -120,11 +121,13 @@ export default function EmailConfirmationOverlay({ visible, onClose, email }) {
         style={[
           styles.overlay,
           {
-            backgroundColor: 'rgba(0, 0, 0, 0.6)',
             opacity: fadeAnim,
           },
         ]}
       >
+        {/* Blurred background */}
+        <BlurView intensity={80} style={StyleSheet.absoluteFill} tint="dark" />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0, 0, 0, 0.3)' }]} />
         <Animated.View
           style={[
             styles.container,
