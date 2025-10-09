@@ -30,22 +30,62 @@ export default function SignUpScreen({ navigation }) {
   const { signUp } = useAuth();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const logoScale = useRef(new Animated.Value(0.8)).current;
+  const logoRotate = useRef(new Animated.Value(0)).current;
+  const cardScale = useRef(new Animated.Value(0.95)).current;
+  const inputAnims = useRef([...Array(5)].map(() => new Animated.Value(0))).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        tension: 50,
-        friction: 8,
-        useNativeDriver: true,
-      }),
+    // Logo entrance animation
+    Animated.sequence([
+      Animated.parallel([
+        Animated.spring(logoScale, {
+          toValue: 1,
+          tension: 40,
+          friction: 7,
+          useNativeDriver: true,
+        }),
+        Animated.timing(logoRotate, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ]),
+      // Main content animation
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          tension: 40,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+        Animated.spring(cardScale, {
+          toValue: 1,
+          tension: 50,
+          friction: 7,
+          useNativeDriver: true,
+        }),
+      ]),
     ]).start();
+
+    // Stagger input animations
+    Animated.stagger(
+      80,
+      inputAnims.map((anim) =>
+        Animated.spring(anim, {
+          toValue: 1,
+          tension: 50,
+          friction: 7,
+          useNativeDriver: true,
+        })
+      )
+    ).start();
   }, []);
 
   const handleSignUp = async () => {
@@ -108,28 +148,76 @@ export default function SignUpScreen({ navigation }) {
             ]}
           >
             {/* Logo */}
-            <View style={styles.logoContainer}>
+            <Animated.View
+              style={[
+                styles.logoContainer,
+                {
+                  opacity: fadeAnim,
+                  transform: [
+                    { scale: logoScale },
+                    {
+                      rotate: logoRotate.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: ['0deg', '360deg'],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            >
               <View style={styles.iconCircle}>
                 <Ionicons name="tennisball" size={44} color="#FFFFFF" />
               </View>
+            </Animated.View>
+            <Animated.View style={{ opacity: fadeAnim }}>
               <Text style={styles.brandName}>PlayCircle</Text>
               <Text style={styles.tagline}>Your Ultimate Sport Community</Text>
-            </View>
+            </Animated.View>
 
             {/* Welcome Card */}
-            <View style={styles.welcomeCard}>
-              <View style={styles.welcomeHeader}>
+            <Animated.View
+              style={[
+                styles.welcomeCard,
+                {
+                  opacity: fadeAnim,
+                  transform: [{ scale: cardScale }, { translateY: slideAnim }],
+                },
+              ]}
+            >
+              <Animated.View
+                style={[
+                  styles.welcomeHeader,
+                  {
+                    opacity: fadeAnim,
+                  },
+                ]}
+              >
                 <Ionicons name="sparkles" size={32} color="#FFFFFF" style={styles.sparkleIcon} />
                 <Text style={styles.welcomeTitle}>Create Account</Text>
                 <Text style={styles.welcomeSubtitle}>
                   Join the community and start playing
                 </Text>
-              </View>
+              </Animated.View>
 
               {/* Sign Up Form */}
               <View style={styles.formCard}>
                 {/* First Name Input */}
-                <View style={styles.inputContainer}>
+                <Animated.View
+                  style={[
+                    styles.inputContainer,
+                    {
+                      opacity: inputAnims[0],
+                      transform: [
+                        {
+                          translateX: inputAnims[0].interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [-20, 0],
+                          }),
+                        },
+                      ],
+                    },
+                  ]}
+                >
                   <Text style={styles.label}>First Name</Text>
                   <View style={styles.inputWrapper}>
                     <Ionicons name="person-outline" size={20} color="#999" style={styles.inputIcon} />
@@ -143,10 +231,25 @@ export default function SignUpScreen({ navigation }) {
                       autoCorrect={false}
                     />
                   </View>
-                </View>
+                </Animated.View>
 
                 {/* Last Name Input */}
-                <View style={styles.inputContainer}>
+                <Animated.View
+                  style={[
+                    styles.inputContainer,
+                    {
+                      opacity: inputAnims[1],
+                      transform: [
+                        {
+                          translateX: inputAnims[1].interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [-20, 0],
+                          }),
+                        },
+                      ],
+                    },
+                  ]}
+                >
                   <Text style={styles.label}>Last Name</Text>
                   <View style={styles.inputWrapper}>
                     <Ionicons name="person-outline" size={20} color="#999" style={styles.inputIcon} />
@@ -160,10 +263,25 @@ export default function SignUpScreen({ navigation }) {
                       autoCorrect={false}
                     />
                   </View>
-                </View>
+                </Animated.View>
 
                 {/* Email Input */}
-                <View style={styles.inputContainer}>
+                <Animated.View
+                  style={[
+                    styles.inputContainer,
+                    {
+                      opacity: inputAnims[2],
+                      transform: [
+                        {
+                          translateX: inputAnims[2].interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [-20, 0],
+                          }),
+                        },
+                      ],
+                    },
+                  ]}
+                >
                   <Text style={styles.label}>Email address</Text>
                   <View style={styles.inputWrapper}>
                     <Ionicons name="mail-outline" size={20} color="#999" style={styles.inputIcon} />
@@ -178,10 +296,25 @@ export default function SignUpScreen({ navigation }) {
                       autoCorrect={false}
                     />
                   </View>
-                </View>
+                </Animated.View>
 
                 {/* Password Input */}
-                <View style={styles.inputContainer}>
+                <Animated.View
+                  style={[
+                    styles.inputContainer,
+                    {
+                      opacity: inputAnims[3],
+                      transform: [
+                        {
+                          translateX: inputAnims[3].interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [-20, 0],
+                          }),
+                        },
+                      ],
+                    },
+                  ]}
+                >
                   <Text style={styles.label}>Password</Text>
                   <View style={styles.inputWrapper}>
                     <Ionicons name="lock-closed-outline" size={20} color="#999" style={styles.inputIcon} />
@@ -206,10 +339,25 @@ export default function SignUpScreen({ navigation }) {
                       />
                     </TouchableOpacity>
                   </View>
-                </View>
+                </Animated.View>
 
                 {/* Confirm Password Input */}
-                <View style={styles.inputContainer}>
+                <Animated.View
+                  style={[
+                    styles.inputContainer,
+                    {
+                      opacity: inputAnims[4],
+                      transform: [
+                        {
+                          translateX: inputAnims[4].interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [-20, 0],
+                          }),
+                        },
+                      ],
+                    },
+                  ]}
+                >
                   <Text style={styles.label}>Confirm Password</Text>
                   <View style={styles.inputWrapper}>
                     <Ionicons name="lock-closed-outline" size={20} color="#999" style={styles.inputIcon} />
@@ -234,7 +382,7 @@ export default function SignUpScreen({ navigation }) {
                       />
                     </TouchableOpacity>
                   </View>
-                </View>
+                </Animated.View>
 
                 {/* Sign Up Button */}
                 <TouchableOpacity
@@ -271,7 +419,7 @@ export default function SignUpScreen({ navigation }) {
                   <Text style={styles.signInButtonText}>Already have an account? Sign In</Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            </Animated.View>
 
             {/* Footer */}
             <View style={styles.footer}>
@@ -313,7 +461,7 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 16,
   },
   iconCircle: {
     width: 100,
