@@ -19,7 +19,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useSport } from '../context/SportContext';
 import { matchService, profileService } from '../services/supabase';
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import PadelMatchHistory from '../components/PadelMatchHistory';
 import AnimatedBackground from '../components/AnimatedBackground';
@@ -155,7 +155,7 @@ const USER_STATS = {
 };
 
 export default function HomeScreen({ navigation }) {
-  const { colors } = useTheme();
+  const { colors, isDarkMode } = useTheme();
   const { user, profile } = useAuth();
   const { selectedSport } = useSport();
 
@@ -165,6 +165,7 @@ export default function HomeScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [navModalVisible, setNavModalVisible] = useState(false);
+  const [showSkipNotification, setShowSkipNotification] = useState(false);
 
   // Filter states
   const [selectedDifficulties, setSelectedDifficulties] = useState([]);
@@ -176,9 +177,46 @@ export default function HomeScreen({ navigation }) {
   const slideAnim = useRef(new Animated.Value(-width)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
+  // Skip notification animation refs
+  const skipFadeAnim = useRef(new Animated.Value(0)).current;
+  const skipScaleAnim = useRef(new Animated.Value(0.8)).current;
+  const skipSlideAnim = useRef(new Animated.Value(50)).current;
+
   useEffect(() => {
     loadData();
   }, [user]);
+
+  // Check for skip notification flag
+  useEffect(() => {
+    const checkSkipNotification = async () => {
+      const shouldShow = await AsyncStorage.getItem('show_skip_notification');
+      if (shouldShow === 'true') {
+        await AsyncStorage.removeItem('show_skip_notification');
+        setShowSkipNotification(true);
+
+        // Animate in
+        Animated.parallel([
+          Animated.timing(skipFadeAnim, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.spring(skipScaleAnim, {
+            toValue: 1,
+            friction: 8,
+            tension: 40,
+            useNativeDriver: true,
+          }),
+          Animated.timing(skipSlideAnim, {
+            toValue: 0,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }
+    };
+    checkSkipNotification();
+  }, []);
 
   const navItems = [
     { name: 'Home', icon: 'home', screen: 'Home' },
@@ -222,6 +260,28 @@ export default function HomeScreen({ navigation }) {
       }),
     ]).start(() => {
       setNavModalVisible(false);
+    });
+  };
+
+  const closeSkipNotification = () => {
+    Animated.parallel([
+      Animated.timing(skipFadeAnim, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.timing(skipScaleAnim, {
+        toValue: 0.8,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.timing(skipSlideAnim, {
+        toValue: 50,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setShowSkipNotification(false);
     });
   };
 
@@ -789,6 +849,63 @@ export default function HomeScreen({ navigation }) {
               </TouchableOpacity>
             </View>
           </View>
+        </Modal>
+
+        {/* Skip Notification Modal */}
+        <Modal
+          visible={showSkipNotification}
+          transparent={true}
+          animationType="none"
+          onRequestClose={closeSkipNotification}
+          statusBarTranslucent={true}
+        >
+          <Animated.View
+            style={[
+              styles.skipModalOverlay,
+              { opacity: skipFadeAnim }
+            ]}
+          >
+            <TouchableOpacity
+              style={styles.skipModalBackdrop}
+              activeOpacity={1}
+              onPress={closeSkipNotification}
+            />
+            <Animated.View
+              style={[
+                styles.skipModalContainer,
+                {
+                  opacity: skipFadeAnim,
+                  transform: [
+                    { scale: skipScaleAnim },
+                    { translateY: skipSlideAnim }
+                  ]
+                }
+              ]}
+            >
+              <BlurView
+                intensity={isDarkMode ? 40 : 60}
+                tint={isDarkMode ? 'dark' : 'light'}
+                style={styles.skipCardBlur}
+              >
+                <View style={styles.skipCard}>
+                  <View style={styles.skipIconContainer}>
+                    <Ionicons name="checkmark-circle" size={56} color={colors.primary} />
+                  </View>
+                  <Text style={styles.skipTitle}>Onboarding Skipped</Text>
+                  <Text style={styles.skipMessage}>
+                    You can set up your sport preferences anytime in your Profile settings.
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.skipContinueButton}
+                    onPress={closeSkipNotification}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.skipContinueText}>Continue</Text>
+                  </TouchableOpacity>
+                </View>
+              </BlurView>
+            </Animated.View>
+          </Animated.View>
         </Modal>
       </View>
     </AnimatedBackground>
@@ -1476,5 +1593,62 @@ const createStyles = (colors) => StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  skipModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  skipModalBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  skipModalContainer: {
+    width: '85%',
+    maxWidth: 380,
+  },
+  skipCardBlur: {
+    borderRadius: 24,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+  },
+  skipCard: {
+    padding: 32,
+    alignItems: 'center',
+  },
+  skipIconContainer: {
+    marginBottom: 20,
+  },
+  skipTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  skipMessage: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  skipContinueButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 16,
+    width: '100%',
+    alignItems: 'center',
+  },
+  skipContinueText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.white,
   },
 });

@@ -63,9 +63,23 @@ function AppContent() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#1a1a1a' }}>
-      <NavigationContainer>
+      <NavigationContainer theme={{
+        dark: true,
+        colors: {
+          primary: '#10B981',
+          background: '#1a1a1a',
+          card: '#1a1a1a',
+          text: '#FFFFFF',
+          border: '#2D2D2D',
+          notification: '#10B981',
+        },
+      }}>
         <StatusBar style="light" backgroundColor="#1a1a1a" />
-        <Stack.Navigator>
+        <Stack.Navigator screenOptions={{
+          animation: 'fade',
+          animationDuration: 200,
+          contentStyle: { backgroundColor: '#1a1a1a' }
+        }}>
           {!user ? (
             // Auth Stack - Show when user is not logged in
             <>
@@ -85,7 +99,7 @@ function AppContent() {
             <Stack.Screen
               name="Onboarding"
               component={OnboardingScreen}
-              options={{ headerShown: false }}
+              options={{ headerShown: false, animation: 'fade' }}
             />
           ) : (
             // Main App Stack - Show when user is logged in
@@ -93,7 +107,11 @@ function AppContent() {
               <Stack.Screen
                 name="Home"
                 component={HomeScreen}
-                options={{ headerShown: false }}
+                options={{
+                  headerShown: false,
+                  animation: 'fade',
+                  contentStyle: { backgroundColor: '#1a1a1a' }
+                }}
               />
               <Stack.Screen
                 name="Matches"
@@ -122,7 +140,7 @@ function AppContent() {
                   headerTitle: 'Match Details',
                   headerTitleAlign: 'left',
                   headerStyle: {
-                    backgroundColor: 'transparent',
+                    backgroundColor: '#1a1a1a',
                     borderBottomWidth: 0,
                     shadowColor: 'transparent',
                     shadowOffset: { width: 0, height: 0 },
@@ -130,7 +148,7 @@ function AppContent() {
                     shadowRadius: 0,
                     elevation: 0,
                   },
-                  headerTintColor: colors.text,
+                  headerTintColor: '#FFFFFF',
                   headerTitleStyle: {
                     fontSize: 20,
                     fontWeight: '700',
