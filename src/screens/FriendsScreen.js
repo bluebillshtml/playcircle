@@ -20,6 +20,7 @@ import FriendChip from '../components/FriendChip';
 import MemberRow from '../components/MemberRow';
 import RequestStrip from '../components/RequestStrip';
 import SettingsBottomSheet from '../components/SettingsBottomSheet';
+import ScreenHeader from '../components/ScreenHeader';
 import AnimatedBackground from '../components/AnimatedBackground';
 
 const FriendsScreen = ({ navigation }) => {
@@ -495,15 +496,12 @@ const FriendsScreen = ({ navigation }) => {
     <AnimatedBackground>
       <View style={styles.container}>
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Friends</Text>
-          <TouchableOpacity 
-            style={styles.settingsButton}
-            onPress={() => setSettingsVisible(true)}
-          >
-            <Ionicons name="settings-outline" size={24} color={colors.text} />
-          </TouchableOpacity>
-        </View>
+        <ScreenHeader
+          title="Friends"
+          showRightButton={true}
+          rightButtonIcon="settings-outline"
+          onRightButtonPress={() => setSettingsVisible(true)}
+        />
 
         {/* Search Bar */}
         <View style={styles.searchContainer}>
@@ -605,22 +603,7 @@ const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 16,
-  },
-  headerTitle: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  settingsButton: {
-    padding: 8,
-  },
+
   searchContainer: {
     paddingHorizontal: 20,
     paddingBottom: 16,

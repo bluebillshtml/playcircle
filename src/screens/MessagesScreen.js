@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { groupChats } from '../services/chatUtils';
+import ScreenHeader from '../components/ScreenHeader';
 
 // Simple mock data function as fallback
 const createMockChatListScenario = (count = 8) => {
@@ -298,16 +299,16 @@ export default function MessagesScreen({ navigation }) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-        {/* Invisible Header Spacer */}
-        <View style={styles.invisibleHeader} />
-        
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Messages</Text>
-          <TouchableOpacity style={styles.searchButton}>
-            <Ionicons name="search-outline" size={24} color={colors.text} />
-          </TouchableOpacity>
-        </View>
+        <ScreenHeader 
+          title="Messages" 
+          showRightButton={true}
+          rightButtonIcon="search-outline"
+          onRightButtonPress={() => {
+            // Search functionality can be added here
+            console.log('Search pressed');
+          }}
+        />
 
         {/* Chat List */}
         <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
@@ -392,27 +393,7 @@ const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
   },
-  invisibleHeader: {
-    height: 90,
-    backgroundColor: 'transparent',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  searchButton: {
-    padding: 8,
-    borderRadius: 12,
-    backgroundColor: colors.surfaceLight,
-  },
+
   content: {
     flex: 1,
   },

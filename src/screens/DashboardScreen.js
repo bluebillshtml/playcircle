@@ -14,6 +14,7 @@ import { useSport } from '../context/SportContext';
 import { leaderboardService } from '../services/supabase';
 
 import AnimatedBackground from '../components/AnimatedBackground';
+import ScreenHeader from '../components/ScreenHeader';
 
 // Mock leaderboard data
 const TOP_3_DATA = [
@@ -148,14 +149,8 @@ export default function DashboardScreen({ navigation }) {
   return (
     <AnimatedBackground>
       <View style={styles.container}>
-        <View style={styles.spacer} />
-      
       {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerTitle}>
-          <Text style={styles.title}>{selectedSport.name} Leaderboard</Text>
-        </View>
-      </View>
+      <ScreenHeader title={`${selectedSport.name} Leaderboard`} />
 
       {/* Navigation Tabs */}
       <View style={styles.tabContainer}>
@@ -287,31 +282,7 @@ const createStyles = (colors) => StyleSheet.create({
     flex: 1,
     backgroundColor: 'transparent',
   },
-  spacer: {
-    height: 100,
-    backgroundColor: colors.background,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 16,
-    backgroundColor: colors.background,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    marginBottom: 12,
-  },
-  headerTitle: {
-    alignItems: 'flex-start',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: colors.text,
-    letterSpacing: -0.5,
-  },
+
   tabContainer: {
     flexDirection: 'row',
     paddingHorizontal: 20,
