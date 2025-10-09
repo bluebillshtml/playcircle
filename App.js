@@ -9,7 +9,6 @@ import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { SportProvider } from './src/context/SportContext';
 
 import SplashScreen from './src/screens/SplashScreen';
-import SignInScreen from './src/screens/SignInScreen';
 import SignUpScreen from './src/screens/SignUpScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import PreferencesScreen from './src/screens/PreferencesScreen';
@@ -70,11 +69,6 @@ function AppContent() {
           {!user ? (
             // Auth Stack - Show when user is not logged in
             <>
-              <Stack.Screen
-                name="SignIn"
-                component={SignInScreen}
-                options={{ headerShown: false }}
-              />
               <Stack.Screen
                 name="SignUp"
                 component={SignUpScreen}
