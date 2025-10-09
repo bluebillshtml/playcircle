@@ -73,6 +73,24 @@ function AppContent() {
           border: '#2D2D2D',
           notification: '#10B981',
         },
+        fonts: {
+          regular: {
+            fontFamily: 'System',
+            fontWeight: '400',
+          },
+          medium: {
+            fontFamily: 'System',
+            fontWeight: '500',
+          },
+          bold: {
+            fontFamily: 'System',
+            fontWeight: '700',
+          },
+          heavy: {
+            fontFamily: 'System',
+            fontWeight: '900',
+          },
+        },
       }}>
         <StatusBar style="light" backgroundColor="#1a1a1a" />
         <Stack.Navigator screenOptions={{
@@ -138,20 +156,9 @@ function AppContent() {
                 component={MatchDetailScreen}
                 options={{
                   headerTitle: 'Match Details',
-                  headerTitleAlign: 'left',
+                  headerTintColor: '#FFFFFF',
                   headerStyle: {
                     backgroundColor: '#1a1a1a',
-                    borderBottomWidth: 0,
-                    shadowColor: 'transparent',
-                    shadowOffset: { width: 0, height: 0 },
-                    shadowOpacity: 0,
-                    shadowRadius: 0,
-                    elevation: 0,
-                  },
-                  headerTintColor: '#FFFFFF',
-                  headerTitleStyle: {
-                    fontSize: 20,
-                    fontWeight: '700',
                   },
                 }}
               />

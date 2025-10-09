@@ -22,7 +22,6 @@ const SPORTS = [
   { id: 'tennis', name: 'Tennis', icon: 'tennisball-outline' },
   { id: 'pickleball', name: 'Pickleball', icon: 'baseball' },
   { id: 'basketball', name: 'Basketball', icon: 'basketball' },
-  { id: 'volleyball', name: 'Volleyball', icon: 'football' },
 ];
 
 const SKILL_LEVELS = ['Beginner', 'Intermediate', 'Advanced', 'Expert'];
@@ -32,7 +31,6 @@ const POSITIONS = {
   tennis: ['Singles', 'Doubles', 'No Preference'],
   pickleball: ['Singles', 'Doubles', 'No Preference'],
   basketball: ['Point Guard', 'Shooting Guard', 'Small Forward', 'Power Forward', 'Center', 'No Preference'],
-  volleyball: ['Setter', 'Outside Hitter', 'Middle Blocker', 'Opposite', 'Libero', 'No Preference'],
 };
 
 export default function OnboardingScreen({ navigation }) {
