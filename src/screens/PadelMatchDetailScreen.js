@@ -380,7 +380,7 @@ export default function PadelMatchDetailScreen({ navigation, route }) {
         [
           {
             text: 'View My Matches',
-            onPress: () => navigation.navigate('Matches')
+            onPress: () => navigation.navigate('Home')
           },
           {
             text: 'OK',

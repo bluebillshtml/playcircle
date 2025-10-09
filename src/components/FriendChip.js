@@ -16,6 +16,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
@@ -34,7 +35,7 @@ const SPORT_TAG_HEIGHT = 20;
 // SPORT TAG COMPONENT
 // =====================================================
 
-const SportTag = ({ sportId, theme }) => {
+const SportTag = ({ sportId, colors }) => {
   const sportConfig = {
     tennis: { name: 'Tennis', color: '#4CAF50', icon: '🎾' },
     badminton: { name: 'Badminton', color: '#FF9800', icon: '🏸' },
@@ -46,7 +47,7 @@ const SportTag = ({ sportId, theme }) => {
 
   const config = sportConfig[sportId] || { 
     name: sportId.charAt(0).toUpperCase() + sportId.slice(1), 
-    color: theme.colors.primary, 
+    color: colors.primary, 
     icon: '⚽' 
   };
 
@@ -63,12 +64,12 @@ const SportTag = ({ sportId, theme }) => {
 // MUTUAL SESSIONS BADGE
 // =====================================================
 
-const MutualSessionsBadge = ({ count, theme }) => {
+const MutualSessionsBadge = ({ count, colors }) => {
   if (count <= 0) return null;
 
   return (
-    <View style={[styles.mutualBadge, { backgroundColor: theme.colors.primary }]}>
-      <Text style={[styles.mutualBadgeText, { color: theme.colors.surface }]}>
+    <View style={[styles.mutualBadge, { backgroundColor: colors.primary }]}>
+      <Text style={[styles.mutualBadgeText, { color: colors.surface }]}>
         {count} session{count !== 1 ? 's' : ''}
       </Text>
     </View>
@@ -79,7 +80,7 @@ const MutualSessionsBadge = ({ count, theme }) => {
 // OVERFLOW MENU COMPONENT
 // =====================================================
 
-const OverflowMenu = ({ visible, onClose, onMessage, onInvite, theme, disabled }) => {
+const OverflowMenu = ({ visible, onClose, onMessage, onInvite, colors, disabled, isMessageLoading, isInviteLoading }) => {
   if (!visible) return null;
 
   return (
@@ -89,18 +90,22 @@ const OverflowMenu = ({ visible, onClose, onMessage, onInvite, theme, disabled }
         onPress={onClose}
         activeOpacity={1}
       />
-      <BlurView intensity={80} style={[styles.menu, { backgroundColor: theme.colors.surface + 'E6' }]}>
+      <BlurView intensity={80} style={[styles.menu, { backgroundColor: colors.surface + 'E6' }]}>
         <TouchableOpacity
-          style={[styles.menuItem, { borderBottomColor: theme.colors.border }]}
+          style={[styles.menuItem, { borderBottomColor: colors.border }]}
           onPress={() => {
             onClose();
             onMessage();
           }}
-          disabled={disabled}
+          disabled={disabled || isMessageLoading}
         >
-          <Ionicons name="chatbubble-outline" size={20} color={theme.colors.text} />
-          <Text style={[styles.menuItemText, { color: theme.colors.text }]}>
-            Message
+          {isMessageLoading ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <Ionicons name="chatbubble-outline" size={20} color={colors.text} />
+          )}
+          <Text style={[styles.menuItemText, { color: colors.text, opacity: isMessageLoading ? 0.6 : 1 }]}>
+            {isMessageLoading ? 'Opening...' : 'Message'}
           </Text>
         </TouchableOpacity>
         
@@ -110,11 +115,15 @@ const OverflowMenu = ({ visible, onClose, onMessage, onInvite, theme, disabled }
             onClose();
             onInvite();
           }}
-          disabled={disabled}
+          disabled={disabled || isInviteLoading}
         >
-          <Ionicons name="person-add-outline" size={20} color={theme.colors.text} />
-          <Text style={[styles.menuItemText, { color: theme.colors.text }]}>
-            Invite to Game
+          {isInviteLoading ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <Ionicons name="person-add-outline" size={20} color={colors.text} />
+          )}
+          <Text style={[styles.menuItemText, { color: colors.text, opacity: isInviteLoading ? 0.6 : 1 }]}>
+            {isInviteLoading ? 'Opening...' : 'Invite to Game'}
           </Text>
         </TouchableOpacity>
       </BlurView>
@@ -133,8 +142,10 @@ const FriendChip = ({
   onInvite,
   loading = false,
   disabled = false,
+  isMessageLoading = false,
+  isInviteLoading = false,
 }) => {
-  const { theme } = useTheme();
+  const { colors } = useTheme();
   const [menuVisible, setMenuVisible] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -146,6 +157,9 @@ const FriendChip = ({
     if (disabled || actionLoading || loading) return;
 
     try {
+      // Haptic feedback for add friend action
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      
       setActionLoading(true);
       const success = await onAddFriend(user.id);
       
@@ -161,13 +175,19 @@ const FriendChip = ({
     }
   };
 
-  const handleMessage = () => {
-    if (disabled || loading) return;
+  const handleMessage = async () => {
+    if (disabled || loading || isMessageLoading) return;
+    
+    // Haptic feedback for message action
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onMessage(user.id);
   };
 
-  const handleInvite = () => {
-    if (disabled || loading) return;
+  const handleInvite = async () => {
+    if (disabled || loading || isInviteLoading) return;
+    
+    // Haptic feedback for invite action
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onInvite(user.id);
   };
 
@@ -191,8 +211,8 @@ const FriendChip = ({
           }}
         />
       ) : (
-        <View style={[styles.avatarPlaceholder, { backgroundColor: theme.colors.border }]}>
-          <Ionicons name="person" size={24} color={theme.colors.textSecondary} />
+        <View style={[styles.avatarPlaceholder, { backgroundColor: colors.border }]}>
+          <Ionicons name="person" size={24} color={colors.textSecondary} />
         </View>
       )}
     </View>
@@ -201,7 +221,7 @@ const FriendChip = ({
   const renderUserInfo = () => (
     <View style={styles.userInfo}>
       <Text 
-        style={[styles.userName, { color: theme.colors.text }]}
+        style={[styles.userName, { color: colors.text }]}
         numberOfLines={1}
         ellipsizeMode="tail"
       >
@@ -210,7 +230,7 @@ const FriendChip = ({
       
       {user.username !== user.full_name && (
         <Text 
-          style={[styles.userHandle, { color: theme.colors.textSecondary }]}
+          style={[styles.userHandle, { color: colors.textSecondary }]}
           numberOfLines={1}
           ellipsizeMode="tail"
         >
@@ -230,11 +250,11 @@ const FriendChip = ({
     return (
       <View style={styles.sportTagsContainer}>
         {displayTags.map((sportId, index) => (
-          <SportTag key={`${sportId}-${index}`} sportId={sportId} theme={theme} />
+          <SportTag key={`${sportId}-${index}`} sportId={sportId} colors={colors} />
         ))}
         {hasMore && (
-          <View style={[styles.sportTag, { backgroundColor: theme.colors.border }]}>
-            <Text style={[styles.sportTagText, { color: theme.colors.textSecondary }]}>
+          <View style={[styles.sportTag, { backgroundColor: colors.border }]}>
+            <Text style={[styles.sportTagText, { color: colors.textSecondary }]}>
               +{user.sport_tags.length - 2}
             </Text>
           </View>
@@ -249,9 +269,9 @@ const FriendChip = ({
     
     if (isFriend) {
       return (
-        <View style={[styles.actionButton, styles.friendButton, { backgroundColor: theme.colors.success + '20' }]}>
-          <Ionicons name="checkmark-circle" size={16} color={theme.colors.success} />
-          <Text style={[styles.actionButtonText, { color: theme.colors.success }]}>
+        <View style={[styles.actionButton, styles.friendButton, { backgroundColor: colors.success + '20' }]}>
+          <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+          <Text style={[styles.actionButtonText, { color: colors.success }]}>
             Friends
           </Text>
         </View>
@@ -260,9 +280,9 @@ const FriendChip = ({
 
     if (isRequested) {
       return (
-        <View style={[styles.actionButton, styles.requestedButton, { backgroundColor: theme.colors.warning + '20' }]}>
-          <Ionicons name="time-outline" size={16} color={theme.colors.warning} />
-          <Text style={[styles.actionButtonText, { color: theme.colors.warning }]}>
+        <View style={[styles.actionButton, styles.requestedButton, { backgroundColor: colors.warning + '20' }]}>
+          <Ionicons name="time-outline" size={16} color={colors.warning} />
+          <Text style={[styles.actionButtonText, { color: colors.warning }]}>
             Requested
           </Text>
         </View>
@@ -274,7 +294,7 @@ const FriendChip = ({
         style={[
           styles.actionButton,
           styles.addFriendButton,
-          { backgroundColor: theme.colors.primary },
+          { backgroundColor: colors.primary },
           (disabled || loading || actionLoading) && styles.disabledButton
         ]}
         onPress={handleAddFriend}
@@ -282,11 +302,11 @@ const FriendChip = ({
         activeOpacity={0.8}
       >
         {actionLoading ? (
-          <ActivityIndicator size="small" color={theme.colors.surface} />
+          <ActivityIndicator size="small" color={colors.surface} />
         ) : (
           <>
-            <Ionicons name="person-add" size={16} color={theme.colors.surface} />
-            <Text style={[styles.actionButtonText, { color: theme.colors.surface }]}>
+            <Ionicons name="person-add" size={16} color={colors.surface} />
+            <Text style={[styles.actionButtonText, { color: colors.surface }]}>
               Add Friend
             </Text>
           </>
@@ -297,12 +317,12 @@ const FriendChip = ({
 
   const renderOverflowButton = () => (
     <TouchableOpacity
-      style={[styles.overflowButton, { backgroundColor: theme.colors.border }]}
+      style={[styles.overflowButton, { backgroundColor: colors.border }]}
       onPress={handleOverflowPress}
       disabled={disabled || loading}
       activeOpacity={0.7}
     >
-      <Ionicons name="ellipsis-horizontal" size={16} color={theme.colors.textSecondary} />
+      <Ionicons name="ellipsis-horizontal" size={16} color={colors.textSecondary} />
     </TouchableOpacity>
   );
 
@@ -316,12 +336,12 @@ const FriendChip = ({
         intensity={20} 
         style={[
           styles.container,
-          { backgroundColor: theme.colors.surface + 'CC' },
+          { backgroundColor: colors.surface + 'CC' },
           disabled && styles.disabledContainer
         ]}
       >
         {/* Mutual Sessions Badge */}
-        <MutualSessionsBadge count={user.mutual_sessions} theme={theme} />
+        <MutualSessionsBadge count={user.mutual_sessions} colors={colors} />
         
         {/* Avatar */}
         {renderAvatar()}
@@ -341,7 +361,7 @@ const FriendChip = ({
         {/* Loading Overlay */}
         {loading && (
           <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="small" color={theme.colors.primary} />
+            <ActivityIndicator size="small" color={colors.primary} />
           </View>
         )}
       </BlurView>
@@ -352,8 +372,10 @@ const FriendChip = ({
         onClose={() => setMenuVisible(false)}
         onMessage={handleMessage}
         onInvite={handleInvite}
-        theme={theme}
+        colors={colors}
         disabled={disabled || loading}
+        isMessageLoading={isMessageLoading}
+        isInviteLoading={isInviteLoading}
       />
     </>
   );

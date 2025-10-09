@@ -491,6 +491,24 @@ export const sanitizeUserInput = (input: string): string => {
     });
 };
 
+/**
+ * Sanitize user ID to ensure it's a valid UUID string
+ */
+export const sanitizeUserId = (userId: string): string => {
+  if (typeof userId !== 'string') return '';
+  
+  // Remove any whitespace and convert to lowercase
+  const cleaned = userId.trim().toLowerCase();
+  
+  // Validate UUID format and return cleaned version
+  if (isValidUUID(cleaned)) {
+    return cleaned;
+  }
+  
+  // If not a valid UUID, return empty string
+  return '';
+};
+
 // =====================================================
 // RATE LIMITING VALIDATION
 // =====================================================

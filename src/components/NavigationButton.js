@@ -33,7 +33,7 @@ export default function NavigationButton({ navigation, currentScreen }) {
   const navItems = [
     { name: 'Home', icon: 'home', screen: 'Home' },
     { name: 'Leaderboard', icon: 'trophy', screen: 'Dashboard' },
-    { name: 'Matches', icon: 'calendar', screen: 'Matches' },
+    { name: 'Friends', icon: 'people', screen: 'Friends' },
     { name: 'Messages', icon: 'chatbubbles', screen: 'Messages' },
     { name: 'Profile', icon: 'person', screen: 'Profile' },
   ];
