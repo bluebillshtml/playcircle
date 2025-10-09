@@ -446,7 +446,7 @@ export default function SignUpScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1F2937',
+    backgroundColor: 'transparent',
   },
   keyboardView: {
     flex: 1,
@@ -461,7 +461,7 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 24,
   },
   iconCircle: {
     width: 100,
@@ -478,14 +478,17 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     letterSpacing: -0.5,
     marginBottom: 8,
+    textAlign: 'center',
   },
   tagline: {
     fontSize: 16,
     color: '#9CA3AF',
     fontWeight: '400',
+    textAlign: 'center',
+    marginBottom: 32,
   },
   welcomeCard: {
-    backgroundColor: '#374151',
+    backgroundColor: 'rgba(55, 65, 81, 0.7)',
     borderRadius: 24,
     padding: 24,
     marginBottom: 24,

@@ -228,7 +228,7 @@ export default function SignInScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1F2937',
+    backgroundColor: 'transparent',
   },
   keyboardView: {
     flex: 1,
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
   welcomeCard: {
-    backgroundColor: '#374151',
+    backgroundColor: 'rgba(55, 65, 81, 0.7)',
     borderRadius: 24,
     padding: 24,
     marginBottom: 24,
