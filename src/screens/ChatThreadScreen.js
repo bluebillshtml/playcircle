@@ -11,6 +11,9 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import MessageBubble from '../components/MessageBubble';
+import ChatMembersModal from '../components/ChatMembersModal';
+import ChatSettingsModal from '../components/ChatSettingsModal';
+import DropdownMenu from '../components/DropdownMenu';
 
 // Mock message data generator
 const generateMockMessages = (count = 15) => {
@@ -68,6 +71,10 @@ export default function ChatThreadScreen({ navigation, route }) {
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(true);
   const [quickActionsVisible, setQuickActionsVisible] = useState(false);
+  const [membersModalVisible, setMembersModalVisible] = useState(false);
+  const [settingsModalVisible, setSettingsModalVisible] = useState(false);
+  const [dropdownVisible, setDropdownVisible] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({ x: 0, y: 0 });
   
   // Refs
   const flatListRef = useRef(null);
@@ -278,7 +285,17 @@ export default function ChatThreadScreen({ navigation, route }) {
           </Text>
         </View>
         
-        <TouchableOpacity style={styles.moreButton}>
+        <TouchableOpacity 
+          style={styles.moreButton}
+          onPress={() => {
+            // Position dropdown below the header
+            setDropdownPosition({ 
+              x: 0, 
+              y: 100 // Approximate header height + padding
+            });
+            setDropdownVisible(true);
+          }}
+        >
           <Ionicons name="ellipsis-horizontal" size={24} color={colors.text} />
         </TouchableOpacity>
       </View>
@@ -348,41 +365,58 @@ export default function ChatThreadScreen({ navigation, route }) {
         </View>
       </View>
 
-      {/* Sticky Action Bar */}
-      <View style={styles.stickyActionBar}>
-        <TouchableOpacity 
-          style={styles.actionButton}
-          onPress={() => Alert.alert('Add Friend', 'Add friend functionality coming soon!')}
-        >
-          <Ionicons name="person-add-outline" size={18} color={colors.textSecondary} />
-          <Text style={styles.actionButtonText}>Add Friend</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.actionButton}
-          onPress={() => Alert.alert('Directions', 'Navigation functionality coming soon!')}
-        >
-          <Ionicons name="navigate-outline" size={18} color={colors.textSecondary} />
-          <Text style={styles.actionButtonText}>Directions</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[styles.actionButton, { backgroundColor: colors.error + '20' }]}
-          onPress={() => {
-            Alert.alert(
-              'Leave Chat',
-              'Are you sure you want to leave this chat?',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Leave', style: 'destructive', onPress: () => navigation.goBack() },
-              ]
-            );
-          }}
-        >
-          <Ionicons name="exit-outline" size={18} color={colors.error} />
-          <Text style={[styles.actionButtonText, { color: colors.error }]}>Leave</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Dropdown Menu */}
+      <DropdownMenu
+        visible={dropdownVisible}
+        onClose={() => setDropdownVisible(false)}
+        anchorPosition={dropdownPosition}
+        options={[
+          {
+            id: 'members',
+            title: 'Members',
+            icon: 'people-outline',
+            onPress: () => setMembersModalVisible(true),
+          },
+          {
+            id: 'settings',
+            title: 'Settings',
+            icon: 'settings-outline',
+            onPress: () => setSettingsModalVisible(true),
+          },
+          {
+            id: 'leave',
+            title: 'Leave',
+            icon: 'exit-outline',
+            destructive: true,
+            onPress: () => {
+              Alert.alert(
+                'Leave Chat',
+                'Are you sure you want to leave this chat? You won\'t receive any new messages.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { 
+                    text: 'Leave', 
+                    style: 'destructive', 
+                    onPress: () => navigation.goBack() 
+                  },
+                ]
+              );
+            },
+          },
+        ]}
+      />
+
+      {/* Modals */}
+      <ChatMembersModal
+        visible={membersModalVisible}
+        onClose={() => setMembersModalVisible(false)}
+        chatMembers={[]} // Will be populated with real data later
+      />
+
+      <ChatSettingsModal
+        visible={settingsModalVisible}
+        onClose={() => setSettingsModalVisible(false)}
+      />
     </View>
   );
 }
@@ -521,31 +555,5 @@ const createStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  
-  // Sticky action bar styles
-  stickyActionBar: {
-    flexDirection: 'row',
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 12,
-  },
-  actionButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    backgroundColor: colors.surfaceLight,
-    gap: 6,
-  },
-  actionButtonText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
+
 });
