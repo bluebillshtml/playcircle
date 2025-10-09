@@ -788,9 +788,10 @@ const createStyles = (colors, isDarkMode) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 60,
-    paddingBottom: 8,
+    paddingTop: 5,
+    paddingBottom: 2,
     backgroundColor: 'transparent',
+    height: 25,
   },
   backButton: {
     width: 44,
