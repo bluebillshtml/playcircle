@@ -757,11 +757,13 @@ export default function HomeScreen({ navigation }) {
           statusBarTranslucent={true}
         >
           <Animated.View style={[styles.navModalOverlay, { opacity: fadeAnim }]}>
-            <TouchableOpacity
-              style={styles.navBackdrop}
-              activeOpacity={1}
-              onPress={closeNavModal}
-            />
+            <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill}>
+              <TouchableOpacity
+                style={styles.navBackdrop}
+                activeOpacity={1}
+                onPress={closeNavModal}
+              />
+            </BlurView>
             <Animated.View
               style={[
                 styles.navDrawer,
@@ -770,7 +772,12 @@ export default function HomeScreen({ navigation }) {
                 }
               ]}
             >
-              <BlurView intensity={80} tint="dark" style={styles.navBlurContainer}>
+              <View style={styles.navDrawerWrapper}>
+                <BlurView intensity={80} tint="dark" style={styles.navBlurContainer}>
+                <LinearGradient
+                  colors={['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 0.5)']}
+                  style={[StyleSheet.absoluteFill, { borderTopRightRadius: 24, borderBottomRightRadius: 24 }]}
+                />
                 <View style={styles.navDrawerHeader}>
                   <View style={styles.navDrawerHeaderContent}>
                     <View style={styles.navAppIcon}>
@@ -849,15 +856,24 @@ export default function HomeScreen({ navigation }) {
                 <View style={styles.navDrawerFooter}>
                   <View style={styles.navUserInfo}>
                     <View style={styles.navUserAvatar}>
-                      <Ionicons name="person" size={20} color="#FFFFFF" />
+                      {profile?.avatar_url ? (
+                        <Image source={{ uri: profile.avatar_url }} style={styles.navUserAvatarImage} />
+                      ) : (
+                        <Ionicons name="person" size={20} color="#FFFFFF" />
+                      )}
                     </View>
                     <View style={styles.navUserDetails}>
-                      <Text style={styles.navUserName}>Player</Text>
+                      <Text style={styles.navUserName}>
+                        {profile?.first_name && profile?.last_name
+                          ? `${profile.first_name} ${profile.last_name}`
+                          : profile?.full_name || profile?.username || 'Player'}
+                      </Text>
                       <Text style={styles.navUserStatus}>Online</Text>
                     </View>
                   </View>
                 </View>
               </BlurView>
+              </View>
             </Animated.View>
           </Animated.View>
         </Modal>
@@ -1507,6 +1523,7 @@ const createStyles = (colors) => StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   navDrawer: {
     position: 'absolute',
@@ -1516,14 +1533,18 @@ const createStyles = (colors) => StyleSheet.create({
     width: width * 0.8,
     maxWidth: 320,
   },
-  navBlurContainer: {
+  navDrawerWrapper: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
     borderTopRightRadius: 24,
     borderBottomRightRadius: 24,
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: 'rgba(16, 185, 129, 0.3)',
     borderLeftWidth: 0,
+  },
+  navBlurContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(6, 95, 70, 0.4)',
   },
   navDrawerHeader: {
     flexDirection: 'row',
@@ -1579,10 +1600,10 @@ const createStyles = (colors) => StyleSheet.create({
   navItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 18,
-    borderRadius: 20,
-    marginVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 16,
+    marginVertical: 6,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.15)',
@@ -1637,6 +1658,12 @@ const createStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
+    overflow: 'hidden',
+  },
+  navUserAvatarImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   navUserDetails: {
     flex: 1,

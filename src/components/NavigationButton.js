@@ -9,15 +9,19 @@ import {
   Dimensions,
   StatusBar,
   Platform,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import { BlurView } from 'expo-blur';
 
 const { width, height } = Dimensions.get('window');
 
 export default function NavigationButton({ navigation, currentScreen }) {
   const { colors } = useTheme();
+  const { profile } = useAuth();
   const [navModalVisible, setNavModalVisible] = useState(false);
   const slideAnim = useRef(new Animated.Value(-width)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -31,7 +35,7 @@ export default function NavigationButton({ navigation, currentScreen }) {
   }
 
   const navItems = [
-    { name: 'Home', icon: 'home', screen: 'Home' },
+    { name: 'Discover', icon: 'home', screen: 'Home' },
     { name: 'Leaderboard', icon: 'trophy', screen: 'Dashboard' },
     { name: 'Friends', icon: 'people', screen: 'Friends' },
     { name: 'Messages', icon: 'chatbubbles', screen: 'Messages' },
@@ -167,24 +171,31 @@ export default function NavigationButton({ navigation, currentScreen }) {
         statusBarTranslucent={true}
       >
         <Animated.View style={[styles.modalOverlay, { opacity: fadeAnim }]}>
-          <TouchableOpacity
-            style={styles.backdrop}
-            activeOpacity={1}
-            onPress={closeModal}
-          />
-          <Animated.View 
+          <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill}>
+            <TouchableOpacity
+              style={styles.backdrop}
+              activeOpacity={1}
+              onPress={closeModal}
+            />
+          </BlurView>
+          <Animated.View
             style={[
-              styles.navDrawer, 
-              { 
+              styles.navDrawer,
+              {
                 transform: [{ translateX: slideAnim }]
               }
             ]}
           >
-            <BlurView intensity={25} style={styles.blurContainer}>
+            <View style={styles.navDrawerWrapper}>
+              <BlurView intensity={80} tint="dark" style={styles.blurContainer}>
+                <LinearGradient
+                  colors={['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 0.5)']}
+                  style={[StyleSheet.absoluteFill, { borderTopRightRadius: 24, borderBottomRightRadius: 24 }]}
+                />
               <View style={styles.drawerHeader}>
                 <View style={styles.drawerHeaderContent}>
                   <View style={styles.appIcon}>
-                    <Ionicons name="tennisball" size={28} color={colors.primary} />
+                    <Ionicons name="tennisball" size={28} color="#FFFFFF" />
                   </View>
                   <View style={styles.appInfo}>
                     <Text style={styles.appName}>PlayCircle</Text>
@@ -196,7 +207,7 @@ export default function NavigationButton({ navigation, currentScreen }) {
                   style={styles.closeButton}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="close" size={24} color={colors.text} />
+                  <Ionicons name="close" size={24} color="#FFFFFF" />
                 </TouchableOpacity>
               </View>
               
@@ -234,10 +245,10 @@ export default function NavigationButton({ navigation, currentScreen }) {
                         styles.navItemIcon,
                         currentScreen === item.screen && styles.navItemIconActive
                       ]}>
-                        <Ionicons 
-                          name={item.icon} 
-                          size={24} 
-                          color={currentScreen === item.screen ? colors.primary : colors.text} 
+                        <Ionicons
+                          name={item.icon}
+                          size={28}
+                          color="#FFFFFF"
                         />
                       </View>
                       <Text style={[
@@ -259,15 +270,24 @@ export default function NavigationButton({ navigation, currentScreen }) {
               <View style={styles.drawerFooter}>
                 <View style={styles.userInfo}>
                   <View style={styles.userAvatar}>
-                    <Ionicons name="person" size={20} color={colors.text} />
+                    {profile?.avatar_url ? (
+                      <Image source={{ uri: profile.avatar_url }} style={styles.userAvatarImage} />
+                    ) : (
+                      <Ionicons name="person" size={20} color="#FFFFFF" />
+                    )}
                   </View>
                   <View style={styles.userDetails}>
-                    <Text style={styles.userName}>Player</Text>
+                    <Text style={styles.userName}>
+                      {profile?.first_name && profile?.last_name
+                        ? `${profile.first_name} ${profile.last_name}`
+                        : profile?.full_name || profile?.username || 'Player'}
+                    </Text>
                     <Text style={styles.userStatus}>Online</Text>
                   </View>
                 </View>
               </View>
             </BlurView>
+            </View>
           </Animated.View>
         </Animated.View>
       </Modal>
@@ -330,6 +350,7 @@ const createStyles = (colors) => StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   navDrawer: {
     position: 'absolute',
@@ -339,14 +360,18 @@ const createStyles = (colors) => StyleSheet.create({
     width: width * 0.8,
     maxWidth: 320,
   },
-  blurContainer: {
+  navDrawerWrapper: {
     flex: 1,
-    backgroundColor: colors.glass,
     borderTopRightRadius: 24,
     borderBottomRightRadius: 24,
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: colors.glassBorder,
+    borderColor: 'rgba(16, 185, 129, 0.3)',
     borderLeftWidth: 0,
+  },
+  blurContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(6, 95, 70, 0.4)',
   },
   drawerHeader: {
     flexDirection: 'row',
@@ -355,8 +380,7 @@ const createStyles = (colors) => StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 32,
     paddingTop: 60,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.glassBorder,
+    borderBottomWidth: 0,
   },
   drawerHeaderContent: {
     flexDirection: 'row',
@@ -367,7 +391,7 @@ const createStyles = (colors) => StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: colors.primary + '20',
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
@@ -378,13 +402,13 @@ const createStyles = (colors) => StyleSheet.create({
   appName: {
     fontSize: 24,
     fontWeight: '800',
-    color: colors.text,
+    color: '#FFFFFF',
     letterSpacing: -0.5,
     marginBottom: 2,
   },
   appSubtitle: {
     fontSize: 14,
-    color: colors.textSecondary,
+    color: 'rgba(255, 255, 255, 0.7)',
     fontWeight: '500',
   },
   closeButton: {
@@ -403,38 +427,37 @@ const createStyles = (colors) => StyleSheet.create({
   navItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderRadius: 16,
     marginVertical: 6,
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   navItemActive: {
-    backgroundColor: colors.primary + '15',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderWidth: 1,
-    borderColor: colors.primary + '30',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   navItemIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
   },
   navItemIconActive: {
-    backgroundColor: colors.primary + '20',
   },
   navItemText: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
-    color: colors.text,
+    color: '#FFFFFF',
     letterSpacing: -0.3,
     flex: 1,
   },
   navItemTextActive: {
-    color: colors.primary,
+    color: '#FFFFFF',
     fontWeight: '700',
   },
   navItemIndicator: {
@@ -448,8 +471,7 @@ const createStyles = (colors) => StyleSheet.create({
   drawerFooter: {
     paddingHorizontal: 24,
     paddingVertical: 20,
-    borderTopWidth: 1,
-    borderTopColor: colors.glassBorder,
+    borderTopWidth: 0,
   },
   userInfo: {
     flexDirection: 'row',
@@ -463,6 +485,12 @@ const createStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
+    overflow: 'hidden',
+  },
+  userAvatarImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   userDetails: {
     flex: 1,
@@ -470,12 +498,12 @@ const createStyles = (colors) => StyleSheet.create({
   userName: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.text,
+    color: '#FFFFFF',
     marginBottom: 2,
   },
   userStatus: {
     fontSize: 12,
-    color: colors.success,
+    color: 'rgba(255, 255, 255, 0.7)',
     fontWeight: '500',
   },
 });
