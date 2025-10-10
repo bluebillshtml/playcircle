@@ -468,7 +468,7 @@ const FriendsScreen = ({ navigation }) => {
     return (
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          <Text style={[styles.sectionHeaderTitle, { color: colors.text }]}>
             Friend Requests
           </Text>
           <View style={[styles.badge, { backgroundColor: colors.primary }]}>
@@ -662,6 +662,10 @@ const createStyles = (colors) => StyleSheet.create({
     fontWeight: '600',
     paddingHorizontal: 20,
     marginBottom: 16,
+  },
+  sectionHeaderTitle: {
+    fontSize: 20,
+    fontWeight: '600',
   },
   badge: {
     paddingHorizontal: 8,

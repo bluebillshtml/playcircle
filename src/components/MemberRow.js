@@ -352,7 +352,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     minHeight: ROW_HEIGHT,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderRadius: 16,
+    marginBottom: 8,
     position: 'relative',
   },
   disabledContainer: {

@@ -27,9 +27,9 @@ import { SuggestedFriend } from '../types/friends';
 // =====================================================
 
 const { width: screenWidth } = Dimensions.get('window');
-const CHIP_WIDTH = screenWidth * 0.42; // ~42% of screen width
-const AVATAR_SIZE = 48;
-const SPORT_TAG_HEIGHT = 20;
+const CHIP_WIDTH = screenWidth * 0.45; // ~45% of screen width
+const AVATAR_SIZE = 80;
+const SPORT_TAG_HEIGHT = 24;
 
 // =====================================================
 // SPORT TAG COMPONENT
@@ -220,17 +220,17 @@ const FriendChip = ({
 
   const renderUserInfo = () => (
     <View style={styles.userInfo}>
-      <Text 
-        style={[styles.userName, { color: colors.text }]}
+      <Text
+        style={styles.userName}
         numberOfLines={1}
         ellipsizeMode="tail"
       >
         {user.full_name || user.username}
       </Text>
-      
+
       {user.username !== user.full_name && (
-        <Text 
-          style={[styles.userHandle, { color: colors.textSecondary }]}
+        <Text
+          style={styles.userHandle}
           numberOfLines={1}
           ellipsizeMode="tail"
         >
@@ -266,11 +266,11 @@ const FriendChip = ({
   const renderActionButton = () => {
     const isRequested = user.friendship_status === 'pending';
     const isFriend = user.friendship_status === 'friends';
-    
+
     if (isFriend) {
       return (
         <View style={[styles.actionButton, styles.friendButton, { backgroundColor: colors.success + '20' }]}>
-          <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+          <Ionicons name="checkmark-circle" size={18} color={colors.success} />
           <Text style={[styles.actionButtonText, { color: colors.success }]}>
             Friends
           </Text>
@@ -281,7 +281,7 @@ const FriendChip = ({
     if (isRequested) {
       return (
         <View style={[styles.actionButton, styles.requestedButton, { backgroundColor: colors.warning + '20' }]}>
-          <Ionicons name="time-outline" size={16} color={colors.warning} />
+          <Ionicons name="time-outline" size={18} color={colors.warning} />
           <Text style={[styles.actionButtonText, { color: colors.warning }]}>
             Requested
           </Text>
@@ -294,7 +294,7 @@ const FriendChip = ({
         style={[
           styles.actionButton,
           styles.addFriendButton,
-          { backgroundColor: colors.primary },
+          { backgroundColor: '#10B981' },
           (disabled || loading || actionLoading) && styles.disabledButton
         ]}
         onPress={handleAddFriend}
@@ -302,11 +302,11 @@ const FriendChip = ({
         activeOpacity={0.8}
       >
         {actionLoading ? (
-          <ActivityIndicator size="small" color={colors.surface} />
+          <ActivityIndicator size="small" color="#065F46" />
         ) : (
           <>
-            <Ionicons name="person-add" size={16} color={colors.surface} />
-            <Text style={[styles.actionButtonText, { color: colors.surface }]}>
+            <Ionicons name="person-add" size={18} color="#065F46" />
+            <Text style={styles.actionButtonText}>
               Add Friend
             </Text>
           </>
@@ -317,12 +317,12 @@ const FriendChip = ({
 
   const renderOverflowButton = () => (
     <TouchableOpacity
-      style={[styles.overflowButton, { backgroundColor: colors.border }]}
+      style={[styles.overflowButton, { backgroundColor: '#10B981' }]}
       onPress={handleOverflowPress}
       disabled={disabled || loading}
       activeOpacity={0.7}
     >
-      <Ionicons name="ellipsis-horizontal" size={16} color={colors.textSecondary} />
+      <Ionicons name="ellipsis-horizontal" size={18} color="#065F46" />
     </TouchableOpacity>
   );
 
@@ -332,39 +332,41 @@ const FriendChip = ({
 
   return (
     <>
-      <BlurView 
-        intensity={20} 
+      <View
         style={[
           styles.container,
-          { backgroundColor: colors.surface + 'CC' },
+          { backgroundColor: colors.primary + '40' },
           disabled && styles.disabledContainer
         ]}
       >
         {/* Mutual Sessions Badge */}
         <MutualSessionsBadge count={user.mutual_sessions} colors={colors} />
-        
+
         {/* Avatar */}
         {renderAvatar()}
-        
+
         {/* User Info */}
         {renderUserInfo()}
-        
+
         {/* Sport Tags */}
         {renderSportTags()}
-        
+
+        {/* Spacer to push buttons to bottom */}
+        <View style={styles.spacer} />
+
         {/* Action Buttons */}
         <View style={styles.actionsContainer}>
           {renderActionButton()}
           {renderOverflowButton()}
         </View>
-        
+
         {/* Loading Overlay */}
         {loading && (
           <View style={styles.loadingOverlay}>
             <ActivityIndicator size="small" color={colors.primary} />
           </View>
         )}
-      </BlurView>
+      </View>
 
       {/* Overflow Menu */}
       <OverflowMenu
@@ -388,48 +390,51 @@ const FriendChip = ({
 const styles = StyleSheet.create({
   container: {
     width: CHIP_WIDTH,
-    height: CHIP_WIDTH,
-    borderRadius: 16,
-    padding: 16,
+    minHeight: CHIP_WIDTH * 1.2,
+    borderRadius: 20,
+    padding: 20,
     marginRight: 12,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 6,
     position: 'relative',
   },
   disabledContainer: {
     opacity: 0.6,
   },
-  
+
   // Mutual Sessions Badge
   mutualBadge: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    top: 12,
+    right: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
     zIndex: 1,
   },
   mutualBadgeText: {
-    fontSize: 10,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#065F46',
   },
-  
+
   // Avatar
   avatarContainer: {
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   avatar: {
     width: AVATAR_SIZE,
     height: AVATAR_SIZE,
     borderRadius: AVATAR_SIZE / 2,
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   avatarPlaceholder: {
     width: AVATAR_SIZE,
@@ -437,57 +442,69 @@ const styles = StyleSheet.create({
     borderRadius: AVATAR_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
-  
+
   // User Info
   userInfo: {
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   userName: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
     textAlign: 'center',
+    color: '#FFFFFF',
   },
   userHandle: {
-    fontSize: 12,
-    marginTop: 2,
+    fontSize: 14,
+    marginTop: 4,
     textAlign: 'center',
+    color: 'rgba(255, 255, 255, 0.8)',
   },
-  
+
   // Sport Tags
   sportTagsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
     marginBottom: 12,
-    gap: 4,
+    gap: 6,
   },
   sportTag: {
     height: SPORT_TAG_HEIGHT,
-    paddingHorizontal: 6,
-    borderRadius: 10,
+    paddingHorizontal: 10,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
   },
   sportTagText: {
-    fontSize: 10,
-    fontWeight: '500',
+    fontSize: 12,
+    fontWeight: '600',
   },
-  
+
+  // Spacer
+  spacer: {
+    flex: 1,
+  },
+
   // Actions
   actionsContainer: {
     flexDirection: 'row',
     gap: 8,
+    marginTop: 'auto',
   },
   actionButton: {
     flex: 1,
-    height: 36,
-    borderRadius: 18,
+    height: 44,
+    borderRadius: 22,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
+    paddingHorizontal: 8,
   },
   addFriendButton: {
     // Primary button styles applied via backgroundColor
@@ -502,13 +519,14 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   actionButtonText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#065F46',
   },
   overflowButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },

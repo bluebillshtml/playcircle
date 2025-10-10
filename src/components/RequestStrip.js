@@ -426,10 +426,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   userName: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
     flex: 1,
   },
@@ -438,7 +438,8 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   requestText: {
-    fontSize: 12,
+    fontSize: 14,
+    lineHeight: 16,
   },
   
   // Actions
