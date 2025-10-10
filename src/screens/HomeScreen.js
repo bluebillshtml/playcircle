@@ -1104,8 +1104,10 @@ export default function HomeScreen({ navigation }) {
               { opacity: skipFadeAnim }
             ]}
           >
-            {/* Blurred background */}
-            <BlurView intensity={50} style={StyleSheet.absoluteFill} tint="dark" />
+            {/* Blurred and darkened background */}
+            <BlurView intensity={80} style={StyleSheet.absoluteFill} tint="dark">
+              <View style={styles.skipModalDarkOverlay} />
+            </BlurView>
             <TouchableOpacity
               style={styles.skipModalBackdrop}
               activeOpacity={1}
@@ -1124,10 +1126,14 @@ export default function HomeScreen({ navigation }) {
               ]}
             >
               <BlurView
-                intensity={80}
+                intensity={100}
                 tint="dark"
                 style={styles.skipCardBlur}
               >
+                <LinearGradient
+                  colors={['rgba(6, 95, 70, 0.5)', 'rgba(6, 95, 70, 0.6)']}
+                  style={StyleSheet.absoluteFill}
+                />
                 <View style={styles.skipCard}>
                   <View style={styles.skipIconContainer}>
                     <Ionicons name="checkmark-circle" size={56} color={colors.primary} />
@@ -1158,7 +1164,9 @@ export default function HomeScreen({ navigation }) {
           statusBarTranslucent={true}
         >
           <View style={styles.skipModalOverlay}>
-            <BlurView intensity={50} style={StyleSheet.absoluteFill} tint="dark" />
+            <BlurView intensity={80} style={StyleSheet.absoluteFill} tint="dark">
+              <View style={styles.skipModalDarkOverlay} />
+            </BlurView>
             <TouchableOpacity
               style={styles.skipModalBackdrop}
               activeOpacity={1}
@@ -1166,10 +1174,14 @@ export default function HomeScreen({ navigation }) {
             />
             <View style={styles.skipModalContainer}>
               <BlurView
-                intensity={80}
+                intensity={100}
                 tint="dark"
                 style={styles.skipCardBlur}
               >
+                <LinearGradient
+                  colors={['rgba(6, 95, 70, 0.5)', 'rgba(6, 95, 70, 0.6)']}
+                  style={StyleSheet.absoluteFill}
+                />
                 <View style={styles.skipCard}>
                   <View style={styles.skipIconContainer}>
                     <Ionicons name="notifications" size={56} color={colors.primary} />
@@ -1898,9 +1910,13 @@ const createStyles = (colors) => StyleSheet.create({
   },
   skipModalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  skipModalDarkOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
   },
   skipModalBackdrop: {
     position: 'absolute',
@@ -1927,7 +1943,7 @@ const createStyles = (colors) => StyleSheet.create({
   skipCard: {
     padding: 32,
     alignItems: 'center',
-    backgroundColor: 'rgba(6, 95, 70, 0.4)',
+    backgroundColor: 'transparent',
   },
   skipIconContainer: {
     marginBottom: 20,
