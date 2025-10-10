@@ -25,9 +25,9 @@ import { formatTimeAgo } from '../utils/friendsTransformers';
 // CONSTANTS
 // =====================================================
 
-const AVATAR_SIZE = 32;
-const ACTION_BUTTON_SIZE = 36;
-const STRIP_HEIGHT = 56;
+const AVATAR_SIZE = 48;
+const ACTION_BUTTON_SIZE = 44;
+const STRIP_HEIGHT = 80;
 
 // =====================================================
 // TIME AGO COMPONENT
@@ -35,9 +35,9 @@ const STRIP_HEIGHT = 56;
 
 const TimeAgoText = ({ createdAt, colors }) => {
   const timeAgo = formatTimeAgo(createdAt);
-  
+
   return (
-    <Text style={[styles.timeAgo, { color: colors.textSecondary }]}>
+    <Text style={styles.timeAgo}>
       {timeAgo}
     </Text>
   );
@@ -60,11 +60,11 @@ const ActionButton = ({
     switch (variant) {
       case 'accept':
         return {
-          backgroundColor: colors.success,
+          backgroundColor: '#10B981',
         };
       case 'decline':
         return {
-          backgroundColor: colors.error,
+          backgroundColor: '#EF4444',
         };
       default:
         return {
@@ -76,8 +76,9 @@ const ActionButton = ({
   const getIconColor = () => {
     switch (variant) {
       case 'accept':
+        return '#065F46';
       case 'decline':
-        return colors.surface;
+        return '#7F1D1D';
       default:
         return colors.textSecondary;
     }
@@ -99,7 +100,7 @@ const ActionButton = ({
       {loading ? (
         <ActivityIndicator size="small" color={getIconColor()} />
       ) : (
-        <Ionicons name={icon} size={18} color={getIconColor()} />
+        <Ionicons name={icon} size={20} color={getIconColor()} />
       )}
     </TouchableOpacity>
   );
@@ -231,19 +232,19 @@ const RequestStrip = ({
   const renderUserInfo = () => (
     <View style={styles.userInfo}>
       <View style={styles.userNameRow}>
-        <Text 
-          style={[styles.userName, { color: colors.text }]}
+        <Text
+          style={styles.userName}
           numberOfLines={1}
           ellipsizeMode="tail"
         >
           {request.from_user.full_name || request.from_user.username}
         </Text>
-        
+
         <TimeAgoText createdAt={request.created_at} colors={colors} />
       </View>
-      
-      <Text 
-        style={[styles.requestText, { color: colors.textSecondary }]}
+
+      <Text
+        style={styles.requestText}
         numberOfLines={1}
         ellipsizeMode="tail"
       >
@@ -283,25 +284,24 @@ const RequestStrip = ({
   // =====================================================
 
   return (
-    <View 
+    <View
       style={[
         styles.container,
-        { 
-          backgroundColor: colors.surface,
-          borderColor: colors.border,
+        {
+          backgroundColor: colors.primary + '40',
         },
         disabled && styles.disabledContainer
       ]}
     >
       {/* Avatar */}
       {renderAvatar()}
-      
+
       {/* User Info */}
       {renderUserInfo()}
-      
+
       {/* Action Buttons */}
       {renderActionButtons()}
-      
+
       {/* Loading Overlay */}
       {loading && (
         <View style={[styles.loadingOverlay, { backgroundColor: colors.surface + 'CC' }]}>
@@ -388,26 +388,35 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
     minHeight: STRIP_HEIGHT,
-    borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 16,
     marginBottom: 8,
     position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
   },
   disabledContainer: {
     opacity: 0.6,
   },
-  
+
   // Avatar
   avatarContainer: {
-    marginRight: 12,
+    marginRight: 16,
   },
   avatar: {
     width: AVATAR_SIZE,
     height: AVATAR_SIZE,
     borderRadius: AVATAR_SIZE / 2,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   avatarPlaceholder: {
     width: AVATAR_SIZE,
@@ -415,8 +424,10 @@ const styles = StyleSheet.create({
     borderRadius: AVATAR_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
-  
+
   // User Info
   userInfo: {
     flex: 1,
@@ -430,18 +441,21 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     flex: 1,
+    color: '#FFFFFF',
   },
   timeAgo: {
     fontSize: 12,
     marginLeft: 8,
+    color: 'rgba(255, 255, 255, 0.7)',
   },
   requestText: {
     fontSize: 14,
     lineHeight: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
   },
-  
+
   // Actions
   actionsContainer: {
     flexDirection: 'row',

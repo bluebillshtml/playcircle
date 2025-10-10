@@ -7,6 +7,8 @@ import {
   FlatList,
   TextInput,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
@@ -14,6 +16,7 @@ import MessageBubble from '../components/MessageBubble';
 import ChatMembersModal from '../components/ChatMembersModal';
 import ChatSettingsModal from '../components/ChatSettingsModal';
 import DropdownMenu from '../components/DropdownMenu';
+import AnimatedBackground from '../components/AnimatedBackground';
 
 // Mock message data generator
 const generateMockMessages = (count = 15) => {
@@ -227,28 +230,35 @@ export default function ChatThreadScreen({ navigation, route }) {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="chevron-back" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>
-            {sessionTitle || 'Chat'}
-          </Text>
+      <AnimatedBackground>
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="chevron-back" size={24} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>
+              {sessionTitle || 'Chat'}
+            </Text>
+          </View>
+          
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Loading messages...</Text>
+          </View>
         </View>
-        
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading messages...</Text>
-        </View>
-      </View>
+      </AnimatedBackground>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <AnimatedBackground>
+      <KeyboardAvoidingView 
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
+      >
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity 
@@ -322,15 +332,15 @@ export default function ChatThreadScreen({ navigation, route }) {
           >
             <Ionicons 
               name={quickActionsVisible ? "close" : "add"} 
-              size={20} 
-              color={colors.textSecondary} 
+              size={24} 
+              color="#FFFFFF" 
             />
           </TouchableOpacity>
           
           <TextInput
             style={styles.textInput}
             placeholder="Type a message..."
-            placeholderTextColor={colors.textSecondary}
+            placeholderTextColor="rgba(255, 255, 255, 0.7)"
             value={inputText}
             onChangeText={setInputText}
             multiline
@@ -342,7 +352,7 @@ export default function ChatThreadScreen({ navigation, route }) {
             onPress={sendMessage}
             disabled={!inputText.trim()}
           >
-            <Ionicons name="send" size={18} color="#FFFFFF" />
+            <Ionicons name="send" size={20} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
       </View>
@@ -399,26 +409,25 @@ export default function ChatThreadScreen({ navigation, route }) {
         visible={settingsModalVisible}
         onClose={() => setSettingsModalVisible(false)}
       />
-    </View>
+      </KeyboardAvoidingView>
+    </AnimatedBackground>
   );
 }
 
 const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   
   // Header styles
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingVertical: 12,
     paddingTop: 60,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    backgroundColor: 'transparent',
   },
   backButton: {
     padding: 8,
@@ -467,17 +476,17 @@ const createStyles = (colors) => StyleSheet.create({
   quickActionsContainer: {
     position: 'absolute',
     bottom: 120,
-    left: 16,
-    right: 16,
-    backgroundColor: colors.surface,
-    borderRadius: 16,
+    left: 20,
+    right: 20,
+    backgroundColor: colors.card,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.border + '40',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
   },
   quickActions: {
     flexDirection: 'row',
@@ -487,23 +496,22 @@ const createStyles = (colors) => StyleSheet.create({
   quickActionButton: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderRadius: 16,
   },
   quickActionLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 4,
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 6,
   },
   
   // Input styles
   inputContainer: {
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    backgroundColor: 'transparent',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 32, // Extra padding for iPhone notch/home indicator
   },
   inputRow: {
     flexDirection: 'row',
@@ -511,29 +519,27 @@ const createStyles = (colors) => StyleSheet.create({
     gap: 12,
   },
   quickActionToggle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.surfaceLight,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   textInput: {
     flex: 1,
-    backgroundColor: colors.surfaceLight,
-    color: colors.text,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    backgroundColor: colors.primary,
+    color: '#FFFFFF',
+    borderRadius: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
     maxHeight: 100,
     fontSize: 16,
   },
   sendButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },

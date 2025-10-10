@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   Animated,
   Image,
-  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
@@ -51,7 +50,6 @@ const ChatCard = ({
 }) => {
   const { colors } = useTheme();
   const scaleAnim = React.useRef(new Animated.Value(1)).current;
-  const unreadBadgeAnim = React.useRef(new Animated.Value(1)).current;
   const unreadBadgeAnim = React.useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -279,14 +277,6 @@ const ChatCard = ({
                   )}
                   
                   {showUnreadBadge && (
-                    <Animated.View 
-                      style={[
-                        styles.unreadBadge,
-                        {
-                          transform: [{ scale: unreadBadgeAnim }],
-                        },
-                      ]}
-                    >
                     <Animated.View 
                       style={[
                         styles.unreadBadge,

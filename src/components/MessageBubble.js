@@ -65,7 +65,7 @@ const MessageBubble = ({
               />
             )}
             {message.content && (
-              <Text style={[styles.messageText, { color: isOwn ? colors.white : colors.text }]}>
+              <Text style={[styles.messageText, { color: colors.text }]}>
                 {message.content}
               </Text>
             )}
@@ -79,14 +79,14 @@ const MessageBubble = ({
               <Ionicons 
                 name="location" 
                 size={16} 
-                color={isOwn ? colors.white : colors.primary} 
+                color={colors.primary} 
               />
-              <Text style={[styles.locationTitle, { color: isOwn ? colors.white : colors.text }]}>
+              <Text style={[styles.locationTitle, { color: colors.text }]}>
                 Location Shared
               </Text>
             </View>
             {message.metadata?.location?.address && (
-              <Text style={[styles.locationAddress, { color: isOwn ? colors.white : colors.textSecondary }]}>
+              <Text style={[styles.locationAddress, { color: colors.textSecondary }]}>
                 {message.metadata.location.address}
               </Text>
             )}
@@ -102,7 +102,7 @@ const MessageBubble = ({
               size="large"
               showText={true}
             />
-            <Text style={[styles.messageText, { color: isOwn ? colors.white : colors.text }]}>
+            <Text style={[styles.messageText, { color: colors.text }]}>
               {message.content}
             </Text>
           </View>
@@ -110,7 +110,7 @@ const MessageBubble = ({
       
       default:
         return (
-          <Text style={[styles.messageText, { color: isOwn ? colors.white : colors.text }]}>
+          <Text style={[styles.messageText, { color: colors.text }]}>
             {message.content}
           </Text>
         );
@@ -245,9 +245,9 @@ const createStyles = (colors, isOwn) => StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: isOwn ? colors.primary : colors.surface,
+    backgroundColor: isOwn ? colors.card : colors.surface,
     // Subtle gradient effect using shadow
-    shadowColor: isOwn ? colors.primaryDark : colors.border,
+    shadowColor: colors.border,
     shadowOffset: {
       width: 0,
       height: 1,

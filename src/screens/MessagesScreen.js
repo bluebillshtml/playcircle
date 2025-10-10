@@ -8,87 +8,65 @@ import {
   RefreshControl,
   ActivityIndicator,
   Animated,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { groupChats } from '../services/chatUtils';
-import ScreenHeader from '../components/ScreenHeader';
+import ChatCard from '../components/ChatCard';
+import AnimatedBackground from '../components/AnimatedBackground';
 
 // Simple mock data function as fallback
 const createMockChatListScenario = (count = 8) => {
+  const mockMessages = [
+    'See you there!',
+    'On my way!',
+    'Great game everyone!',
+    'Running 5 minutes late',
+    'Who is bringing the balls?',
+    'Same time next week?',
+    'Thanks for the match!',
+    'Court 2 is available',
+    'Lets do doubles next time',
+    'Anyone up for a rematch?',
+  ];
+  
+  const mockNames = [
+    'Sarah M.', 'Mike J.', 'Emma W.', 'James L.', 
+    'Lisa K.', 'David R.', 'Anna P.', 'Tom H.'
+  ];
+  
+  const courtNames = [
+    'Elite Padel Club', 'Downtown Tennis Court', 'City Sports Center',
+    'Riverside Courts', 'Premium Padel Arena', 'Metro Tennis Club',
+    'Sunset Sports Complex', 'Athletic Center Court'
+  ];
+  
   const mockChats = [];
   for (let i = 0; i < count; i++) {
     mockChats.push({
       chat_id: `chat_${i}`,
       court_session_id: `session_${i}`,
-      session_title: `Court ${i + 1} – Today 7:00 PM`,
-      session_date: new Date().toISOString().split('T')[0],
-      session_time: '19:00',
+      session_title: `${courtNames[i % courtNames.length]} – ${i % 2 === 0 ? 'Yesterday' : '2 days ago'}`,
+      session_date: new Date(Date.now() - (i + 1) * 86400000).toISOString().split('T')[0],
+      session_time: `${14 + (i % 6)}:${i % 2 === 0 ? '00' : '30'}`,
       session_duration: 90,
-      court_name: `Court ${i + 1}`,
-      sport_id: 'padel',
-      last_message_content: i % 3 === 0 ? 'See you there!' : i % 3 === 1 ? 'On my way! 🏃‍♂️' : 'Great game everyone!',
-      last_message_at: new Date(Date.now() - i * 60000).toISOString(),
-      last_message_user_name: 'Player',
-      unread_count: i % 4 === 0 ? Math.floor(Math.random() * 3) + 1 : 0,
-      member_count: Math.floor(Math.random() * 4) + 2,
-      is_happening_soon: i < count / 3,
-      sport_icon: 'tennisball',
-      time_display: '7:00 PM',
-      relative_time: `${i + 1}h ago`,
+      court_name: courtNames[i % courtNames.length],
+      sport_id: i % 3 === 0 ? 'padel' : i % 3 === 1 ? 'tennis' : 'basketball',
+      last_message_content: mockMessages[i % mockMessages.length],
+      last_message_at: new Date(Date.now() - i * 3600000).toISOString(),
+      last_message_user_name: mockNames[i % mockNames.length],
+      unread_count: i % 5 === 0 ? Math.floor(Math.random() * 3) + 1 : 0,
+      member_count: 4,
+      is_happening_soon: false,
+      sport_icon: i % 3 === 0 ? 'tennisball' : i % 3 === 1 ? 'tennisball' : 'basketball',
+      time_display: `${14 + (i % 6)}:${i % 2 === 0 ? '00' : '30'}`,
+      relative_time: i === 0 ? '1h ago' : i === 1 ? '3h ago' : `${i}h ago`,
     });
   }
   return mockChats;
 };
-// Simple ChatCard component for testing
-const SimpleChatCard = ({ chat, onPress, style, isHappeningSoon }) => {
-  const { colors } = useTheme();
-  
-  return (
-    <TouchableOpacity
-      style={[{
-        backgroundColor: colors.surface,
-        margin: 16,
-        padding: 20,
-        borderRadius: 16,
-        borderLeftWidth: isHappeningSoon ? 4 : 0,
-        borderLeftColor: colors.primary,
-      }, style]}
-      onPress={() => onPress(chat.chat_id)}
-    >
-      <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700', marginBottom: 8 }}>
-        {chat.session_title}
-      </Text>
-      <Text style={{ color: colors.textSecondary, fontSize: 14, marginBottom: 4 }}>
-        {chat.time_display} • {chat.member_count} players
-      </Text>
-      {chat.last_message_content && (
-        <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
-          {chat.last_message_content}
-        </Text>
-      )}
-      {chat.unread_count > 0 && (
-        <View style={{
-          position: 'absolute',
-          top: 16,
-          right: 16,
-          backgroundColor: colors.primary,
-          borderRadius: 10,
-          paddingHorizontal: 6,
-          paddingVertical: 2,
-          minWidth: 20,
-          alignItems: 'center',
-        }}>
-          <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>
-            {chat.unread_count}
-          </Text>
-        </View>
-      )}
-    </TouchableOpacity>
-  );
-};
-
 export default function MessagesScreen({ navigation }) {
   const { colors } = useTheme();
   const { user } = useAuth();
@@ -225,36 +203,66 @@ export default function MessagesScreen({ navigation }) {
   // Loading state
   if (loading && !refreshing) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.invisibleHeader} />
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Messages</Text>
+      <AnimatedBackground>
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <TouchableOpacity style={styles.menuButton} onPress={() => console.log('Menu pressed')}>
+              <Ionicons name="menu" size={28} color={colors.primary} />
+            </TouchableOpacity>
+
+            <View style={styles.searchContainer}>
+              <Ionicons name="search" size={20} color={colors.textSecondary} />
+              <Text style={styles.searchPlaceholder}>Search chats</Text>
+            </View>
+
+            <TouchableOpacity 
+              style={styles.settingsButton}
+              onPress={() => console.log('Settings pressed')}
+            >
+              <Ionicons name="settings-outline" size={28} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.loadingText}>Loading your chats...</Text>
+          </View>
         </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Loading your chats...</Text>
-        </View>
-      </View>
+      </AnimatedBackground>
     );
   }
 
   // Error state
   if (error && !refreshing) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.invisibleHeader} />
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Messages</Text>
+      <AnimatedBackground>
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <TouchableOpacity style={styles.menuButton} onPress={() => console.log('Menu pressed')}>
+              <Ionicons name="menu" size={28} color={colors.primary} />
+            </TouchableOpacity>
+
+            <View style={styles.searchContainer}>
+              <Ionicons name="search" size={20} color={colors.textSecondary} />
+              <Text style={styles.searchPlaceholder}>Search chats</Text>
+            </View>
+
+            <TouchableOpacity 
+              style={styles.settingsButton}
+              onPress={() => console.log('Settings pressed')}
+            >
+              <Ionicons name="settings-outline" size={28} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.errorContainer}>
+            <Ionicons name="alert-circle-outline" size={48} color={colors.textSecondary} />
+            <Text style={styles.errorTitle}>Unable to load chats</Text>
+            <Text style={styles.errorMessage}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={refreshChats}>
+              <Text style={styles.retryButtonText}>Try Again</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-        <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle-outline" size={48} color={colors.textSecondary} />
-          <Text style={styles.errorTitle}>Unable to load chats</Text>
-          <Text style={styles.errorMessage}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={refreshChats}>
-            <Text style={styles.retryButtonText}>Try Again</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      </AnimatedBackground>
     );
   }
 
@@ -262,55 +270,79 @@ export default function MessagesScreen({ navigation }) {
   const totalChats = groupedChats.happeningSoon.length + groupedChats.recent.length;
   if (totalChats === 0 && !loading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.invisibleHeader} />
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Messages</Text>
-        </View>
-        <ScrollView
-          contentContainerStyle={styles.emptyScrollContent}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={colors.primary}
-              colors={[colors.primary]}
-            />
-          }
-        >
-          <View style={styles.emptyContainer}>
-            <Ionicons name="chatbubbles-outline" size={64} color={colors.textSecondary} />
-            <Text style={styles.emptyTitle}>No chats yet</Text>
-            <Text style={styles.emptyMessage}>
-              Join a session to start chatting with other players!
-            </Text>
+      <AnimatedBackground>
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <TouchableOpacity style={styles.menuButton} onPress={() => console.log('Menu pressed')}>
+              <Ionicons name="menu" size={28} color={colors.primary} />
+            </TouchableOpacity>
+
+            <View style={styles.searchContainer}>
+              <Ionicons name="search" size={20} color={colors.textSecondary} />
+              <Text style={styles.searchPlaceholder}>Search chats</Text>
+            </View>
+
             <TouchableOpacity 
-              style={styles.exploreButton}
-              onPress={() => navigation.navigate('Home')}
+              style={styles.settingsButton}
+              onPress={() => console.log('Settings pressed')}
             >
-              <Ionicons name="search-outline" size={20} color="#FFFFFF" />
-              <Text style={styles.exploreButtonText}>Find Sessions</Text>
+              <Ionicons name="settings-outline" size={28} color={colors.primary} />
             </TouchableOpacity>
           </View>
-        </ScrollView>
-      </View>
+          <ScrollView
+            contentContainerStyle={styles.emptyScrollContent}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={colors.primary}
+                colors={[colors.primary]}
+              />
+            }
+          >
+            <View style={styles.emptyContainer}>
+              <Ionicons name="chatbubbles-outline" size={64} color={colors.textSecondary} />
+              <Text style={styles.emptyTitle}>No chats yet</Text>
+              <Text style={styles.emptyMessage}>
+                Join a session to start chatting with other players!
+              </Text>
+              <TouchableOpacity 
+                style={styles.exploreButton}
+                onPress={() => navigation.navigate('Home')}
+              >
+                <Ionicons name="search-outline" size={20} color="#FFFFFF" />
+                <Text style={styles.exploreButtonText}>Find Sessions</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </View>
+      </AnimatedBackground>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-        {/* Header */}
-        <ScreenHeader 
-          title="Messages" 
-          showRightButton={true}
-          rightButtonIcon="search-outline"
-          onRightButtonPress={() => {
-            // Search functionality can be added here
-            console.log('Search pressed');
-          }}
-        />
+    <AnimatedBackground>
+      <View style={styles.container}>
+        {/* Header with Menu, Search, and Settings */}
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.menuButton} onPress={() => console.log('Menu pressed')}>
+            <Ionicons name="menu" size={28} color={colors.text} />
+          </TouchableOpacity>
 
-        {/* Chat List */}
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color={colors.textSecondary} />
+            <Text style={styles.searchPlaceholder}>Search chats</Text>
+          </View>
+
+          <TouchableOpacity 
+            style={styles.settingsButton}
+            onPress={() => console.log('Settings pressed')}
+          >
+            <Ionicons name="settings-outline" size={28} color={colors.text} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Content Sections */}
         <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
           <ScrollView
             style={styles.scrollView}
@@ -325,75 +357,156 @@ export default function MessagesScreen({ navigation }) {
               />
             }
           >
-            {/* Happening Soon Section */}
-            {filteredGroupedChats.happeningSoon.length > 0 && (
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>Happening Soon</Text>
-                  <View style={styles.sectionBadge}>
-                    <Text style={styles.sectionBadgeText}>
-                      {filteredGroupedChats.happeningSoon.length}
-                    </Text>
-                  </View>
-                </View>
-                {filteredGroupedChats.happeningSoon.map((chat, index) => (
-                  <SimpleChatCard
-                    key={chat.chat_id}
-                    chat={chat}
-                    onPress={handleChatPress}
-                    isHappeningSoon={true}
-                  />
-                ))}
+            {/* Friends Section */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Friends</Text>
+                <TouchableOpacity>
+                  <Text style={styles.seeAllText}>See All</Text>
+                </TouchableOpacity>
               </View>
-            )}
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.friendsScrollContent}
+              >
+                {[
+                  { name: 'Sarah', avatar: 'https://i.pravatar.cc/150?img=1' },
+                  { name: 'Mike', avatar: 'https://i.pravatar.cc/150?img=12' },
+                  { name: 'Emma', avatar: 'https://i.pravatar.cc/150?img=5' },
+                  { name: 'James', avatar: 'https://i.pravatar.cc/150?img=13' },
+                  { name: 'Lisa', avatar: 'https://i.pravatar.cc/150?img=9' },
+                  { name: 'David', avatar: 'https://i.pravatar.cc/150?img=14' },
+                ].map((friend, index) => (
+                  <TouchableOpacity 
+                    key={index}
+                    style={styles.friendCard}
+                    onPress={() => console.log('Friend pressed:', friend.name)}
+                  >
+                    <View style={styles.friendAvatar}>
+                      <Image 
+                        source={{ uri: friend.avatar }} 
+                        style={styles.friendAvatarImage}
+                      />
+                    </View>
+                    <Text style={styles.friendName}>{friend.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
 
-            {/* Recent Section */}
-            {filteredGroupedChats.recent.length > 0 && (
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>Recent</Text>
-                  <View style={styles.sectionBadge}>
-                    <Text style={styles.sectionBadgeText}>
-                      {filteredGroupedChats.recent.length}
-                    </Text>
-                  </View>
+            {/* Upcoming Matches Section */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Upcoming Matches</Text>
+                <View style={styles.sectionBadge}>
+                  <Text style={styles.sectionBadgeText}>3</Text>
                 </View>
-                {filteredGroupedChats.recent.map((chat, index) => (
-                  <SimpleChatCard
+              </View>
+              {[
+                { court: 'Elite Padel Club', time: 'Today 7:00 PM', players: 4, sport: 'Padel', icon: 'tennisball' },
+                { court: 'Downtown Tennis Court', time: 'Tomorrow 9:30 AM', players: 4, sport: 'Tennis', icon: 'tennisball' },
+                { court: 'City Basketball Arena', time: 'Sat 6:00 PM', players: 8, sport: 'Basketball', icon: 'basketball' },
+              ].map((match, index) => (
+                <TouchableOpacity 
+                  key={index}
+                  style={styles.matchCard}
+                  onPress={() => console.log('Match pressed:', match.court)}
+                >
+                  <View style={styles.matchIcon}>
+                    <Ionicons name={match.icon} size={24} color={colors.primary} />
+                  </View>
+                  <View style={styles.matchInfo}>
+                    <Text style={styles.matchTitle}>{match.court}</Text>
+                    <Text style={styles.matchDetails}>{match.time} • {match.players} players</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Past Chats Section */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Past Chats</Text>
+                <View style={styles.sectionBadge}>
+                  <Text style={styles.sectionBadgeText}>
+                    {filteredGroupedChats.recent.length}
+                  </Text>
+                </View>
+              </View>
+              {filteredGroupedChats.recent.length > 0 ? (
+                filteredGroupedChats.recent.map((chat, index) => (
+                  <ChatCard
                     key={chat.chat_id}
                     chat={chat}
                     onPress={handleChatPress}
                     isHappeningSoon={false}
+                    style={styles.chatCard}
                   />
-                ))}
-              </View>
-            )}
-
-            {/* Search Results Empty State */}
-            {searchQuery.trim() && 
-             filteredGroupedChats.happeningSoon.length === 0 && 
-             filteredGroupedChats.recent.length === 0 && (
-              <View style={styles.searchEmptyContainer}>
-                <Ionicons name="search-outline" size={48} color={colors.textSecondary} />
-                <Text style={styles.searchEmptyTitle}>No chats found</Text>
-                <Text style={styles.searchEmptyMessage}>
-                  Try searching with different keywords
-                </Text>
-              </View>
-            )}
+                ))
+              ) : (
+                <View style={styles.emptySection}>
+                  <Ionicons name="chatbubbles-outline" size={40} color={colors.textSecondary} />
+                  <Text style={styles.emptySectionText}>No past chats yet</Text>
+                </View>
+              )}
+            </View>
 
             <View style={styles.bottomPadding} />
           </ScrollView>
         </Animated.View>
       </View>
+    </AnimatedBackground>
   );
 }
 
 const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: 'transparent',
   },
-
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+  },
+  menuButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 24,
+    gap: 12,
+    height: 48,
+  },
+  searchPlaceholder: {
+    flex: 1,
+    fontSize: 16,
+    color: colors.textSecondary,
+  },
+  settingsButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   content: {
     flex: 1,
   },
@@ -401,46 +514,130 @@ const createStyles = (colors) => StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 20,
+    paddingBottom: 32,
   },
   section: {
-    marginTop: 8,
+    marginTop: 0,
+    marginBottom: 24,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingVertical: 16,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
     color: colors.text,
-    letterSpacing: -0.3,
+    letterSpacing: -0.4,
   },
   sectionBadge: {
     backgroundColor: colors.primary,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 12,
-    minWidth: 24,
+    minWidth: 28,
     alignItems: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   sectionBadgeText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
     color: '#FFFFFF',
   },
+  seeAllText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  
+  // Friends Section
+  friendsScrollContent: {
+    paddingHorizontal: 20,
+    gap: 12,
+  },
+  friendCard: {
+    alignItems: 'center',
+    width: 70,
+  },
+  friendAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    overflow: 'hidden',
+  },
+  friendAvatarImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+  },
+  friendName: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.text,
+    textAlign: 'center',
+  },
+  
+  // Upcoming Matches Section
+  matchCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    padding: 16,
+    borderRadius: 16,
+    gap: 12,
+  },
+  matchIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primary + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  matchInfo: {
+    flex: 1,
+  },
+  matchTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 4,
+    letterSpacing: -0.2,
+  },
+  matchDetails: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  
+  // Past Chats Section
   chatCard: {
-    marginHorizontal: 16,
-    marginVertical: 4,
+    marginHorizontal: 20,
+    marginBottom: 12,
   },
-  firstChatCard: {
-    marginTop: 8,
+  emptySection: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    gap: 12,
   },
-  lastChatCard: {
-    marginBottom: 16,
+  emptySectionText: {
+    fontSize: 14,
+    color: colors.textSecondary,
   },
   
   // Loading state
@@ -494,46 +691,51 @@ const createStyles = (colors) => StyleSheet.create({
   // Empty state
   emptyScrollContent: {
     flexGrow: 1,
+    justifyContent: 'center',
+    paddingVertical: 60,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 40,
+    paddingVertical: 40,
   },
   emptyTitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '700',
     color: colors.text,
     marginTop: 24,
     marginBottom: 12,
     textAlign: 'center',
+    letterSpacing: -0.5,
   },
   emptyMessage: {
-    fontSize: 16,
+    fontSize: 17,
     color: colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 26,
     marginBottom: 32,
   },
   exploreButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.primary,
-    paddingHorizontal: 24,
+    paddingHorizontal: 28,
     paddingVertical: 16,
-    borderRadius: 20,
-    gap: 8,
+    borderRadius: 16,
+    gap: 10,
     shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 6,
   },
   exploreButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
+    letterSpacing: -0.3,
   },
   
   // Search empty state
@@ -542,24 +744,26 @@ const createStyles = (colors) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 40,
-    paddingVertical: 60,
+    paddingVertical: 80,
+    marginTop: 40,
   },
   searchEmptyTitle: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: 22,
+    fontWeight: '700',
     color: colors.text,
-    marginTop: 16,
-    marginBottom: 8,
+    marginTop: 20,
+    marginBottom: 10,
     textAlign: 'center',
+    letterSpacing: -0.3,
   },
   searchEmptyMessage: {
-    fontSize: 14,
+    fontSize: 16,
     color: colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 24,
   },
   
   bottomPadding: {
-    height: 20,
+    height: 40,
   },
 });
