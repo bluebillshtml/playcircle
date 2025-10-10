@@ -19,6 +19,7 @@ import CreateMatchScreen from './src/screens/CreateMatchScreen';
 import MessagesScreen from './src/screens/MessagesScreen';
 import ChatThreadScreen from './src/screens/ChatThreadScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
+import UserProfileScreen from './src/screens/UserProfileScreen';
 import MatchDetailScreen from './src/screens/MatchDetailScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
 import AccountSettingsScreen from './src/screens/AccountSettingsScreen';
@@ -141,6 +142,11 @@ function AppContent() {
               <Stack.Screen
                 name="Profile"
                 component={ScreenWithNavButton({ component: ProfileScreen, currentScreen: 'Profile' })}
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="UserProfile"
+                component={UserProfileScreen}
                 options={{ headerShown: false }}
               />
               <Stack.Screen

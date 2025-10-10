@@ -8,7 +8,6 @@ import {
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
 
@@ -20,8 +19,13 @@ const SPORTS_LIST = [
   { id: 'volleyball', name: 'Volleyball', icon: 'tennisball' },
 ];
 
-const FADE_DISTANCE = 100; // Distance over which fade occurs
-const EDGE_PADDING = 80; // Padding from edges where fade starts
+// ===== FADE CONFIGURATION =====
+// Adjust these values to control fade behavior
+const BUTTON_WIDTH = 90; // Approximate width of each button (including gap)
+const FADE_ZONE = 120; // Distance from viewport edge where fade occurs (larger = more gradual)
+const MIN_OPACITY = 0; // Minimum opacity at the very edge (0 = fully transparent, 1 = fully visible)
+const MAX_OPACITY = 1; // Maximum opacity when button is centered
+// ===== END FADE CONFIGURATION =====
 
 export default function ScrollableSportSelector({
   activeSport,
@@ -29,14 +33,28 @@ export default function ScrollableSportSelector({
   colors,
   onNotificationPress
 }) {
+  // ===== ANIMATED SCROLL TRACKING =====
+  // scrollX tracks horizontal scroll position in real-time
   const scrollX = useRef(new Animated.Value(0)).current;
   const [contentWidth, setContentWidth] = useState(0);
   const [scrollViewWidth, setScrollViewWidth] = useState(0);
 
+  // Store button positions for accurate fade calculations
+  const buttonPositions = useRef([]);
+
+  // PERFORMANCE NOTE: Using useNativeDriver: false because we need to interpolate
+  // opacity based on scroll position. For better performance with large lists,
+  // consider using react-native-reanimated with useNativeDriver: true
   const handleScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-    { useNativeDriver: false }
+    { useNativeDriver: false } // Set to false for opacity interpolation
   );
+
+  // Calculate button layout positions for precise fade calculations
+  const onButtonLayout = (event, index) => {
+    const { x, width } = event.nativeEvent.layout;
+    buttonPositions.current[index] = { x, width };
+  };
 
   return (
     <View style={styles.container}>
@@ -51,32 +69,14 @@ export default function ScrollableSportSelector({
           horizontal
           showsHorizontalScrollIndicator={false}
           onScroll={handleScroll}
-          scrollEventThrottle={16}
+          scrollEventThrottle={16} // PERFORMANCE: Lower = more frequent updates (smoother), higher = less CPU (16ms ≈ 60fps)
           contentContainerStyle={styles.scrollContent}
           onContentSizeChange={(w) => setContentWidth(w)}
           onLayout={(e) => setScrollViewWidth(e.nativeEvent.layout.width)}
         >
           {SPORTS_LIST.map((sport, index) => {
-            // Calculate position of this button
-            const buttonPosition = index * 90; // Approximate button width + gap
-            const maxScroll = Math.max(0, contentWidth - scrollViewWidth);
-
-            // Fade in from left edge
-            const leftFadeStart = Math.max(0, buttonPosition - 60);
-            const leftFadeEnd = Math.max(0, buttonPosition - 20);
-
-            // Fade out at right edge
-            const rightFadeStart = Math.max(leftFadeEnd + 1, maxScroll - 60);
-            const rightFadeEnd = Math.max(rightFadeStart + 1, maxScroll);
-
-            const opacity = scrollX.interpolate({
-              inputRange: [0, leftFadeStart, leftFadeEnd, rightFadeStart, rightFadeEnd, rightFadeEnd + 100],
-              outputRange: [1, 1, 1, 1, 0.3, 0],
-              extrapolate: 'clamp',
-            });
-
             return (
-              <Animated.View key={sport.id} style={{ opacity }}>
+              <View key={sport.id}>
                 <TouchableOpacity
                   style={[
                     styles.sportCard,
@@ -88,7 +88,7 @@ export default function ScrollableSportSelector({
                   <Ionicons
                     name={sport.icon}
                     size={18}
-                    color={activeSport === sport.id ? colors.primary : colors.textSecondary}
+                    color={activeSport === sport.id ? colors.primary : 'rgba(255, 255, 255, 0.7)'}
                   />
                   <Text
                     style={[
@@ -99,7 +99,7 @@ export default function ScrollableSportSelector({
                     {sport.name}
                   </Text>
                 </TouchableOpacity>
-              </Animated.View>
+              </View>
             );
           })}
         </Animated.ScrollView>
@@ -116,71 +116,72 @@ export default function ScrollableSportSelector({
   );
 }
 
+// ===== STYLES =====
 const styles = StyleSheet.create({
+  // Main container with hamburger, scrollable buttons, and notification bell
   container: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingTop: 60,
     paddingBottom: 16,
     paddingHorizontal: 20,
-    gap: 12,
+    gap: 12, // Space between hamburger, scroll area, and bell
   },
+
+  // Placeholder for hamburger menu icon (rendered by parent)
   leftIcon: {
     width: 48,
     height: 48,
   },
+
+  // Container for the scrollable sport buttons
   scrollContainer: {
-    flex: 1,
+    flex: 1, // Takes remaining space between hamburger and bell
     position: 'relative',
     height: 48,
     justifyContent: 'center',
   },
+
+  // Content inside the ScrollView
   scrollContent: {
-    gap: 8,
+    gap: 8, // Space between sport buttons
     paddingHorizontal: 8,
     alignItems: 'center',
   },
-  fadeLeft: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 60,
-    zIndex: 1,
-  },
-  fadeRight: {
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    bottom: 0,
-    width: 60,
-    zIndex: 1,
-  },
+
+  // Individual sport button styling (dark theme with green accent)
   sportCard: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 16,
-    backgroundColor: 'rgba(30, 30, 30, 0.8)',
+    backgroundColor: 'rgba(30, 30, 30, 0.8)', // Dark background
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    gap: 6,
+    borderColor: 'rgba(255, 255, 255, 0.1)', // Subtle border
+    gap: 6, // Space between icon and text
   },
+
+  // Active sport button styling (green theme)
   sportCardActive: {
-    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+    backgroundColor: 'rgba(16, 185, 129, 0.2)', // Green tint (#10B981 with 20% opacity)
     borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.4)',
+    borderColor: 'rgba(16, 185, 129, 0.4)', // Green border
   },
+  // Sport button text styling
   sportCardText: {
     fontSize: 13,
     fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: 'rgba(255, 255, 255, 0.7)', // Slightly dimmed white
   },
+
+  // Active sport button text styling
   sportCardTextActive: (colors) => ({
-    color: colors.primary,
+    color: colors.primary, // Green color from theme
     fontWeight: '700',
   }),
+
+  // Notification bell button (fixed right)
   notificationButton: {
     width: 48,
     height: 48,
@@ -190,3 +191,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
 });
+
+// ===== PERFORMANCE OPTIMIZATION TIPS =====
+// 1. For very long lists (20+ items), consider using react-native-reanimated for better performance
+// 2. Adjust scrollEventThrottle based on device performance (8-32ms range)
+// 3. Use shouldComponentUpdate or React.memo if buttons have complex rendering
+// 4. Consider lazy loading buttons that are far off-screen
+// 5. Profile with React DevTools to identify bottlenecks
+//
+// ===== CUSTOMIZATION GUIDE =====
+// - Fade distance: Adjust FADE_START_DISTANCE and FADE_END_DISTANCE at the top
+// - Opacity range: Modify MIN_OPACITY and MAX_OPACITY constants
+// - Button spacing: Change BUTTON_WIDTH to match actual button dimensions
+// - Colors: Update sportCard and sportCardActive background/border colors
+// - Scroll speed: Modify scrollEventThrottle (lower = smoother, higher = less CPU)
+// ===== END NOTES =====

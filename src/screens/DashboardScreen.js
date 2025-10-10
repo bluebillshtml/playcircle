@@ -87,7 +87,7 @@ const SPORTS_LIST = [
 export default function DashboardScreen({ navigation }) {
   const { colors } = useTheme();
   const { selectedSport } = useSport();
-  const [activeTab, setActiveTab] = useState('Region');
+  const [activeTab, setActiveTab] = useState('Local');
   const [activeSport, setActiveSport] = useState(selectedSport?.id || 'padel');
   const [leaderboardData, setLeaderboardData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -101,9 +101,36 @@ export default function DashboardScreen({ navigation }) {
   }, [activeTab, activeSport]);
 
   const loadLeaderboard = async () => {
-    // Use test data
-    const testData = LEADERBOARD_TEST_DATA[activeSport] || LEADERBOARD_TEST_DATA.padel;
-    setLeaderboardData(testData);
+    // Get base data for the sport
+    const baseData = LEADERBOARD_TEST_DATA[activeSport] || LEADERBOARD_TEST_DATA.padel;
+
+    // Modify data based on active tab
+    let filteredData = [...baseData];
+
+    if (activeTab === 'Local') {
+      // Show local players (within 200 miles) - simulate by showing top 8
+      filteredData = baseData.slice(0, 8);
+    } else if (activeTab === 'National') {
+      // Show national rankings - shuffle order slightly for variety
+      filteredData = [...baseData].sort((a, b) => {
+        // Adjust rankings slightly for national view
+        return (a.rank + Math.random() * 2) - (b.rank + Math.random() * 2);
+      }).map((user, index) => ({
+        ...user,
+        rank: index + 1,
+        points: user.points + Math.floor(Math.random() * 100)
+      }));
+    } else if (activeTab === 'Global') {
+      // Show global rankings - different order and higher points
+      filteredData = [...baseData].reverse().map((user, index) => ({
+        ...user,
+        rank: index + 1,
+        points: user.points + Math.floor(Math.random() * 500),
+        trend: Math.random() > 0.5 ? 'up' : 'down'
+      }));
+    }
+
+    setLeaderboardData(filteredData);
   };
 
   const renderTrendIcon = (trend) => {
@@ -136,10 +163,11 @@ export default function DashboardScreen({ navigation }) {
         {/* Navigation Tabs */}
         <View style={styles.tabContainer}>
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'Region' && styles.activeTab]}
-            onPress={() => setActiveTab('Region')}
+            style={[styles.tab, activeTab === 'Local' && styles.activeTab]}
+            onPress={() => setActiveTab('Local')}
           >
-            <Text style={[styles.tabText, activeTab === 'Region' && styles.activeTabText]}>Region</Text>
+            <Text style={[styles.tabText, activeTab === 'Local' && styles.activeTabText]}>Local</Text>
+            <Text style={[styles.tabSubtext, activeTab === 'Local' && styles.activeTabSubtext]}>200 mi</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.tab, activeTab === 'National' && styles.activeTab]}
@@ -227,7 +255,12 @@ export default function DashboardScreen({ navigation }) {
           showsVerticalScrollIndicator={false}
         >
           {restData.map((user, index) => (
-            <View key={user.id} style={styles.userCard}>
+            <TouchableOpacity
+              key={user.id}
+              style={styles.userCard}
+              onPress={() => navigation.navigate('UserProfile', { userId: user.id, userData: user })}
+              activeOpacity={0.7}
+            >
               <View style={styles.rankNumber}>
                 <Text style={styles.rankNumberText}>{user.rank}</Text>
               </View>
@@ -253,7 +286,7 @@ export default function DashboardScreen({ navigation }) {
                 <Text style={styles.pointsText}>{user.points}</Text>
                 {renderTrendIcon(user.trend)}
               </View>
-            </View>
+            </TouchableOpacity>
           ))}
         </ScrollView>
 
@@ -363,6 +396,15 @@ const createStyles = (colors) => StyleSheet.create({
   activeTabText: {
     color: colors.text,
     fontWeight: '600',
+  },
+  tabSubtext: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  activeTabSubtext: {
+    color: colors.primary,
+    fontWeight: '500',
   },
   top3Section: {
     paddingHorizontal: 20,
