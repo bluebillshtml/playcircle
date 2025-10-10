@@ -495,31 +495,30 @@ const FriendsScreen = ({ navigation }) => {
   return (
     <AnimatedBackground>
       <View style={styles.container}>
-        {/* Header */}
-        <ScreenHeader
-          title="Friends"
-          showRightButton={true}
-          rightButtonIcon="settings-outline"
-          onRightButtonPress={() => setSettingsVisible(true)}
-        />
-
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <View style={[styles.searchBar, { backgroundColor: colors.surface }]}>
-            <Ionicons name="search" size={20} color={colors.textSecondary} />
+        {/* Header with Search Bar and Settings */}
+        <View style={styles.header}>
+          <View style={[styles.headerSearchBar, { backgroundColor: colors.card, borderColor: colors.glassBorder }]}>
+            <Ionicons name="search" size={18} color={colors.textSecondary} />
             <TextInput
-              style={[styles.searchInput, { color: colors.text }]}
-              placeholder="Search friends and members..."
+              style={[styles.headerSearchInput, { color: colors.text }]}
+              placeholder="Search games"
               placeholderTextColor={colors.textSecondary}
               value={searchQuery}
               onChangeText={handleSearchInput}
             />
             {searchQuery.length > 0 && (
               <TouchableOpacity onPress={handleClearSearch}>
-                <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
+                <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
               </TouchableOpacity>
             )}
           </View>
+
+          <TouchableOpacity
+            style={[styles.settingsButton, { backgroundColor: colors.card, borderColor: colors.glassBorder }]}
+            onPress={() => setSettingsVisible(true)}
+          >
+            <Ionicons name="settings-outline" size={24} color={colors.text} />
+          </TouchableOpacity>
         </View>
 
         {/* Content */}
@@ -604,21 +603,46 @@ const createStyles = (colors) => StyleSheet.create({
     flex: 1,
   },
 
-  searchContainer: {
-    paddingHorizontal: 20,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: 60,
+    paddingHorizontal: 16,
     paddingBottom: 16,
+    paddingLeft: 76,
+    gap: 12,
   },
-  searchBar: {
+  headerSearchBar: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    gap: 12,
+    paddingVertical: 14,
+    borderRadius: 28,
+    gap: 10,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
-  searchInput: {
+  headerSearchInput: {
     flex: 1,
     fontSize: 16,
+  },
+  settingsButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   content: {
     flex: 1,

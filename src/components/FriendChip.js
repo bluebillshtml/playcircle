@@ -388,7 +388,8 @@ const FriendChip = ({
 const styles = StyleSheet.create({
   container: {
     width: CHIP_WIDTH,
-    borderRadius: 24,
+    height: CHIP_WIDTH,
+    borderRadius: 16,
     padding: 16,
     marginRight: 12,
     shadowColor: '#000',

@@ -19,7 +19,7 @@ import { BlurView } from 'expo-blur';
 
 const { width, height } = Dimensions.get('window');
 
-export default function NavigationButton({ navigation, currentScreen }) {
+export default function NavigationButton({ navigation, currentScreen, hide = false }) {
   const { colors } = useTheme();
   const { profile } = useAuth();
   const [navModalVisible, setNavModalVisible] = useState(false);
@@ -31,6 +31,11 @@ export default function NavigationButton({ navigation, currentScreen }) {
   // Safety check for navigation prop
   if (!navigation) {
     console.error('NavigationButton: navigation prop is undefined');
+    return null;
+  }
+
+  // Hide the navigation button if requested
+  if (hide) {
     return null;
   }
 

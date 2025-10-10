@@ -33,7 +33,7 @@ import AuthBackgroundVideo from './src/components/AuthBackgroundVideo';
 const Stack = createNativeStackNavigator();
 
 // Helper component to add NavigationButton to screens
-function ScreenWithNavButton({ component: Component, currentScreen, ...rest }) {
+function ScreenWithNavButton({ component: Component, currentScreen, hideNavButton = false, ...rest }) {
   return (props) => {
     return (
       <View style={{ flex: 1 }}>
@@ -41,6 +41,7 @@ function ScreenWithNavButton({ component: Component, currentScreen, ...rest }) {
         <NavigationButton
           navigation={props.navigation}
           currentScreen={currentScreen}
+          hide={hideNavButton}
         />
       </View>
     );
