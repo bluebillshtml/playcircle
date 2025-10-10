@@ -16,6 +16,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useSport } from '../context/SportContext';
 import { leaderboardService } from '../services/supabase';
 import NavigationButton from '../components/NavigationButton';
+import ScrollableSportSelector from '../components/ScrollableSportSelector';
 
 import AnimatedBackground from '../components/AnimatedBackground';
 
@@ -124,58 +125,13 @@ export default function DashboardScreen({ navigation }) {
       <View style={styles.container}>
         <NavigationButton navigation={navigation} currentScreen="Dashboard" />
 
-        {/* Header with Sport Selector */}
-        <View style={styles.headerContainer}>
-          <View style={styles.sportSelectorWrapper}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.sportSelector}
-              contentContainerStyle={styles.sportSelectorContent}
-            >
-              {SPORTS_LIST.map((sport) => (
-                <TouchableOpacity
-                  key={sport.id}
-                  style={[
-                    styles.sportCard,
-                    activeSport === sport.id && styles.sportCardActive
-                  ]}
-                  onPress={() => setActiveSport(sport.id)}
-                >
-                  <Ionicons
-                    name={sport.icon}
-                    size={18}
-                    color={activeSport === sport.id ? colors.primary : colors.textSecondary}
-                  />
-                  <Text style={[
-                    styles.sportCardText,
-                    activeSport === sport.id && styles.sportCardTextActive
-                  ]}>
-                    {sport.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-            <LinearGradient
-              colors={[colors.background, 'transparent']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.sportFadeLeft}
-              pointerEvents="none"
-            />
-            <LinearGradient
-              colors={['transparent', colors.background]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.sportFadeRight}
-              pointerEvents="none"
-            />
-          </View>
-        </View>
-
-        <TouchableOpacity style={styles.notificationButton}>
-          <Ionicons name="notifications-outline" size={24} color={colors.text} />
-        </TouchableOpacity>
+        {/* Scrollable Sport Selector with Fade */}
+        <ScrollableSportSelector
+          activeSport={activeSport}
+          onSportChange={setActiveSport}
+          colors={colors}
+          onNotificationPress={() => console.log('Notification pressed')}
+        />
 
         {/* Navigation Tabs */}
         <View style={styles.tabContainer}>
