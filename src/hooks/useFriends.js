@@ -70,6 +70,7 @@ export const useFriends = () => {
   const [suggestedFriends, setSuggestedFriends] = useState([]);
   const [recentMembers, setRecentMembers] = useState([]);
   const [friendRequests, setFriendRequests] = useState([]);
+  const [friends, setFriends] = useState([]);
   const [privacySettings, setPrivacySettings] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState(null);
@@ -223,6 +224,35 @@ export const useFriends = () => {
     }
   }, [user?.id, setLoadingState, clearError, setErrorState]);
 
+  const fetchFriends = useCallback(async (showLoading = true) => {
+    if (!user?.id) return;
+
+    try {
+      if (showLoading) setLoadingState('friends', true);
+      clearError('friends');
+
+      const response = await friendsService.getFriends(user.id);
+      
+      if (!mountedRef.current) return;
+
+      if (response.success && response.data) {
+        console.log('useFriends: Fetched friends:', response.data.length, 'friends');
+        console.log('useFriends: Friends list:', response.data.map(f => ({ id: f.id, name: f.full_name || f.username })));
+        setFriends(response.data);
+      } else {
+        throw new Error(response.error || 'Failed to fetch friends');
+      }
+    } catch (error) {
+      console.error('Error fetching friends:', error);
+      if (!mountedRef.current) return;
+      setErrorState('friends', error.message);
+    } finally {
+      if (mountedRef.current && showLoading) {
+        setLoadingState('friends', false);
+      }
+    }
+  }, [user?.id, setLoadingState, clearError, setErrorState]);
+
   const fetchPrivacySettings = useCallback(async (showLoading = true) => {
     if (!user?.id) return;
 
@@ -309,6 +339,7 @@ export const useFriends = () => {
   }, [user?.id, showErrorAlert, fetchSuggestedFriends, fetchRecentMembers]);
 
   const acceptFriendRequest = useCallback(async (requestId) => {
+    console.log('useFriends: acceptFriendRequest called with:', { requestId, userId: user?.id });
     if (!user?.id) {
       showErrorAlert('Error', 'You must be logged in to accept friend requests');
       return false;
@@ -316,20 +347,20 @@ export const useFriends = () => {
 
     try {
       const result = await friendsService.acceptFriendRequest(requestId, user.id);
+      console.log('useFriends: acceptFriendRequest result:', result);
       
       if (result.success) {
-        // Optimistically update the UI
-        setFriendRequests(prev => prev.filter(request => request.id !== requestId));
-        
-        // Refresh data to get accurate state
-        setTimeout(() => {
-          fetchFriendRequests(false);
-          fetchSuggestedFriends(false);
-          fetchRecentMembers(false);
-        }, 500);
+        // Refresh data immediately to get accurate state
+        await Promise.allSettled([
+          fetchFriends(false),
+          fetchFriendRequests(false),
+          fetchSuggestedFriends(false),
+          fetchRecentMembers(false),
+        ]);
 
         return true;
       } else {
+        console.error('useFriends: acceptFriendRequest failed:', result.error);
         showErrorAlert('Accept Request Failed', result.error || 'Unable to accept friend request');
         return false;
       }
@@ -341,6 +372,7 @@ export const useFriends = () => {
   }, [user?.id, showErrorAlert, fetchFriendRequests, fetchSuggestedFriends, fetchRecentMembers]);
 
   const declineFriendRequest = useCallback(async (requestId) => {
+    console.log('useFriends: declineFriendRequest called with:', { requestId, userId: user?.id });
     if (!user?.id) {
       showErrorAlert('Error', 'You must be logged in to decline friend requests');
       return false;
@@ -348,18 +380,15 @@ export const useFriends = () => {
 
     try {
       const result = await friendsService.declineFriendRequest(requestId, user.id);
+      console.log('useFriends: declineFriendRequest result:', result);
       
       if (result.success) {
-        // Optimistically update the UI
-        setFriendRequests(prev => prev.filter(request => request.id !== requestId));
-        
-        // Refresh data to get accurate state
-        setTimeout(() => {
-          fetchFriendRequests(false);
-        }, 500);
+        // Refresh data immediately to get accurate state
+        await fetchFriendRequests(false);
 
         return true;
       } else {
+        console.error('useFriends: declineFriendRequest failed:', result.error);
         showErrorAlert('Decline Request Failed', result.error || 'Unable to decline friend request');
         return false;
       }
@@ -427,7 +456,8 @@ export const useFriends = () => {
         setSearchResults({
           suggested_friends: response.data.suggested_friends,
           recent_members: response.data.recent_members,
-          total_count: response.data.suggested_friends.length + response.data.recent_members.length,
+          searchable_users: response.data.searchable_users || [],
+          total_count: response.data.suggested_friends.length + response.data.recent_members.length + (response.data.searchable_users?.length || 0),
         });
       } else {
         throw new Error(response.error || 'Search failed');
@@ -522,6 +552,7 @@ export const useFriends = () => {
     if (!user?.id) return;
 
     const promises = [
+      fetchFriends(),
       fetchSuggestedFriends(),
       fetchRecentMembers(),
       fetchFriendRequests(),
@@ -533,7 +564,7 @@ export const useFriends = () => {
     } catch (error) {
       console.error('Error refreshing data:', error);
     }
-  }, [user?.id, fetchSuggestedFriends, fetchRecentMembers, fetchFriendRequests, fetchPrivacySettings]);
+  }, [user?.id, fetchFriends, fetchSuggestedFriends, fetchRecentMembers, fetchFriendRequests, fetchPrivacySettings]);
 
   const retryFailedRequests = useCallback(() => {
     if (errors.suggested_friends) fetchSuggestedFriends();
@@ -580,7 +611,7 @@ export const useFriends = () => {
   // COMPUTED VALUES
   // =====================================================
 
-  const hasAnyData = suggestedFriends.length > 0 || recentMembers.length > 0;
+  const hasAnyData = suggestedFriends.length > 0 || recentMembers.length > 0 || friends.length > 0;
   const hasAnyErrors = Object.values(errors).some(error => error !== null);
   const isAnyLoading = Object.values(loading).some(isLoading => isLoading);
   const hasSearchResults = searchResults && searchResults.total_count > 0;
@@ -591,6 +622,7 @@ export const useFriends = () => {
 
   return {
     // Data
+    friends,
     suggestedFriends,
     recentMembers,
     friendRequests,

@@ -38,12 +38,7 @@ import {
   validatePrivacySettingsUpdate,
   sanitizeUserId,
 } from '../utils/friendsValidation';
-import {
-  createMockSuggestedFriends,
-  createMockRecentMembers,
-  createMockFriendRequests,
-  createMockPrivacySettings,
-} from '../utils/friendsFactory';
+
 
 // =====================================================
 // TYPES AND INTERFACES
@@ -89,68 +84,17 @@ export class FriendsService {
    */
   async getSuggestedFriends(userId: string): Promise<ApiResponse<SuggestedFriend[]>> {
     try {
-      // Check if supabase is available
-      if (!supabase) {
-        console.log('Supabase not available, using mock data');
-        const mockData = createMockSuggestedFriends(5);
-        return {
-          data: mockData,
-          error: null,
-          success: true,
-        };
-      }
-
-      // Validate user ID
-      const validation = validateUserId(userId);
-      if (!validation.valid) {
-        return {
-          data: null,
-          error: validation.errors.join(', '),
-          success: false,
-        };
-      }
-
-      const sanitizedUserId = sanitizeUserId(userId);
-
-      // Check cache first
-      const cacheKey = `suggested_friends_${sanitizedUserId}`;
-      const cached = this.getFromCache(cacheKey);
-      if (cached) {
-        return {
-          data: cached,
-          error: null,
-          success: true,
-        };
-      }
-
-      // Call the database function to get suggested friends
-      const { data, error } = await supabase.rpc('get_suggested_friends', {
-        p_user_id: sanitizedUserId,
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      const suggestedFriends = transformSuggestedFriends(data || []);
-      
-      // Cache the result
-      this.setCache(cacheKey, suggestedFriends);
-
+      // For now, return empty array since we don't have the database functions
+      // This can be implemented later when needed
       return {
-        data: suggestedFriends,
+        data: [],
         error: null,
         success: true,
       };
     } catch (error) {
       console.error('Error fetching suggested friends:', error);
-      
-      // Fallback to mock data when Supabase fails
-      console.log('Falling back to mock suggested friends data');
-      const mockData = createMockSuggestedFriends(5);
-      
       return {
-        data: mockData,
+        data: [],
         error: null,
         success: true,
       };
@@ -166,67 +110,17 @@ export class FriendsService {
    */
   async getRecentMembers(userId: string): Promise<ApiResponse<RecentMember[]>> {
     try {
-      // Check if supabase is available
-      if (!supabase) {
-        console.log('Supabase not available, using mock data');
-        const mockData = createMockRecentMembers(8);
-        return {
-          data: mockData,
-          error: null,
-          success: true,
-        };
-      }
-
-      const validation = validateUserId(userId);
-      if (!validation.valid) {
-        return {
-          data: null,
-          error: validation.errors.join(', '),
-          success: false,
-        };
-      }
-
-      const sanitizedUserId = sanitizeUserId(userId);
-
-      // Check cache first
-      const cacheKey = `recent_members_${sanitizedUserId}`;
-      const cached = this.getFromCache(cacheKey);
-      if (cached) {
-        return {
-          data: cached,
-          error: null,
-          success: true,
-        };
-      }
-
-      // Call the database function to get recent members
-      const { data, error } = await supabase.rpc('get_recent_members', {
-        p_user_id: sanitizedUserId,
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      const recentMembers = transformRecentMembers(data || []);
-      
-      // Cache the result
-      this.setCache(cacheKey, recentMembers);
-
+      // For now, return empty array since we don't have the database functions
+      // This can be implemented later when needed
       return {
-        data: recentMembers,
+        data: [],
         error: null,
         success: true,
       };
     } catch (error) {
       console.error('Error fetching recent members:', error);
-      
-      // Fallback to mock data when Supabase fails
-      console.log('Falling back to mock recent members data');
-      const mockData = createMockRecentMembers(8);
-      
       return {
-        data: mockData,
+        data: [],
         error: null,
         success: true,
       };
@@ -238,7 +132,7 @@ export class FriendsService {
   // =====================================================
 
   /**
-   * Send a friend request to another user
+   * Send a friend request to another user using database function
    */
   async sendFriendRequest(senderId: string, recipientId: string): Promise<FriendActionResult> {
     try {
@@ -254,23 +148,29 @@ export class FriendsService {
         };
       }
 
-      // Call the database function to send friend request
-      const { data, error } = await supabase.rpc('send_friend_request', {
-        sender_id: sanitizedSenderId,
-        recipient_id: sanitizedRecipientId,
-      });
+      console.log('Sending friend request from', sanitizedSenderId, 'to', sanitizedRecipientId);
+
+      // Use the JSONB database function which bypasses RLS with SECURITY DEFINER
+      const { data: friendshipId, error } = await supabase
+        .rpc('send_friend_request_jsonb', {
+          sender_id: sanitizedSenderId,
+          recipient_id: sanitizedRecipientId,
+        });
 
       if (error) {
+        console.error('RPC error:', error);
         throw error;
       }
 
-      // Clear relevant caches
+      console.log('Friend request sent successfully, friendship_id:', friendshipId);
+
+      // Clear cache for both users
       this.clearUserCaches(sanitizedSenderId);
       this.clearUserCaches(sanitizedRecipientId);
 
       return {
         success: true,
-        friendship_id: data,
+        friendship_id: friendshipId,
         updated_status: 'pending',
       };
     } catch (error) {
@@ -283,31 +183,32 @@ export class FriendsService {
   }
 
   /**
-   * Accept a friend request
+   * Accept a friend request using JSONB structure
    */
   async acceptFriendRequest(requestId: string, accepterId: string): Promise<FriendActionResult> {
     try {
-      const sanitizedRequestId = sanitizeUserId(requestId);
-      const sanitizedAccepterId = sanitizeUserId(accepterId);
+      // Extract sender ID from request ID (format: "request_<sender_id>")
+      const senderId = requestId.replace('request_', '');
+      
+      console.log('Accepting friend request from', senderId, 'by', accepterId);
 
-      const { data, error } = await supabase.rpc('accept_friend_request', {
-        friendship_id: sanitizedRequestId,
-        accepter_id: sanitizedAccepterId,
-      });
+      // Use the JSONB database function which bypasses RLS with SECURITY DEFINER
+      const { data, error } = await supabase
+        .rpc('accept_friend_request_jsonb', {
+          accepter_id: accepterId,
+          sender_id: senderId,
+        });
 
       if (error) {
+        console.error('RPC error:', error);
         throw error;
       }
 
-      if (!data) {
-        return {
-          success: false,
-          error: 'Friend request not found or already processed',
-        };
-      }
+      console.log('Friend request accepted successfully');
 
-      // Clear relevant caches
-      this.clearUserCaches(sanitizedAccepterId);
+      // Clear cache for both users
+      this.clearUserCaches(accepterId);
+      this.clearUserCaches(senderId);
 
       return {
         success: true,
@@ -323,31 +224,32 @@ export class FriendsService {
   }
 
   /**
-   * Decline a friend request
+   * Decline a friend request using JSONB structure
    */
   async declineFriendRequest(requestId: string, declinerId: string): Promise<FriendActionResult> {
     try {
-      const sanitizedRequestId = sanitizeUserId(requestId);
-      const sanitizedDeclinerId = sanitizeUserId(declinerId);
+      // Extract sender ID from request ID (format: "request_<sender_id>")
+      const senderId = requestId.replace('request_', '');
+      
+      console.log('Declining friend request from', senderId, 'by', declinerId);
 
-      const { data, error } = await supabase.rpc('decline_friend_request', {
-        friendship_id: sanitizedRequestId,
-        decliner_id: sanitizedDeclinerId,
-      });
+      // Use the JSONB database function which bypasses RLS with SECURITY DEFINER
+      const { data, error } = await supabase
+        .rpc('decline_friend_request_jsonb', {
+          decliner_id: declinerId,
+          sender_id: senderId,
+        });
 
       if (error) {
+        console.error('RPC error:', error);
         throw error;
       }
 
-      if (!data) {
-        return {
-          success: false,
-          error: 'Friend request not found or already processed',
-        };
-      }
+      console.log('Friend request declined successfully');
 
-      // Clear relevant caches
-      this.clearUserCaches(sanitizedDeclinerId);
+      // Clear cache for both users
+      this.clearUserCaches(declinerId);
+      this.clearUserCaches(senderId);
 
       return {
         success: true,
@@ -363,21 +265,10 @@ export class FriendsService {
   }
 
   /**
-   * Get pending friend requests for a user
+   * Get pending friend requests for a user using user_friends JSONB structure
    */
   async getPendingFriendRequests(userId: string): Promise<ApiResponse<FriendRequest[]>> {
     try {
-      // Check if supabase is available
-      if (!supabase) {
-        console.log('Supabase not available, using mock data');
-        const mockData = createMockFriendRequests(3);
-        return {
-          data: mockData,
-          error: null,
-          success: true,
-        };
-      }
-
       const validation = validateUserId(userId);
       if (!validation.valid) {
         return {
@@ -400,15 +291,68 @@ export class FriendsService {
         };
       }
 
-      const { data, error } = await supabase.rpc('get_pending_friend_requests', {
-        p_user_id: sanitizedUserId,
-      });
+      // Query the user_friends table for received requests
+      const { data: userFriendsData, error } = await supabase
+        .from('user_friends')
+        .select('friend_requests_received')
+        .eq('user_id', sanitizedUserId)
+        .single();
 
-      if (error) {
+      if (error && error.code !== 'PGRST116') {
         throw error;
       }
 
-      const friendRequests = transformFriendRequests(data || []);
+      if (!userFriendsData || !userFriendsData.friend_requests_received) {
+        return {
+          data: [],
+          error: null,
+          success: true,
+        };
+      }
+
+      // Extract pending request user IDs
+      const pendingRequests = userFriendsData.friend_requests_received
+        .filter((request: any) => request.status === 'pending');
+
+      if (pendingRequests.length === 0) {
+        return {
+          data: [],
+          error: null,
+          success: true,
+        };
+      }
+
+      const requestUserIds = pendingRequests.map((request: any) => request.user_id);
+
+      // Get profiles of users who sent requests
+      const { data: requestProfiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, username, full_name, avatar_url')
+        .in('id', requestUserIds);
+
+      if (profilesError) {
+        throw profilesError;
+      }
+
+      // Transform to FriendRequest objects
+      const friendRequests = (requestProfiles || []).map((profile: any) => {
+        const requestData = pendingRequests.find((r: any) => r.user_id === profile.id);
+        return {
+          id: `request_${profile.id}`, // Generate a request ID
+          from_user: {
+            id: profile.id,
+            username: profile.username || '',
+            full_name: profile.full_name || '',
+            avatar_url: profile.avatar_url,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+          to_user_id: sanitizedUserId,
+          status: 'pending' as const,
+          created_at: requestData?.requested_at || new Date().toISOString(),
+          updated_at: requestData?.requested_at || new Date().toISOString(),
+        };
+      });
       
       // Cache the result
       this.setCache(cacheKey, friendRequests);
@@ -420,15 +364,10 @@ export class FriendsService {
       };
     } catch (error) {
       console.error('Error fetching friend requests:', error);
-      
-      // Fallback to mock data when Supabase fails
-      console.log('Falling back to mock friend requests data');
-      const mockData = createMockFriendRequests(3);
-      
       return {
-        data: mockData,
-        error: null,
-        success: true,
+        data: null,
+        error: transformApiError(error),
+        success: false,
       };
     }
   }
@@ -438,7 +377,7 @@ export class FriendsService {
   // =====================================================
 
   /**
-   * Get user's friends list
+   * Get user's friends list using the user_friends JSONB structure
    */
   async getFriends(userId: string): Promise<ApiResponse<Friend[]>> {
     try {
@@ -464,15 +403,60 @@ export class FriendsService {
         };
       }
 
-      const { data, error } = await supabase.rpc('get_user_friends', {
-        p_user_id: sanitizedUserId,
-      });
+      // Query the user_friends table directly
+      const { data: userFriendsData, error } = await supabase
+        .from('user_friends')
+        .select('friends')
+        .eq('user_id', sanitizedUserId)
+        .single();
 
-      if (error) {
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
         throw error;
       }
 
-      const friends = transformFriends(data || []);
+      if (!userFriendsData || !userFriendsData.friends) {
+        return {
+          data: [],
+          error: null,
+          success: true,
+        };
+      }
+
+      // Extract friend IDs from the JSONB array
+      const friendIds = userFriendsData.friends
+        .filter((friend: any) => friend.status === 'accepted')
+        .map((friend: any) => friend.user_id);
+
+      if (friendIds.length === 0) {
+        return {
+          data: [],
+          error: null,
+          success: true,
+        };
+      }
+
+      // Get friend profiles
+      const { data: friendProfiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, username, full_name, avatar_url')
+        .in('id', friendIds);
+
+      if (profilesError) {
+        throw profilesError;
+      }
+
+      // Transform to Friend objects
+      const friends = (friendProfiles || []).map((profile: any) => {
+        const friendData = userFriendsData.friends.find((f: any) => f.user_id === profile.id);
+        return {
+          id: profile.id,
+          username: profile.username || '',
+          full_name: profile.full_name || '',
+          avatar_url: profile.avatar_url,
+          friendship_date: friendData?.added_at || new Date().toISOString(),
+          online_status: false, // Placeholder
+        };
+      });
       
       // Cache the result
       this.setCache(cacheKey, friends);
@@ -531,21 +515,10 @@ export class FriendsService {
   // =====================================================
 
   /**
-   * Get user's privacy settings
+   * Get user's privacy settings (returns default settings for now)
    */
   async getPrivacySettings(userId: string): Promise<ApiResponse<PrivacySettings>> {
     try {
-      // Check if supabase is available
-      if (!supabase) {
-        console.log('Supabase not available, using mock data');
-        const mockData = createMockPrivacySettings();
-        return {
-          data: mockData,
-          error: null,
-          success: true,
-        };
-      }
-
       const validation = validateUserId(userId);
       if (!validation.valid) {
         return {
@@ -555,78 +528,26 @@ export class FriendsService {
         };
       }
 
-      const sanitizedUserId = sanitizeUserId(userId);
-
-      // Check cache first
-      const cacheKey = `privacy_settings_${sanitizedUserId}`;
-      const cached = this.getFromCache(cacheKey);
-      if (cached) {
-        return {
-          data: cached,
-          error: null,
-          success: true,
-        };
-      }
-
-      const { data, error } = await supabase
-        .from('user_privacy_settings')
-        .select('*')
-        .eq('user_id', sanitizedUserId)
-        .single();
-
-      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-        throw error;
-      }
-
-      // If no settings exist, create default ones
-      if (!data) {
-        const defaultSettings = {
-          user_id: sanitizedUserId,
-          allow_friend_requests: 'everyone',
-          show_online_status: true,
-        };
-
-        const { data: newData, error: insertError } = await supabase
-          .from('user_privacy_settings')
-          .insert(defaultSettings)
-          .select()
-          .single();
-
-        if (insertError) {
-          throw insertError;
-        }
-
-        const privacySettings = transformPrivacySettings(newData);
-        this.setCache(cacheKey, privacySettings);
-
-        return {
-          data: privacySettings,
-          error: null,
-          success: true,
-        };
-      }
-
-      const privacySettings = transformPrivacySettings(data);
-      
-      // Cache the result
-      this.setCache(cacheKey, privacySettings);
+      // Return default privacy settings for now
+      const defaultSettings: PrivacySettings = {
+        user_id: userId,
+        allow_friend_requests: 'everyone',
+        show_online_status: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
 
       return {
-        data: privacySettings,
+        data: defaultSettings,
         error: null,
         success: true,
       };
     } catch (error) {
       console.error('Error fetching privacy settings:', error);
-      
-      // Fallback to mock data when Supabase fails
-      console.log('Falling back to mock privacy settings data');
-      const mockData = createMockPrivacySettings();
-      
       return {
-        data: mockData,
-        error: null,
-        success: true,
+        data: null,
+        error: transformApiError(error),
+        success: false,
       };
     }
   }
@@ -699,11 +620,12 @@ export class FriendsService {
   // =====================================================
 
   /**
-   * Search for users across suggested friends and recent members
+   * Search for users globally (anyone who allows friend requests from everyone)
    */
   async searchUsers(userId: string, query: string): Promise<ApiResponse<{
     suggested_friends: SuggestedFriend[];
     recent_members: RecentMember[];
+    searchable_users: User[];
   }>> {
     try {
       const validation = validateUserId(userId);
@@ -723,43 +645,87 @@ export class FriendsService {
           data: {
             suggested_friends: [],
             recent_members: [],
+            searchable_users: [],
           },
           error: null,
           success: true,
         };
       }
 
-      // Get both suggested friends and recent members
+      // Search for users globally who allow friend requests from everyone
+      const { data: searchableUsers, error: searchError } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          username,
+          full_name,
+          first_name,
+          last_name,
+          avatar_url,
+          favorite_sports
+        `)
+        .neq('id', sanitizedUserId) // Exclude current user
+        .or(`first_name.ilike.%${sanitizedQuery}%,full_name.ilike.%${sanitizedQuery}%,username.ilike.%${sanitizedQuery}%`)
+        .eq('is_active', true)
+        .limit(20);
+
+      if (searchError) {
+        throw searchError;
+      }
+
+      // Filter out users who are already friends
+      const { data: userFriendsData } = await supabase
+        .from('user_friends')
+        .select('friends')
+        .eq('user_id', sanitizedUserId)
+        .single();
+
+      const existingFriendIds = new Set();
+      if (userFriendsData?.friends) {
+        userFriendsData.friends.forEach((friend: any) => {
+          if (friend.status === 'accepted') {
+            existingFriendIds.add(friend.user_id);
+          }
+        });
+      }
+
+      // Filter out existing friends and transform to User objects
+      const availableUsers = (searchableUsers || [])
+        .filter(user => !existingFriendIds.has(user.id))
+        .map(user => ({
+          id: user.id,
+          username: user.username || '',
+          full_name: user.full_name || '',
+          first_name: user.first_name || '',
+          last_name: user.last_name || '',
+          avatar_url: user.avatar_url,
+          favorite_sports: user.favorite_sports || [],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }));
+
+      // Get both suggested friends and recent members (existing functionality)
       const [suggestedResponse, recentResponse] = await Promise.all([
         this.getSuggestedFriends(sanitizedUserId),
         this.getRecentMembers(sanitizedUserId),
       ]);
 
-      if (!suggestedResponse.success || !recentResponse.success) {
-        return {
-          data: null,
-          error: suggestedResponse.error || recentResponse.error,
-          success: false,
-        };
-      }
-
-      // Filter results based on search query
+      // Filter existing results based on search query
       const filteredSuggested = (suggestedResponse.data || []).filter(friend =>
         friend.username.toLowerCase().includes(sanitizedQuery) ||
-        friend.full_name.toLowerCase().includes(sanitizedQuery) ||
-        friend.sport_tags.some(tag => tag.toLowerCase().includes(sanitizedQuery))
+        friend.full_name.toLowerCase().includes(sanitizedQuery)
       );
 
       const filteredRecent = (recentResponse.data || []).filter(member =>
         member.username.toLowerCase().includes(sanitizedQuery) ||
-        member.full_name.toLowerCase().includes(sanitizedQuery) ||
-        member.last_interaction.location.toLowerCase().includes(sanitizedQuery)
+        member.full_name.toLowerCase().includes(sanitizedQuery)
       );
 
       return {
         data: {
           suggested_friends: filteredSuggested,
           recent_members: filteredRecent,
+          searchable_users: availableUsers,
         },
         error: null,
         success: true,
@@ -767,30 +733,10 @@ export class FriendsService {
     } catch (error) {
       console.error('Error searching users:', error);
       
-      // Fallback to mock data when Supabase fails
-      console.log('Falling back to mock search data');
-      const mockSuggested = createMockSuggestedFriends(3);
-      const mockRecent = createMockRecentMembers(3);
-      
-      // Filter mock data based on query
-      const sanitizedQuery = query.trim().toLowerCase();
-      const filteredSuggested = mockSuggested.filter(friend =>
-        friend.username.toLowerCase().includes(sanitizedQuery) ||
-        friend.full_name.toLowerCase().includes(sanitizedQuery)
-      );
-      
-      const filteredRecent = mockRecent.filter(member =>
-        member.username.toLowerCase().includes(sanitizedQuery) ||
-        member.full_name.toLowerCase().includes(sanitizedQuery)
-      );
-      
       return {
-        data: {
-          suggested_friends: filteredSuggested,
-          recent_members: filteredRecent,
-        },
-        error: null,
-        success: true,
+        data: null,
+        error: transformApiError(error),
+        success: false,
       };
     }
   }

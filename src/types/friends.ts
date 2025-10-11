@@ -222,6 +222,7 @@ export interface SearchQuery {
 export interface SearchResults {
   suggested_friends: SuggestedFriend[];
   recent_members: RecentMember[];
+  searchable_users: User[];
   total_count: number;
 }
 

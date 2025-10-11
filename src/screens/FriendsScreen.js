@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,18 +10,23 @@ import {
   RefreshControl,
   Alert,
   Animated,
+  Image,
+  Modal,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import useFriends from '../hooks/useFriends';
+import { supabase } from '../services/supabase';
 import FriendChip from '../components/FriendChip';
 import MemberRow from '../components/MemberRow';
 import RequestStrip from '../components/RequestStrip';
 import SettingsBottomSheet from '../components/SettingsBottomSheet';
 import ScreenHeader from '../components/ScreenHeader';
 import AnimatedBackground from '../components/AnimatedBackground';
+import SearchDropdown from '../components/SearchDropdown';
 
 const FriendsScreen = ({ navigation }) => {
   const { colors } = useTheme();
@@ -29,6 +34,10 @@ const FriendsScreen = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState(null); // Track which action is loading
   const [isOffline, setIsOffline] = useState(false);
+  const [searchDropdownVisible, setSearchDropdownVisible] = useState(false);
+  const [friendshipStatuses, setFriendshipStatuses] = useState({}); // Track friendship statuses for search results
+  const [showAllFriendsModal, setShowAllFriendsModal] = useState(false);
+  const [pendingSentRequests, setPendingSentRequests] = useState([]);
   
   // Animation values
   const fadeAnim = useState(new Animated.Value(0))[0];
@@ -36,6 +45,7 @@ const FriendsScreen = ({ navigation }) => {
 
   const {
     // Data
+    friends,
     suggestedFriends,
     recentMembers,
     friendRequests,
@@ -86,13 +96,144 @@ const FriendsScreen = ({ navigation }) => {
     ]).start();
   }, []);
 
+  // Check friendship statuses for search results
+  const checkFriendshipStatuses = useCallback(async (userIds) => {
+    if (!user?.id || !userIds || userIds.length === 0) return;
+
+    try {
+      // Get current user's friends and sent requests
+      const { data: userData } = await supabase
+        .from('user_friends')
+        .select('friends, friend_requests_sent')
+        .eq('user_id', user.id)
+        .single();
+
+      const statuses = {};
+
+      userIds.forEach(userId => {
+        // Check if already friends
+        const isFriend = userData?.friends?.some(
+          friend => friend.user_id === userId && friend.status === 'accepted'
+        );
+
+        if (isFriend) {
+          statuses[userId] = 'friends';
+          return;
+        }
+
+        // Check if request is pending
+        const hasPendingRequest = userData?.friend_requests_sent?.some(
+          request => request.user_id === userId && request.status === 'pending'
+        );
+
+        if (hasPendingRequest) {
+          statuses[userId] = 'pending';
+          return;
+        }
+
+        statuses[userId] = 'none';
+      });
+
+      setFriendshipStatuses(statuses);
+    } catch (error) {
+      console.error('Error checking friendship statuses:', error);
+    }
+  }, [user?.id]);
+
+  // Check statuses when search results change
+  useEffect(() => {
+    if (searchResults?.searchable_users && searchResults.searchable_users.length > 0) {
+      const userIds = searchResults.searchable_users.map(u => u.id);
+      checkFriendshipStatuses(userIds);
+    }
+  }, [searchResults, checkFriendshipStatuses]);
+
+  // Fetch pending sent requests
+  const fetchPendingSentRequests = useCallback(async () => {
+    if (!user?.id) return;
+
+    try {
+      const { data: userData } = await supabase
+        .from('user_friends')
+        .select('friend_requests_sent')
+        .eq('user_id', user.id)
+        .single();
+
+      console.log('FriendsScreen: friend_requests_sent from DB:', userData?.friend_requests_sent);
+
+      if (userData?.friend_requests_sent) {
+        const pendingRequests = userData.friend_requests_sent
+          .filter((request) => request.status === 'pending')
+          .map((request) => request.user_id);
+
+        console.log('FriendsScreen: Pending request user IDs:', pendingRequests);
+
+        if (pendingRequests.length > 0) {
+          // Get profiles for pending users
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, username, full_name, avatar_url')
+            .in('id', pendingRequests);
+
+          console.log('FriendsScreen: Pending profiles fetched:', profiles?.map(p => ({ id: p.id, name: p.full_name || p.username })));
+          setPendingSentRequests(profiles || []);
+        } else {
+          setPendingSentRequests([]);
+        }
+      } else {
+        setPendingSentRequests([]);
+      }
+    } catch (error) {
+      console.error('Error fetching pending sent requests:', error);
+      setPendingSentRequests([]);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    fetchPendingSentRequests();
+  }, [fetchPendingSentRequests, friends]);
+
   // Handle search input changes
   const handleSearchInput = (query) => {
     handleSearch(query);
+    const shouldShow = query.trim().length > 0;
+    console.log('Search input:', query, 'Should show dropdown:', shouldShow);
+    setSearchDropdownVisible(shouldShow);
   };
 
   const handleClearSearch = () => {
     clearSearch();
+    setSearchDropdownVisible(false);
+  };
+
+  const handleSearchFocus = () => {
+    if (searchQuery.trim().length > 0) {
+      setSearchDropdownVisible(true);
+    }
+  };
+
+  const handleSearchBlur = () => {
+    // Keep dropdown visible for a brief moment to allow clicks
+    setTimeout(() => setSearchDropdownVisible(false), 150);
+  };
+
+  const handleDropdownUserSelect = (user) => {
+    // Close dropdown when user is selected
+    setSearchDropdownVisible(false);
+    
+    // Navigate to UserProfile screen (same as leaderboard behavior)
+    navigation.navigate('UserProfile', { 
+      userId: user.id, 
+      userData: {
+        id: user.id,
+        name: user.full_name || user.username,
+        username: user.username,
+        avatar: user.avatar_url,
+        points: 0, // Default values since we don't have this data
+        rank: 0,
+        trend: 'up',
+      }
+    });
   };
 
   // Enhanced error handling utilities
@@ -172,7 +313,11 @@ const FriendsScreen = ({ navigation }) => {
   };
 
   const handleAddFriend = async (userId) => {
+    if (actionLoading === `add-${userId}`) return;
+    
     try {
+      setActionLoading(`add-${userId}`);
+      
       // Haptic feedback for add friend action
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       
@@ -197,6 +342,8 @@ const FriendsScreen = ({ navigation }) => {
           () => handleAddFriend(userId)
         );
       }
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -319,11 +466,13 @@ const FriendsScreen = ({ navigation }) => {
   };
 
   const handleAcceptRequest = async (requestId) => {
+    console.log('FriendsScreen: handleAcceptRequest called with requestId:', requestId);
     try {
       // Haptic feedback for accept action
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       
       const success = await acceptFriendRequest(requestId);
+      console.log('FriendsScreen: acceptFriendRequest result:', success);
       if (success) {
         // Success haptic feedback
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -337,8 +486,10 @@ const FriendsScreen = ({ navigation }) => {
   };
 
   const handleDeclineRequest = async (requestId) => {
+    console.log('FriendsScreen: handleDeclineRequest called with requestId:', requestId);
     try {
       const success = await declineFriendRequest(requestId);
+      console.log('FriendsScreen: declineFriendRequest result:', success);
       if (success) {
         Alert.alert('Success', 'Friend request declined.');
       }
@@ -356,9 +507,9 @@ const FriendsScreen = ({ navigation }) => {
   };
 
   const renderSuggestedFriends = () => {
-    // Use search results if searching, otherwise use regular data
-    const friendsToShow = hasSearchResults ? searchResults.suggested_friends : suggestedFriends;
-    const isLoading = loading.search || (loading.suggested_friends && suggestedFriends.length === 0);
+    // Always show regular suggested friends, never search results
+    const friendsToShow = suggestedFriends;
+    const isLoading = loading.suggested_friends && suggestedFriends.length === 0;
 
     if (isLoading) {
       return (
@@ -372,10 +523,8 @@ const FriendsScreen = ({ navigation }) => {
     }
 
     if (friendsToShow.length === 0) {
-      const emptyTitle = hasSearchResults ? 'No friends found' : 'No suggestions yet';
-      const emptySubtitle = hasSearchResults 
-        ? 'Try a different search term' 
-        : 'Play more games to discover new friends';
+      const emptyTitle = 'No suggestions yet';
+      const emptySubtitle = 'Play more games to discover new friends';
 
       return (
         <View style={[styles.emptyContainer, { backgroundColor: colors.surface + '40', borderRadius: 24, marginHorizontal: 24, borderWidth: 1, borderColor: colors.glassBorder }]}>
@@ -414,9 +563,9 @@ const FriendsScreen = ({ navigation }) => {
   };
 
   const renderRecentMembers = () => {
-    // Use search results if searching, otherwise use regular data
-    const membersToShow = hasSearchResults ? searchResults.recent_members : recentMembers;
-    const isLoading = loading.search || (loading.recent_members && recentMembers.length === 0);
+    // Always show regular recent members, never search results
+    const membersToShow = recentMembers;
+    const isLoading = loading.recent_members && recentMembers.length === 0;
 
     if (isLoading) {
       return (
@@ -430,10 +579,8 @@ const FriendsScreen = ({ navigation }) => {
     }
 
     if (membersToShow.length === 0) {
-      const emptyTitle = hasSearchResults ? 'No members found' : 'No recent interactions';
-      const emptySubtitle = hasSearchResults 
-        ? 'Try a different search term' 
-        : 'Members you\'ve played with will appear here';
+      const emptyTitle = 'No recent interactions';
+      const emptySubtitle = 'Members you\'ve played with will appear here';
 
       return (
         <View style={[styles.emptyContainer, { backgroundColor: colors.surface + '40', borderRadius: 24, marginHorizontal: 24, borderWidth: 1, borderColor: colors.glassBorder }]}>
@@ -466,6 +613,7 @@ const FriendsScreen = ({ navigation }) => {
     );
   };
 
+
   const renderFriendRequests = () => {
     if (!hasPendingRequests) return null;
 
@@ -494,6 +642,81 @@ const FriendsScreen = ({ navigation }) => {
     );
   };
 
+  const renderFriendsList = () => {
+    if (loading.friends) {
+      return (
+        <View style={styles.friendsLoadingContainer}>
+          <ActivityIndicator size="small" color={colors.primary} />
+        </View>
+      );
+    }
+
+    const totalCount = friends.length + pendingSentRequests.length;
+    if (totalCount === 0) {
+      return null; // Don't show empty state, it's handled by the global empty state
+    }
+
+    // Combine friends and pending requests
+    const allFriendsToShow = [...friends, ...pendingSentRequests];
+    const displayedFriends = allFriendsToShow.slice(0, 8);
+
+    return (
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionHeaderTitle, { color: colors.text }]}>
+            My Friends
+          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View style={[styles.badge, { backgroundColor: colors.primary }]}>
+              <Text style={styles.badgeText}>{totalCount}</Text>
+            </View>
+            <TouchableOpacity onPress={() => setShowAllFriendsModal(true)}>
+              <Text style={[styles.seeAllText, { color: colors.primary }]}>See All</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+        
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.friendsScrollContent}
+        >
+          {displayedFriends.map((friend) => {
+            const isPending = pendingSentRequests.some(p => p.id === friend.id);
+            return (
+              <TouchableOpacity
+                key={friend.id}
+                style={styles.friendCard}
+                onPress={() => navigation.navigate('UserProfile', { userId: friend.id, userData: friend })}
+              >
+                <View style={styles.friendAvatar}>
+                  {friend.avatar_url ? (
+                    <Image
+                      source={{ uri: friend.avatar_url }}
+                      style={styles.friendAvatarImage}
+                    />
+                  ) : (
+                    <View style={[styles.friendAvatarPlaceholder, { backgroundColor: colors.primary + '20' }]}>
+                      <Ionicons name="person" size={24} color={colors.primary} />
+                    </View>
+                  )}
+                  {isPending && (
+                    <View style={[styles.pendingBadge, { backgroundColor: colors.textSecondary }]}>
+                      <Ionicons name="time" size={12} color="#FFFFFF" />
+                    </View>
+                  )}
+                </View>
+                <Text style={[styles.friendName, { color: colors.text }]} numberOfLines={1}>
+                  {friend.full_name || friend.username}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+    );
+  };
+
   const styles = createStyles(colors);
 
   return (
@@ -501,20 +724,24 @@ const FriendsScreen = ({ navigation }) => {
       <View style={styles.container}>
         {/* Header with Search Bar and Settings */}
         <View style={styles.header}>
-          <View style={[styles.headerSearchBar, { backgroundColor: colors.card, borderColor: colors.glassBorder }]}>
-            <Ionicons name="search" size={18} color={colors.textSecondary} />
-            <TextInput
-              style={[styles.headerSearchInput, { color: colors.text }]}
-              placeholder="Search games"
-              placeholderTextColor={colors.textSecondary}
-              value={searchQuery}
-              onChangeText={handleSearchInput}
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={handleClearSearch}>
-                <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
-              </TouchableOpacity>
-            )}
+          <View style={styles.searchBarContainer}>
+            <View style={[styles.headerSearchBar, { backgroundColor: colors.card, borderColor: colors.glassBorder }]}>
+              <Ionicons name="search" size={18} color={colors.textSecondary} />
+              <TextInput
+                style={[styles.headerSearchInput, { color: colors.text }]}
+                placeholder="Search friends"
+                placeholderTextColor={colors.textSecondary}
+                value={searchQuery}
+                onChangeText={handleSearchInput}
+                onFocus={handleSearchFocus}
+                onBlur={handleSearchBlur}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={handleClearSearch}>
+                  <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
 
           <TouchableOpacity
@@ -524,6 +751,18 @@ const FriendsScreen = ({ navigation }) => {
             <Ionicons name="settings-outline" size={24} color={colors.text} />
           </TouchableOpacity>
         </View>
+
+        {/* Search Dropdown - Outside of ScrollView to appear on top */}
+        <SearchDropdown
+          users={searchResults?.searchable_users || []}
+          loading={loading.search}
+          onUserSelect={handleDropdownUserSelect}
+          onAddFriend={handleAddFriend}
+          actionLoading={actionLoading}
+          visible={searchDropdownVisible}
+          style={styles.searchDropdownAbsolute}
+          friendshipStatuses={friendshipStatuses}
+        />
 
         {/* Content */}
         <Animated.ScrollView 
@@ -543,41 +782,8 @@ const FriendsScreen = ({ navigation }) => {
             />
           }
         >
-          {/* Friend Requests Section */}
-          {renderFriendRequests()}
-
-          {/* Search Results Indicator */}
-          {hasSearchResults && (
-            <View style={styles.searchResultsHeader}>
-              <Text style={[styles.searchResultsText, { color: colors.textSecondary }]}>
-                Search results for "{searchQuery}"
-              </Text>
-              <TouchableOpacity onPress={handleClearSearch}>
-                <Text style={[styles.clearSearchText, { color: colors.primary }]}>
-                  Clear
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Suggested Friends Section */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {hasSearchResults ? 'Friends' : 'Suggested Friends'}
-            </Text>
-            {renderSuggestedFriends()}
-          </View>
-
-          {/* Recent Members Section */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {hasSearchResults ? 'Members' : 'Recent Members'}
-            </Text>
-            {renderRecentMembers()}
-          </View>
-
-          {/* Empty State */}
-          {!hasAnyData && !loading.suggested_friends && !loading.recent_members && (
+          {/* Empty State - Only show when user has no friends, no suggestions, no recent members, and no pending requests */}
+          {!hasAnyData && !hasPendingRequests && !loading.suggested_friends && !loading.recent_members && (
             <View style={[styles.globalEmptyContainer, { backgroundColor: colors.surface + '40', borderRadius: 32, marginHorizontal: 24, borderWidth: 1, borderColor: colors.glassBorder }]}>
               <View style={[styles.globalEmptyIconContainer, { backgroundColor: colors.primary + '20' }]}>
                 <Ionicons name="people-outline" size={72} color={colors.primary} />
@@ -599,6 +805,28 @@ const FriendsScreen = ({ navigation }) => {
               </TouchableOpacity>
             </View>
           )}
+
+          {/* Friend Requests Section */}
+          {renderFriendRequests()}
+
+          {/* My Friends Section */}
+          {renderFriendsList()}
+
+          {/* Suggested Friends Section */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Suggested Friends
+            </Text>
+            {renderSuggestedFriends()}
+          </View>
+
+          {/* Recent Members Section */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Recent Members
+            </Text>
+            {renderRecentMembers()}
+          </View>
         </Animated.ScrollView>
 
         {/* Settings Bottom Sheet */}
@@ -608,6 +836,162 @@ const FriendsScreen = ({ navigation }) => {
           privacySettings={privacySettings}
           onUpdateSettings={handleUpdatePrivacySettings}
         />
+
+        {/* All Friends Modal */}
+        <Modal
+          visible={showAllFriendsModal}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setShowAllFriendsModal(false)}
+          statusBarTranslucent={true}
+        >
+          <BlurView intensity={80} style={styles.modalOverlay} tint="dark">
+            <View style={styles.modalDarkOverlay} />
+            <View style={styles.allFriendsModal}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>All Friends</Text>
+                <TouchableOpacity
+                  style={styles.modalCloseButton}
+                  onPress={() => setShowAllFriendsModal(false)}
+                >
+                  <Ionicons name="close" size={24} color={colors.text} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView
+                contentContainerStyle={styles.friendsListContent}
+                showsVerticalScrollIndicator={false}
+              >
+                {/* Pinned Friends Section */}
+                <View style={styles.pinnedSection}>
+                  <Text style={styles.pinnedSectionTitle}>
+                    Pinned Friends ({Math.min(friends.length, 8)}/8)
+                  </Text>
+                  <View style={styles.pinnedGrid}>
+                    {Array.from({ length: 8 }, (_, index) => {
+                      const friend = [...friends, ...pendingSentRequests][index];
+                      const isPending = friend && pendingSentRequests.some(p => p.id === friend.id);
+                      return (
+                        <TouchableOpacity
+                          key={friend?.id || `empty_${index}`}
+                          style={[styles.pinnedFriendCard, !friend && styles.emptyPinnedCard]}
+                          onPress={() => {
+                            if (friend) {
+                              setShowAllFriendsModal(false);
+                              navigation.navigate('UserProfile', { userId: friend.id, userData: friend });
+                            }
+                          }}
+                          disabled={!friend}
+                        >
+                          {friend ? (
+                            <>
+                              <View style={styles.pinnedFriendAvatar}>
+                                {friend.avatar_url ? (
+                                  <Image
+                                    source={{ uri: friend.avatar_url }}
+                                    style={styles.pinnedFriendAvatarImage}
+                                  />
+                                ) : (
+                                  <View style={[styles.friendAvatarPlaceholder, { backgroundColor: colors.primary + '20', width: 56, height: 56, borderRadius: 28 }]}>
+                                    <Ionicons name="person" size={24} color={colors.primary} />
+                                  </View>
+                                )}
+                                {isPending && (
+                                  <View style={styles.pinnedPendingBadge}>
+                                    <Ionicons name="time" size={12} color="#FFFFFF" />
+                                  </View>
+                                )}
+                              </View>
+                              <Text style={styles.pinnedFriendName} numberOfLines={1}>
+                                {friend.full_name || friend.username}
+                              </Text>
+                            </>
+                          ) : (
+                            <View style={styles.emptyPinnedSlot}>
+                              <Ionicons name="add" size={24} color="rgba(255, 255, 255, 0.4)" />
+                            </View>
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                {/* All Friends Section */}
+                <View style={styles.allFriendsSection}>
+                  <Text style={styles.allFriendsSectionTitle}>All Friends</Text>
+                  {friends.map((friend) => (
+                    <TouchableOpacity
+                      key={friend.id}
+                      style={styles.friendListItem}
+                      onPress={() => {
+                        setShowAllFriendsModal(false);
+                        navigation.navigate('UserProfile', { userId: friend.id, userData: friend });
+                      }}
+                    >
+                      <View style={styles.friendListAvatar}>
+                        {friend.avatar_url ? (
+                          <Image
+                            source={{ uri: friend.avatar_url }}
+                            style={styles.friendListAvatarImage}
+                          />
+                        ) : (
+                          <View style={[styles.friendAvatarPlaceholder, { backgroundColor: colors.primary + '20', width: 48, height: 48, borderRadius: 24 }]}>
+                            <Ionicons name="person" size={20} color={colors.primary} />
+                          </View>
+                        )}
+                      </View>
+                      <View style={styles.friendListInfo}>
+                        <Text style={styles.friendListName}>
+                          {friend.full_name || friend.username}
+                        </Text>
+                        <Text style={styles.friendListStatus}>
+                          Friends
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+
+                  {/* Pending Requests */}
+                  {pendingSentRequests.length > 0 && pendingSentRequests.map((friend) => (
+                    <TouchableOpacity
+                      key={friend.id}
+                      style={styles.friendListItem}
+                      onPress={() => {
+                        setShowAllFriendsModal(false);
+                        navigation.navigate('UserProfile', { userId: friend.id, userData: friend });
+                      }}
+                    >
+                      <View style={styles.friendListAvatar}>
+                        {friend.avatar_url ? (
+                          <Image
+                            source={{ uri: friend.avatar_url }}
+                            style={styles.friendListAvatarImage}
+                          />
+                        ) : (
+                          <View style={[styles.friendAvatarPlaceholder, { backgroundColor: colors.primary + '20', width: 48, height: 48, borderRadius: 24 }]}>
+                            <Ionicons name="person" size={20} color={colors.primary} />
+                          </View>
+                        )}
+                        <View style={styles.onlineIndicatorLarge}>
+                          <Ionicons name="time" size={10} color="#FFFFFF" />
+                        </View>
+                      </View>
+                      <View style={styles.friendListInfo}>
+                        <Text style={styles.friendListName}>
+                          {friend.full_name || friend.username}
+                        </Text>
+                        <Text style={styles.friendListStatus}>
+                          Pending request
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+            </View>
+          </BlurView>
+        </Modal>
       </View>
     </AnimatedBackground>
   );
@@ -620,12 +1004,23 @@ const createStyles = (colors) => StyleSheet.create({
 
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingTop: 60,
     paddingHorizontal: 20,
     paddingBottom: 20,
     paddingLeft: 76,
     gap: 16,
+    width: '100%',
+  },
+  searchBarContainer: {
+    flex: 1,
+  },
+  searchDropdownAbsolute: {
+    position: 'absolute',
+    top: 130, // Position below the header
+    left: 96, // Align with search bar (76 + 20)
+    right: 88, // Account for settings button and padding
+    zIndex: 99999,
   },
   headerSearchBar: {
     flex: 1,
@@ -817,6 +1212,334 @@ const createStyles = (colors) => StyleSheet.create({
   clearSearchText: {
     fontSize: 15,
     fontWeight: '600',
+  },
+  
+  // Searchable Users Styles
+  searchUserRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border + '20',
+  },
+  searchUserInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+  },
+  searchUserAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primary + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchUserAvatarText: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  searchUserDetails: {
+    flex: 1,
+    gap: 2,
+  },
+  searchUserName: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  searchUserUsername: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  searchUserSports: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 4,
+  },
+  sportTag: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  sportTagText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  addFriendButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    gap: 4,
+  },
+  addFriendButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+
+  // Friends List Section
+  friendsLoadingContainer: {
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+  friendsScrollContent: {
+    paddingHorizontal: 24,
+    gap: 12,
+  },
+  friendCard: {
+    alignItems: 'center',
+    width: 70,
+  },
+  friendAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    overflow: 'hidden',
+  },
+  friendAvatarImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+  },
+  friendAvatarPlaceholder: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  friendName: {
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  pendingBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.surface,
+  },
+  seeAllText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+
+  // Modal Styles (matching Messages tab)
+  modalOverlay: {
+    flex: 1,
+  },
+  modalDarkOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+  },
+  allFriendsModal: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '85%',
+    backgroundColor: colors.card,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    paddingTop: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 28,
+    paddingBottom: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border + '30',
+  },
+  modalTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: colors.text,
+    letterSpacing: -0.5,
+  },
+  modalCloseButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  friendsListContent: {
+    paddingHorizontal: 28,
+    paddingTop: 20,
+    paddingBottom: 40,
+  },
+
+  // Pinned Friends Section
+  pinnedSection: {
+    marginBottom: 32,
+  },
+  pinnedSectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 16,
+    letterSpacing: -0.3,
+  },
+  pinnedGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  pinnedFriendCard: {
+    width: '22%',
+    aspectRatio: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background,
+    borderRadius: 16,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  emptyPinnedCard: {
+    backgroundColor: colors.background + '60',
+    borderStyle: 'dashed',
+    borderColor: colors.border + '60',
+  },
+  pinnedFriendAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    overflow: 'hidden',
+    position: 'relative',
+    marginBottom: 6,
+  },
+  pinnedFriendAvatarImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  pinnedPendingBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: colors.textSecondary,
+    borderWidth: 2,
+    borderColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pinnedFriendName: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.text,
+    textAlign: 'center',
+  },
+  emptyPinnedSlot: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.border + '40',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+
+  // All Friends Section
+  allFriendsSection: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border + '30',
+    paddingTop: 24,
+  },
+  allFriendsSectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 16,
+    letterSpacing: -0.3,
+  },
+  friendListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: colors.background,
+    borderRadius: 16,
+    marginBottom: 8,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: colors.border + '40',
+  },
+  friendListAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.card,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  friendListAvatarImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+  },
+  friendListInfo: {
+    flex: 1,
+  },
+  friendListName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 2,
+  },
+  friendListStatus: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  onlineIndicatorLarge: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.textSecondary,
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 
