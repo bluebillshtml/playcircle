@@ -40,6 +40,7 @@ export default function SplashScreen({ onComplete }) {
           style={styles.video}
           resizeMode="cover"
           shouldPlay
+          isMuted={true}
           isLooping={false}
           onPlaybackStatusUpdate={(status) => {
             if (status.didJustFinish && !isVideoEnding) {
