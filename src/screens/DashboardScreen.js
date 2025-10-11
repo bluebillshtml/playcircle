@@ -14,7 +14,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
 import { useSport } from '../context/SportContext';
-import { leaderboardService } from '../services/supabase';
+import { useAuth } from '../context/AuthContext';
+import { leaderboardService, profileService } from '../services/supabase';
 import NavigationButton from '../components/NavigationButton';
 import ScrollableSportSelector from '../components/ScrollableSportSelector';
 
@@ -87,18 +88,76 @@ const SPORTS_LIST = [
 export default function DashboardScreen({ navigation }) {
   const { colors } = useTheme();
   const { selectedSport } = useSport();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('Local');
   const [activeSport, setActiveSport] = useState(selectedSport?.id || 'padel');
   const [leaderboardData, setLeaderboardData] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [userSports, setUserSports] = useState([]);
 
   useEffect(() => {
     setActiveSport(selectedSport?.id || 'padel');
   }, [selectedSport]);
 
   useEffect(() => {
+    loadUserSports();
+  }, [user]);
+
+  useEffect(() => {
     loadLeaderboard();
   }, [activeTab, activeSport]);
+
+  const loadUserSports = async () => {
+    if (!user) return;
+
+    try {
+      console.log('🏆 Loading user sports for leaderboard...');
+      const sportProfiles = await profileService.getUserSportProfiles(user.id);
+      
+      if (sportProfiles && sportProfiles.length > 0) {
+        // Map sport profiles to sport objects with icons
+        const sportsMap = {
+          'padel': { id: 'padel', name: 'Padel', icon: 'tennisball' },
+          'tennis': { id: 'tennis', name: 'Tennis', icon: 'tennisball-outline' },
+          'pickleball': { id: 'pickleball', name: 'Pickleball', icon: 'baseball' },
+          'basketball': { id: 'basketball', name: 'Basketball', icon: 'basketball' },
+          'volleyball': { id: 'volleyball', name: 'Volleyball', icon: 'football' },
+          'soccer': { id: 'soccer', name: 'Soccer', icon: 'football-outline' },
+        };
+
+        const userSportsList = sportProfiles
+          .map(profile => sportsMap[profile.sport_id])
+          .filter(Boolean); // Remove any undefined sports
+
+        console.log('✅ User sports loaded for leaderboard:', userSportsList.map(s => s.name));
+        setUserSports(userSportsList);
+
+        // If current active sport is not in user's sports, switch to first available
+        if (userSportsList.length > 0 && !userSportsList.find(s => s.id === activeSport)) {
+          setActiveSport(userSportsList[0].id);
+          console.log(`🔄 Switched active sport to: ${userSportsList[0].name}`);
+        }
+      } else {
+        console.log('📭 No sport profiles found, using default sports');
+        // Fallback to default sports if no profiles found
+        const defaultSports = [
+          { id: 'padel', name: 'Padel', icon: 'tennisball' },
+          { id: 'tennis', name: 'Tennis', icon: 'tennisball-outline' },
+          { id: 'basketball', name: 'Basketball', icon: 'basketball' },
+        ];
+        setUserSports(defaultSports);
+      }
+    } catch (error) {
+      console.error('❌ Error loading user sports:', error);
+      // Fallback to default sports on error
+      const defaultSports = [
+        { id: 'padel', name: 'Padel', icon: 'tennisball' },
+        { id: 'tennis', name: 'Tennis', icon: 'tennisball-outline' },
+        { id: 'basketball', name: 'Basketball', icon: 'basketball' },
+      ];
+      setUserSports(defaultSports);
+    }
+  };
 
   const loadLeaderboard = async () => {
     // Get base data for the sport
@@ -157,10 +216,28 @@ export default function DashboardScreen({ navigation }) {
           activeSport={activeSport}
           onSportChange={setActiveSport}
           colors={colors}
+          sports={userSports}
           onNotificationPress={() => console.log('Notification pressed')}
         />
 
-        {/* Navigation Tabs */}
+        {/* Empty State - No Sports */}
+        {userSports.length === 0 ? (
+          <View style={styles.emptyStateContainer}>
+            <Ionicons name="trophy-outline" size={64} color={colors.textSecondary} />
+            <Text style={styles.emptyStateTitle}>No Sports Selected</Text>
+            <Text style={styles.emptyStateSubtitle}>
+              Add sports to your profile to see leaderboards
+            </Text>
+            <TouchableOpacity 
+              style={styles.emptyStateButton}
+              onPress={() => navigation.navigate('Preferences')}
+            >
+              <Text style={styles.emptyStateButtonText}>Add Sports</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <>
+            {/* Navigation Tabs */}
         <View style={styles.tabContainer}>
           <TouchableOpacity
             style={[styles.tab, activeTab === 'Local' && styles.activeTab]}
@@ -290,6 +367,8 @@ export default function DashboardScreen({ navigation }) {
           ))}
         </ScrollView>
 
+          </>
+        )}
       </View>
     </AnimatedBackground>
   );
@@ -299,6 +378,39 @@ const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'transparent',
+  },
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+    paddingVertical: 60,
+  },
+  emptyStateTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: colors.text,
+    marginTop: 20,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyStateSubtitle: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 30,
+  },
+  emptyStateButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  emptyStateButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   headerContainer: {
     paddingTop: 60,

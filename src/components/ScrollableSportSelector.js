@@ -11,7 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
-const SPORTS_LIST = [
+const DEFAULT_SPORTS_LIST = [
   { id: 'padel', name: 'Padel', icon: 'tennisball' },
   { id: 'tennis', name: 'Tennis', icon: 'tennisball' },
   { id: 'basketball', name: 'Basketball', icon: 'basketball' },
@@ -31,7 +31,8 @@ export default function ScrollableSportSelector({
   activeSport,
   onSportChange,
   colors,
-  onNotificationPress
+  onNotificationPress,
+  sports = DEFAULT_SPORTS_LIST // Allow custom sports list, fallback to default
 }) {
   // ===== ANIMATED SCROLL TRACKING =====
   // scrollX tracks horizontal scroll position in real-time
@@ -74,7 +75,7 @@ export default function ScrollableSportSelector({
           onContentSizeChange={(w) => setContentWidth(w)}
           onLayout={(e) => setScrollViewWidth(e.nativeEvent.layout.width)}
         >
-          {SPORTS_LIST.map((sport, index) => {
+          {sports.map((sport, index) => {
             return (
               <View key={sport.id}>
                 <TouchableOpacity
