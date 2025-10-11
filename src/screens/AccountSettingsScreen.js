@@ -10,12 +10,16 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
-import { profileService } from '../services/supabase';
+import { profileService, supabase } from '../services/supabase';
 import AnimatedBackground from '../components/AnimatedBackground';
+import ProfilePicture from '../components/ProfilePicture';
+import ProfilePreviewModal from '../components/ProfilePreviewModal';
 
 export default function AccountSettingsScreen({ navigation }) {
   const { colors } = useTheme();
@@ -23,6 +27,7 @@ export default function AccountSettingsScreen({ navigation }) {
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   // Form state - parse full_name into first and last name
   const parseFullName = (fullName) => {
@@ -41,19 +46,47 @@ export default function AccountSettingsScreen({ navigation }) {
   const [phone, setPhone] = useState('');
   const [bio, setBio] = useState('');
   const [location, setLocation] = useState('');
+  const [profileImage, setProfileImage] = useState(profile?.profile_picture_url || null);
+  const [coverImage, setCoverImage] = useState(profile?.cover_picture_url || null);
 
+  // Store original values to detect changes
+  const [originalValues, setOriginalValues] = useState({
+    firstName: '',
+    lastName: '',
+    username: '',
+    phone: '',
+    bio: '',
+    location: '',
+    profileImage: null,
+    coverImage: null,
+  });
 
   // Update form state when profile changes
   useEffect(() => {
     if (profile) {
       const { first, last } = parseFullName(profile.full_name);
-      setFirstName(first);
-      setLastName(last);
-      setUsername(profile.username || '');
-      setPhone(profile.phone || '');
-      setBio(profile.bio || '');
-      setLocation(profile.location || '');
-
+      const initialValues = {
+        firstName: first,
+        lastName: last,
+        username: profile.username || '',
+        phone: profile.phone || '',
+        bio: profile.bio || '',
+        location: profile.location || '',
+        profileImage: profile.profile_picture_url || null,
+        coverImage: profile.cover_picture_url || null,
+      };
+      
+      setFirstName(initialValues.firstName);
+      setLastName(initialValues.lastName);
+      setUsername(initialValues.username);
+      setPhone(initialValues.phone);
+      setBio(initialValues.bio);
+      setLocation(initialValues.location);
+      setProfileImage(initialValues.profileImage);
+      setCoverImage(initialValues.coverImage);
+      
+      // Store original values for comparison
+      setOriginalValues(initialValues);
     }
     if (user) {
       setEmail(user.email || '');
@@ -62,56 +95,83 @@ export default function AccountSettingsScreen({ navigation }) {
 
   const styles = createStyles(colors);
 
+  // Check if any changes have been made
+  const hasChanges = () => {
+    return (
+      firstName !== originalValues.firstName ||
+      lastName !== originalValues.lastName ||
+      username !== originalValues.username ||
+      phone !== originalValues.phone ||
+      bio !== originalValues.bio ||
+      location !== originalValues.location ||
+      profileImage !== originalValues.profileImage ||
+      coverImage !== originalValues.coverImage
+    );
+  };
 
 
-  // Auto-save to Supabase when any field changes
-  useEffect(() => {
-    const saveTimeout = setTimeout(() => {
-      if (profile && user) {
-        handleAutoSave();
-      }
-    }, 1000); // Debounce for 1 second
 
-    return () => clearTimeout(saveTimeout);
-  }, [firstName, lastName, username, phone, bio, location]);
-
-  const handleAutoSave = async () => {
+  const handlePickImage = async () => {
     try {
-      // Ensure we have a user and profile before attempting to save
-      if (!user || !user.id) {
-        console.log('No user found, skipping auto-save');
+      // Request permission
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Please grant photo library access to change your profile picture.'
+        );
         return;
       }
 
-      const updates = {
-        first_name: firstName,
-        last_name: lastName,
-        username: username,
-        phone: phone,
-        bio: bio,
-        location: location,
-        full_name: `${firstName} ${lastName}`.trim() || 'User',
-        updated_at: new Date().toISOString(),
-        // Preserve onboarding_completed flag
-        onboarding_completed: profile?.onboarding_completed ?? true,
-      };
+      // Launch image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
 
-      console.log('Auto-saving profile updates:', updates);
-      const updatedProfile = await profileService.updateProfile(user.id, updates);
-      setProfile({ ...profile, ...updatedProfile });
-      console.log('Auto-save successful');
-    } catch (error) {
-      // Silent fail for auto-save, don't disturb user
-      console.error('Auto-save error:', error);
-      // If it's a JSON coercion error, log more details
-      if (error.message && error.message.includes('coerce')) {
-        console.error('JSON coercion error details:', {
-          error: error.message,
-          code: error.code,
-          details: error.details,
-          hint: error.hint
-        });
+      if (!result.canceled && result.assets[0]) {
+        const imageUri = result.assets[0].uri;
+        // Only set the local state - don't upload until user saves
+        setProfileImage(imageUri);
       }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image. Please try again.');
+    }
+  };
+
+  const handlePickCoverImage = async () => {
+    try {
+      // Request permission
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Please grant photo library access to change your cover photo.'
+        );
+        return;
+      }
+
+      // Launch image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [16, 9], // Wide aspect ratio for cover photo
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const imageUri = result.assets[0].uri;
+        // Only set the local state - don't upload until user saves
+        setCoverImage(imageUri);
+      }
+    } catch (error) {
+      console.error('Error picking cover image:', error);
+      Alert.alert('Error', 'Failed to pick cover image. Please try again.');
     }
   };
 
@@ -128,6 +188,93 @@ export default function AccountSettingsScreen({ navigation }) {
 
     setSaving(true);
     try {
+      let profilePictureUrl = originalValues.profileImage;
+      let coverPictureUrl = originalValues.coverImage;
+
+      // Handle profile picture upload if changed
+      if (profileImage !== originalValues.profileImage && profileImage && !profileImage.startsWith('http')) {
+        try {
+          const fileName = `profile_${user.id}_${Date.now()}.jpg`;
+
+          // Create FormData for React Native
+          const formData = new FormData();
+          formData.append('file', {
+            uri: profileImage,
+            type: 'image/jpeg',
+            name: fileName,
+          });
+
+          // Upload to Supabase storage bucket using FormData
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('profile-pictures')
+            .upload(fileName, formData, {
+              contentType: 'image/jpeg',
+              upsert: true,
+            });
+
+          if (uploadError) {
+            console.error('Upload error:', uploadError);
+            Alert.alert('Error', `Failed to upload image: ${uploadError.message}`);
+            setSaving(false);
+            return;
+          }
+
+          // Get public URL
+          const { data: { publicUrl } } = supabase.storage
+            .from('profile-pictures')
+            .getPublicUrl(fileName);
+
+          profilePictureUrl = publicUrl;
+        } catch (uploadError) {
+          console.error('Error uploading:', uploadError);
+          Alert.alert('Error', `Failed to save profile picture: ${uploadError.message}`);
+          setSaving(false);
+          return;
+        }
+      }
+
+      // Handle cover photo upload if changed
+      if (coverImage !== originalValues.coverImage && coverImage && !coverImage.startsWith('http')) {
+        try {
+          const fileName = `cover_${user.id}_${Date.now()}.jpg`;
+
+          // Create FormData for React Native
+          const formData = new FormData();
+          formData.append('file', {
+            uri: coverImage,
+            type: 'image/jpeg',
+            name: fileName,
+          });
+
+          // Upload to Supabase storage bucket using FormData
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('profile-pictures')
+            .upload(fileName, formData, {
+              contentType: 'image/jpeg',
+              upsert: true,
+            });
+
+          if (uploadError) {
+            console.error('Upload error:', uploadError);
+            Alert.alert('Error', `Failed to upload cover image: ${uploadError.message}`);
+            setSaving(false);
+            return;
+          }
+
+          // Get public URL
+          const { data: { publicUrl } } = supabase.storage
+            .from('profile-pictures')
+            .getPublicUrl(fileName);
+
+          coverPictureUrl = publicUrl;
+        } catch (uploadError) {
+          console.error('Error uploading:', uploadError);
+          Alert.alert('Error', `Failed to save cover photo: ${uploadError.message}`);
+          setSaving(false);
+          return;
+        }
+      }
+
       const updates = {
         first_name: firstName.trim(),
         last_name: lastName.trim(),
@@ -136,6 +283,8 @@ export default function AccountSettingsScreen({ navigation }) {
         bio: bio.trim(),
         location: location.trim(),
         full_name: `${firstName.trim()} ${lastName.trim()}`.trim() || 'User',
+        profile_picture_url: profilePictureUrl,
+        cover_picture_url: coverPictureUrl,
         updated_at: new Date().toISOString(),
         // Preserve onboarding_completed flag
         onboarding_completed: profile?.onboarding_completed ?? true,
@@ -200,28 +349,63 @@ export default function AccountSettingsScreen({ navigation }) {
         {/* Profile Picture Section */}
         <View style={styles.avatarSection}>
           <View style={styles.avatarWrapper}>
-            <View style={styles.avatarContainer}>
-              <Ionicons name="person" size={48} color={colors.text} />
-            </View>
-            <TouchableOpacity style={styles.cameraIconContainer}>
-              <Ionicons name="camera" size={16} color="#FFFFFF" />
-            </TouchableOpacity>
+            <ProfilePicture
+              imageUrl={profileImage}
+              size={100}
+              fallbackText={firstName?.charAt(0) || profile?.first_name?.charAt(0) || profile?.username?.charAt(0)}
+              borderColor={colors.primary + '40'}
+              borderWidth={3}
+              style={styles.profilePicture}
+            />
           </View>
-          <TouchableOpacity style={styles.changePhotoButton}>
+          <TouchableOpacity style={styles.changePhotoButton} onPress={handlePickImage}>
             <Ionicons name="camera-outline" size={16} color={colors.primary} />
             <Text style={styles.changePhotoText}>Change Photo</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[
+              styles.previewButton, 
+              !hasChanges() && styles.previewButtonDisabled
+            ]} 
+            onPress={() => hasChanges() && setShowPreview(true)}
+            disabled={!hasChanges()}
+          >
+            <Ionicons 
+              name="eye-outline" 
+              size={16} 
+              color={hasChanges() ? colors.text : colors.textSecondary} 
+            />
+            <Text style={[
+              styles.previewButtonText,
+              !hasChanges() && styles.previewButtonTextDisabled
+            ]}>
+              Preview Changes
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Cover Photo Section */}
+        <View style={styles.coverPhotoSection}>
+          <Text style={styles.sectionLabel}>Cover Photo</Text>
+          <View style={styles.coverPhotoContainer}>
+            {coverImage ? (
+              <Image source={{ uri: coverImage }} style={styles.coverPhotoPreview} />
+            ) : (
+              <View style={styles.defaultCoverPhoto}>
+                <Ionicons name="image-outline" size={32} color={colors.textSecondary} />
+                <Text style={styles.noCoverText}>No cover photo</Text>
+              </View>
+            )}
+          </View>
+          <TouchableOpacity style={styles.changeCoverButton} onPress={handlePickCoverImage}>
+            <Ionicons name="camera-outline" size={16} color={colors.primary} />
+            <Text style={styles.changeCoverText}>Change Cover Photo</Text>
           </TouchableOpacity>
         </View>
 
         {/* Personal Information */}
         <View style={styles.sectionCard}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.iconGlow}>
-              <Ionicons name="person-outline" size={20} color={colors.primary} />
-            </View>
-            <Text style={styles.sectionTitle}>Personal Information</Text>
-          </View>
-
           <View style={styles.inputGroup}>
             <Text style={styles.label}>First Name</Text>
             <TextInput
@@ -346,6 +530,21 @@ export default function AccountSettingsScreen({ navigation }) {
       </ScrollView>
     </KeyboardAvoidingView>
     </View>
+
+    {/* Profile Preview Modal */}
+    <ProfilePreviewModal
+      visible={showPreview}
+      onClose={() => setShowPreview(false)}
+      previewData={{
+        firstName,
+        lastName,
+        username,
+        location,
+        bio,
+        profileImage,
+        coverImage,
+      }}
+    />
     </AnimatedBackground>
   );
 }
@@ -418,15 +617,7 @@ const createStyles = (colors) => StyleSheet.create({
     position: 'relative',
     marginBottom: 16,
   },
-  avatarContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: colors.card,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: colors.primary + '40',
+  profilePicture: {
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.2,
@@ -453,6 +644,7 @@ const createStyles = (colors) => StyleSheet.create({
   changePhotoButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -460,8 +652,92 @@ const createStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.surface + '60',
     borderWidth: 1,
     borderColor: colors.glassBorder,
+    alignSelf: 'center',
+    marginBottom: 12,
   },
   changePhotoText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  previewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    alignSelf: 'center',
+  },
+  previewButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  previewButtonDisabled: {
+    opacity: 0.5,
+    backgroundColor: colors.surface + '40',
+  },
+  previewButtonTextDisabled: {
+    color: colors.textSecondary,
+  },
+  coverPhotoSection: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    marginHorizontal: 20,
+    marginBottom: 16,
+  },
+  sectionLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 16,
+    alignSelf: 'flex-start',
+  },
+  coverPhotoContainer: {
+    width: '100%',
+    height: 120,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+  },
+  coverPhotoPreview: {
+    width: '100%',
+    height: '100%',
+  },
+  defaultCoverPhoto: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+  },
+  noCoverText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 4,
+  },
+  changeCoverButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: colors.surface + '60',
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    alignSelf: 'center',
+  },
+  changeCoverText: {
     fontSize: 14,
     fontWeight: '600',
     color: colors.primary,

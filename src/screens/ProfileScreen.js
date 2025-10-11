@@ -10,6 +10,9 @@ import {
   Animated,
   TextInput,
   Modal,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,14 +23,29 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { supabase, supabaseService } from '../services/supabase';
 import AnimatedBackground from '../components/AnimatedBackground';
+import ProfilePicture from '../components/ProfilePicture';
 
 export default function ProfileScreen() {
   const { colors } = useTheme();
-  const { user, profile, signOut, refreshProfile } = useAuth();
+  const { user, profile, signOut, refreshProfile, setProfile } = useAuth();
   const navigation = useNavigation();
   const [profileImage, setProfileImage] = useState(profile?.profile_picture_url || null);
+  const [coverImage, setCoverImage] = useState(profile?.cover_picture_url || null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
+  const [isBioExpanded, setIsBioExpanded] = useState(false);
+  const [bioHeight, setBioHeight] = useState(0);
+  const [shouldShowExpandButton, setShouldShowExpandButton] = useState(false);
+  
+  // Animation value for smooth bio transitions
+  const bioTextOpacity = useRef(new Animated.Value(1)).current;
+
+  // Enable LayoutAnimation on Android
+  React.useEffect(() => {
+    if (Platform.OS === 'android') {
+      UIManager.setLayoutAnimationEnabledExperimental && UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+  }, []);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -43,7 +61,11 @@ export default function ProfileScreen() {
       if (profile?.profile_picture_url) {
         setProfileImage(profile.profile_picture_url);
       }
-    }, [profile?.profile_picture_url, refreshProfile])
+      // Update cover image if it changed
+      if (profile?.cover_picture_url) {
+        setCoverImage(profile.cover_picture_url);
+      }
+    }, [profile?.profile_picture_url, profile?.cover_picture_url, refreshProfile])
   );
 
 
@@ -56,6 +78,48 @@ export default function ProfileScreen() {
       return profile.username;
     }
     return 'User';
+  };
+
+  // Check if bio needs expand/collapse functionality
+  const handleBioTextLayout = (event) => {
+    const { height } = event.nativeEvent.layout;
+    setBioHeight(height);
+    // If height is more than 3 lines (3 * 18px line height = 54px)
+    setShouldShowExpandButton(height > 54);
+  };
+
+  // Toggle bio expansion with smooth animation
+  const toggleBioExpansion = () => {
+    // First fade out the text
+    Animated.timing(bioTextOpacity, {
+      toValue: 0,
+      duration: 150,
+      useNativeDriver: true,
+    }).start(() => {
+      // After fade out completes, change the state
+      LayoutAnimation.configureNext({
+        duration: 300,
+        create: {
+          type: LayoutAnimation.Types.easeInEaseOut,
+          property: LayoutAnimation.Properties.opacity,
+        },
+        update: {
+          type: LayoutAnimation.Types.easeInEaseOut,
+          property: LayoutAnimation.Properties.scaleY,
+        },
+      });
+      
+      setIsBioExpanded(!isBioExpanded);
+      
+      // Then fade the text back in with new content
+      setTimeout(() => {
+        Animated.timing(bioTextOpacity, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }).start();
+      }, 50);
+    });
   };
 
 
@@ -88,14 +152,18 @@ export default function ProfileScreen() {
         try {
           const fileName = `profile_${user.id}_${Date.now()}.jpg`;
 
-          // Fetch the image and convert to blob for React Native
-          const response = await fetch(imageUri);
-          const blob = await response.blob();
+          // Create FormData for React Native
+          const formData = new FormData();
+          formData.append('file', {
+            uri: imageUri,
+            type: 'image/jpeg',
+            name: fileName,
+          });
 
-          // Upload to Supabase storage bucket
+          // Upload to Supabase storage bucket using FormData
           const { data: uploadData, error: uploadError } = await supabase.storage
             .from('profile-pictures')
-            .upload(fileName, blob, {
+            .upload(fileName, formData, {
               contentType: 'image/jpeg',
               upsert: true,
             });
@@ -112,9 +180,12 @@ export default function ProfileScreen() {
             .getPublicUrl(fileName);
 
           // Update profile in database
-          await supabaseService.updateProfile(user.id, {
+          const updatedProfile = await supabaseService.updateProfile(user.id, {
             profile_picture_url: publicUrl,
           });
+
+          // Update profile in auth context
+          setProfile({ ...profile, ...updatedProfile });
 
           Alert.alert('Success', 'Profile picture updated successfully!');
         } catch (uploadError) {
@@ -125,6 +196,81 @@ export default function ProfileScreen() {
     } catch (error) {
       console.error('Error picking image:', error);
       Alert.alert('Error', 'Failed to pick image. Please try again.');
+    }
+  };
+
+  const handlePickCoverImage = async () => {
+    try {
+      // Request permission
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Please grant photo library access to change your cover photo.'
+        );
+        return;
+      }
+
+      // Launch image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [16, 9], // Wide aspect ratio for cover photo
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const imageUri = result.assets[0].uri;
+        setCoverImage(imageUri);
+
+        // Upload to Supabase storage
+        try {
+          const fileName = `cover_${user.id}_${Date.now()}.jpg`;
+
+          // Create FormData for React Native
+          const formData = new FormData();
+          formData.append('file', {
+            uri: imageUri,
+            type: 'image/jpeg',
+            name: fileName,
+          });
+
+          // Upload to Supabase storage bucket using FormData
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('profile-pictures')
+            .upload(fileName, formData, {
+              contentType: 'image/jpeg',
+              upsert: true,
+            });
+
+          if (uploadError) {
+            console.error('Upload error:', uploadError);
+            Alert.alert('Error', `Failed to upload cover image: ${uploadError.message}`);
+            return;
+          }
+
+          // Get public URL
+          const { data: { publicUrl } } = supabase.storage
+            .from('profile-pictures')
+            .getPublicUrl(fileName);
+
+          // Update profile in database
+          const updatedProfile = await supabaseService.updateProfile(user.id, {
+            cover_picture_url: publicUrl,
+          });
+
+          setProfile({ ...profile, ...updatedProfile });
+
+          Alert.alert('Success', 'Cover photo updated successfully!');
+        } catch (uploadError) {
+          console.error('Error uploading:', uploadError);
+          Alert.alert('Error', `Failed to save cover photo: ${uploadError.message}`);
+        }
+      }
+    } catch (error) {
+      console.error('Error picking cover image:', error);
+      Alert.alert('Error', 'Failed to pick cover image. Please try again.');
     }
   };
 
@@ -164,12 +310,20 @@ export default function ProfileScreen() {
             )}
           </View>
 
-          <TouchableOpacity
-            style={styles.notificationButton}
-            onPress={() => setShowNotifications(true)}
-          >
-            <Ionicons name="notifications-outline" size={28} color={colors.text} />
-          </TouchableOpacity>
+          <View style={styles.headerRightButtons}>
+            <TouchableOpacity
+              style={styles.coverEditButton}
+              onPress={handlePickCoverImage}
+            >
+              <Ionicons name="camera-outline" size={24} color={colors.text} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.notificationButton}
+              onPress={() => setShowNotifications(true)}
+            >
+              <Ionicons name="notifications-outline" size={28} color={colors.text} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <ScrollView
@@ -183,33 +337,102 @@ export default function ProfileScreen() {
             { useNativeDriver: false }
           )}
         >
-        {/* Header */}
+        {/* Header with Cover Photo */}
         <View style={styles.headerWrapper}>
-          {/* Green Header Background */}
-          <View style={styles.headerBackgroundContainer}>
-            <View style={styles.headerBackground} />
+          {/* Cover Photo Background */}
+          <View style={styles.coverPhotoContainer}>
+            {coverImage ? (
+              <Image 
+                source={{ uri: coverImage }} 
+                style={styles.coverPhoto}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={styles.defaultCoverPhoto} />
+            )}
+            {/* Gradient overlay for text readability */}
+            <LinearGradient
+              colors={['rgba(0,0,0,0.95)', 'rgba(0,0,0,0.8)', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.1)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.coverGradient}
+            />
           </View>
 
           <View style={styles.header}>
-            {/* Profile Picture and Edit Button */}
+            {/* Profile Section - Vertical Layout */}
             <View style={styles.profileSection}>
-              <TouchableOpacity style={styles.avatarContainer} onPress={handlePickImage}>
-                {profileImage ? (
-                  <Image source={{ uri: profileImage }} style={styles.avatarImage} />
-                ) : (
-                  <Ionicons name="person" size={24} color="#FFFFFF" />
-                )}
-                <View style={styles.cameraIconContainer}>
-                  <Ionicons name="camera" size={14} color="#FFFFFF" />
-                </View>
-              </TouchableOpacity>
+              {/* Profile Picture */}
+              <View style={styles.avatarRow}>
+                <TouchableOpacity style={styles.avatarContainer} onPress={handlePickImage}>
+                  <ProfilePicture
+                    imageUrl={profileImage}
+                    size={64}
+                    fallbackText={profile?.first_name?.charAt(0) || profile?.username?.charAt(0)}
+                    borderColor="rgba(255, 255, 255, 0.2)"
+                    borderWidth={2}
+                  />
+                  <View style={styles.cameraIconContainer}>
+                    <Ionicons name="camera" size={14} color="#FFFFFF" />
+                  </View>
+                </TouchableOpacity>
+              </View>
+
+              {/* User Info Below Picture */}
               <View style={styles.userInfoContainer}>
                 <Text style={styles.userName}>{getUserName()}</Text>
                 <Text style={styles.userEmail}>@{profile?.username || 'username'}</Text>
+                
+                {/* Location */}
+                {profile?.location && (
+                  <View style={styles.locationContainer}>
+                    <Ionicons name="location-outline" size={12} color={colors.textSecondary} />
+                    <Text style={styles.locationText}>{profile.location}</Text>
+                  </View>
+                )}
+                
+                {/* Bio */}
+                {profile?.bio && (
+                  <View style={styles.bioContainer}>
+                    {/* Hidden text to measure full height */}
+                    <Text
+                      style={[styles.bioText, styles.hiddenBioText]}
+                      onLayout={handleBioTextLayout}
+                    >
+                      {profile.bio}
+                    </Text>
+                    
+                    {/* Visible bio text */}
+                    <Animated.Text 
+                      style={[
+                        styles.bioText,
+                        { opacity: bioTextOpacity }
+                      ]} 
+                      numberOfLines={isBioExpanded ? undefined : 3}
+                    >
+                      {profile.bio}
+                    </Animated.Text>
+                    
+                    {/* Show expand/collapse button if bio is longer than 3 lines */}
+                    {shouldShowExpandButton && (
+                      <TouchableOpacity 
+                        style={styles.expandButton}
+                        onPress={toggleBioExpansion}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.expandButtonText}>
+                          {isBioExpanded ? 'Show less' : 'View more'}
+                        </Text>
+                        <Ionicons 
+                          name={isBioExpanded ? 'chevron-up' : 'chevron-down'} 
+                          size={12} 
+                          color={colors.primary} 
+                        />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
               </View>
-              <TouchableOpacity style={styles.editButton} onPress={handlePickImage}>
-                <Ionicons name="pencil" size={14} color="#FFFFFF" />
-              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -705,6 +928,26 @@ const createStyles = (colors) => StyleSheet.create({
     color: colors.text,
     fontWeight: '500',
   },
+  headerRightButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  coverEditButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: colors.glassBorder,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 12,
+  },
   notificationButton: {
     width: 48,
     height: 48,
@@ -721,24 +964,31 @@ const createStyles = (colors) => StyleSheet.create({
     elevation: 12,
   },
   headerWrapper: {
-    overflow: 'hidden',
     position: 'relative',
   },
-  headerBackgroundContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 180,
-    overflow: 'hidden',
-  },
-  headerBackground: {
+  coverPhotoContainer: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
+    overflow: 'hidden',
+  },
+  coverPhoto: {
+    width: '100%',
+    height: '100%',
+  },
+  defaultCoverPhoto: {
+    width: '100%',
+    height: '100%',
     backgroundColor: colors.card,
+  },
+  coverGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   header: {
     backgroundColor: 'transparent',
@@ -746,7 +996,7 @@ const createStyles = (colors) => StyleSheet.create({
     paddingBottom: 20,
     paddingHorizontal: 20,
     position: 'relative',
-    zIndex: 10,
+    zIndex: 1,
   },
   headerTitle: {
     fontSize: 24,
@@ -755,6 +1005,11 @@ const createStyles = (colors) => StyleSheet.create({
     flex: 1,
   },
   profileSection: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 16,
+  },
+  avatarRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
@@ -776,11 +1031,7 @@ const createStyles = (colors) => StyleSheet.create({
     borderColor: colors.primary + '40',
     alignSelf: 'center',
   },
-  avatarImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-  },
+
   cameraIconContainer: {
     position: 'absolute',
     bottom: -1,
@@ -806,20 +1057,62 @@ const createStyles = (colors) => StyleSheet.create({
     alignSelf: 'center',
   },
   userInfoContainer: {
-    flex: 1,
-    justifyContent: 'center',
+    alignItems: 'flex-start',
+    width: '100%',
   },
   userName: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '600',
     color: colors.text,
     marginBottom: 4,
-    letterSpacing: -0.5,
+    letterSpacing: -0.3,
   },
   userEmail: {
     fontSize: 14,
     color: colors.textSecondary,
     fontWeight: '500',
+    marginBottom: 6,
+  },
+  locationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 6,
+  },
+  locationText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: '500',
+    opacity: 0.8,
+  },
+  bioText: {
+    fontSize: 13,
+    color: colors.text,
+    lineHeight: 18,
+    opacity: 0.9,
+    fontWeight: '400',
+  },
+  bioContainer: {
+    position: 'relative',
+    marginTop: 4,
+  },
+  hiddenBioText: {
+    position: 'absolute',
+    opacity: 0,
+    zIndex: -1,
+    pointerEvents: 'none',
+  },
+  expandButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+    alignSelf: 'flex-start',
+  },
+  expandButtonText: {
+    fontSize: 12,
+    color: colors.primary,
+    fontWeight: '600',
   },
   horizontalCardsScroll: {
     marginTop: 16,

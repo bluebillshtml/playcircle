@@ -21,6 +21,7 @@ import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { SuggestedFriend } from '../types/friends';
+import ProfilePicture from './ProfilePicture';
 
 // =====================================================
 // CONSTANTS
@@ -202,19 +203,14 @@ const FriendChip = ({
 
   const renderAvatar = () => (
     <View style={styles.avatarContainer}>
-      {user.avatar_url ? (
-        <Image
-          source={{ uri: user.avatar_url }}
-          style={styles.avatar}
-          onError={() => {
-            // Handle image load error by showing placeholder
-          }}
-        />
-      ) : (
-        <View style={[styles.avatarPlaceholder, { backgroundColor: colors.border }]}>
-          <Ionicons name="person" size={24} color={colors.textSecondary} />
-        </View>
-      )}
+      <ProfilePicture
+        imageUrl={user.avatar_url}
+        size={AVATAR_SIZE}
+        fallbackText={user.full_name?.charAt(0) || user.username?.charAt(0)}
+        borderColor="rgba(255, 255, 255, 0.4)"
+        borderWidth={4}
+        style={styles.profilePicture}
+      />
     </View>
   );
 
@@ -436,26 +432,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  avatar: {
-    width: AVATAR_SIZE,
-    height: AVATAR_SIZE,
-    borderRadius: AVATAR_SIZE / 2,
-    borderWidth: 4,
-    borderColor: 'rgba(255, 255, 255, 0.4)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  avatarPlaceholder: {
-    width: AVATAR_SIZE,
-    height: AVATAR_SIZE,
-    borderRadius: AVATAR_SIZE / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 4,
-    borderColor: 'rgba(255, 255, 255, 0.4)',
+  profilePicture: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.2,

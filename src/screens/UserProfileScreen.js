@@ -13,6 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import AnimatedBackground from '../components/AnimatedBackground';
+import ProfilePicture from '../components/ProfilePicture';
 
 export default function UserProfileScreen({ route, navigation }) {
   const { userId, userData } = route.params;
@@ -98,13 +99,14 @@ export default function UserProfileScreen({ route, navigation }) {
         >
           {/* Profile Header */}
           <View style={styles.profileHeader}>
-            <View style={[styles.avatarContainer, { backgroundColor: userData.color || colors.primary }]}>
-              {userData.avatar ? (
-                <Image source={{ uri: userData.avatar }} style={styles.avatar} />
-              ) : (
-                <Ionicons name="person" size={64} color="#FFFFFF" />
-              )}
-            </View>
+            <ProfilePicture
+              imageUrl={userData.avatar}
+              size={120}
+              fallbackText={userData.name?.charAt(0)}
+              fallbackColor={userData.color || colors.primary}
+              borderColor="rgba(255, 255, 255, 0.1)"
+              borderWidth={4}
+            />
 
             <Text style={[styles.name, { color: colors.text }]}>{userData.name}</Text>
             <Text style={[styles.username, { color: colors.textSecondary }]}>{userData.username}</Text>
@@ -209,21 +211,7 @@ const createStyles = (colors) => StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 24,
   },
-  avatarContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-    borderWidth: 4,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  avatar: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-  },
+
   name: {
     fontSize: 28,
     fontWeight: '700',

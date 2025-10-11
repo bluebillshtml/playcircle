@@ -10,6 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import MessageTypeIndicator from './MessageTypeIndicator';
+import ProfilePicture from './ProfilePicture';
 
 const MessageBubble = ({
   message,
@@ -220,18 +221,12 @@ const MessageBubble = ({
         {/* Avatar for other users */}
         {!isOwn && showAvatar && (
           <View style={styles.avatarContainer}>
-            {message.user?.avatar_url ? (
-              <Image 
-                source={{ uri: message.user.avatar_url }}
-                style={styles.avatar}
-              />
-            ) : (
-              <View style={[styles.avatarPlaceholder, { backgroundColor: colors.lightGray }]}>
-                <Text style={[styles.avatarText, { color: colors.text }]}>
-                  {message.user?.full_name?.charAt(0) || '?'}
-                </Text>
-              </View>
-            )}
+            <ProfilePicture
+              imageUrl={message.user?.avatar_url}
+              size={32}
+              fallbackText={message.user?.full_name?.charAt(0) || message.user?.name?.charAt(0)}
+              showBorder={false}
+            />
           </View>
         )}
 
@@ -283,22 +278,7 @@ const createStyles = (colors, isOwn) => StyleSheet.create({
     marginRight: 8,
     marginBottom: 4,
   },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-  },
-  avatarPlaceholder: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
+
   bubbleContainer: {
     maxWidth: '75%',
     alignItems: isOwn ? 'flex-end' : 'flex-start',
