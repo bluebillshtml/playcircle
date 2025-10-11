@@ -401,9 +401,23 @@ CREATE TABLE IF NOT EXISTS public.messages (
 );
 
 -- =====================================================
--- 10. FRIENDS SYSTEM - Social connections
+-- 10. FRIENDS SYSTEM - Social connections (Simplified)
 -- =====================================================
 
+-- Each user has one row with their friends stored as JSONB
+CREATE TABLE IF NOT EXISTS public.user_friends (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES profiles(id) ON DELETE CASCADE UNIQUE,
+    friends JSONB DEFAULT '[]'::jsonb, -- Array of friend objects: [{"user_id": "uuid", "status": "accepted", "added_at": "timestamp"}]
+    friend_requests_sent JSONB DEFAULT '[]'::jsonb, -- Pending requests sent by this user
+    friend_requests_received JSONB DEFAULT '[]'::jsonb, -- Pending requests received by this user
+    blocked_users JSONB DEFAULT '[]'::jsonb, -- Users blocked by this user
+    total_friends INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Legacy friendships table for compatibility (can be removed later)
 CREATE TABLE IF NOT EXISTS public.friendships (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user1_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
@@ -549,6 +563,8 @@ CREATE INDEX IF NOT EXISTS idx_chat_members_user ON chat_members(user_id, is_act
 CREATE INDEX IF NOT EXISTS idx_messages_chat_time ON messages(chat_id, created_at DESC);
 
 -- Friends indexes
+CREATE INDEX IF NOT EXISTS idx_user_friends_user_id ON user_friends(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_friends_total ON user_friends(total_friends DESC);
 CREATE INDEX IF NOT EXISTS idx_friendships_user1 ON friendships(user1_id, status);
 CREATE INDEX IF NOT EXISTS idx_friendships_user2 ON friendships(user2_id, status);
 
@@ -607,7 +623,11 @@ BEGIN
         (NEW.id, 'global', 'monthly', NULL, 0),
         (NEW.id, 'global', 'weekly', NULL, 0);
     
-    -- 6. Create welcome notification
+    -- 6. Create user friends record
+    INSERT INTO public.user_friends (user_id)
+    VALUES (NEW.id);
+    
+    -- 7. Create welcome notification
     INSERT INTO public.notifications (user_id, type, title, message)
     VALUES (
         NEW.id,
@@ -747,6 +767,7 @@ ALTER TABLE public.leaderboard ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.chats ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.chat_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_friends ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.friendships ENABLE ROW LEVEL SECURITY;
 
 -- Profiles policies
@@ -925,7 +946,20 @@ CREATE POLICY "Users can send messages to chats they belong to" ON messages
         )
     );
 
--- Friends policies
+-- User Friends policies (new simplified system)
+DROP POLICY IF EXISTS "Users can view own friends" ON user_friends;
+CREATE POLICY "Users can view own friends" ON user_friends
+    FOR SELECT USING (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "Users can update own friends" ON user_friends;
+CREATE POLICY "Users can update own friends" ON user_friends
+    FOR UPDATE USING (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "Users can insert own friends" ON user_friends;
+CREATE POLICY "Users can insert own friends" ON user_friends
+    FOR INSERT WITH CHECK (user_id = auth.uid());
+
+-- Legacy Friends policies (for compatibility)
 DROP POLICY IF EXISTS "Users can see friendships they are part of" ON friendships;
 CREATE POLICY "Users can see friendships they are part of" ON friendships
     FOR SELECT USING (
@@ -990,6 +1024,12 @@ INSERT INTO user_sport_profiles (user_id, sport_id)
 SELECT id, 'padel' FROM profiles
 WHERE id NOT IN (SELECT user_id FROM user_sport_profiles WHERE sport_id = 'padel' AND user_id IS NOT NULL)
 ON CONFLICT (user_id, sport_id) DO NOTHING;
+
+-- Create default user_friends for existing users
+INSERT INTO user_friends (user_id)
+SELECT id FROM profiles
+WHERE id NOT IN (SELECT user_id FROM user_friends WHERE user_id IS NOT NULL)
+ON CONFLICT (user_id) DO NOTHING;
 
 -- =====================================================
 -- SETUP COMPLETE!
