@@ -15,6 +15,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '../context/ThemeContext';
+import { useChatMessages } from '../hooks/useChat';
+import { supabase } from '../services/supabase';
 import MessageBubble from '../components/MessageBubble';
 import ChatMembersModal from '../components/ChatMembersModal';
 import ChatSettingsModal from '../components/ChatSettingsModal';
@@ -246,10 +248,20 @@ export default function ChatThreadScreen({ navigation, route }) {
   const { colors } = useTheme();
   const { chatId, sessionTitle, chatType, recipientId } = route.params || {};
 
+  // Get current user
+  const [currentUser, setCurrentUser] = useState(null);
+  
+  // Use real chat messages hook
+  const { 
+    messages, 
+    loading, 
+    error, 
+    sendMessage, 
+    retryMessage 
+  } = useChatMessages(chatId, currentUser?.id);
+
   // State
-  const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
-  const [loading, setLoading] = useState(true);
   const [quickActionsVisible, setQuickActionsVisible] = useState(false);
   const [membersModalVisible, setMembersModalVisible] = useState(false);
   const [settingsModalVisible, setSettingsModalVisible] = useState(false);
@@ -283,21 +295,13 @@ export default function ChatThreadScreen({ navigation, route }) {
     return friendAvatars[name] || null;
   };
 
-  // Load mock messages
+  // Get current user on mount
   useEffect(() => {
-    const loadMessages = async () => {
-      setLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 500));
-      const friendAvatar = getFriendAvatar(sessionTitle);
-      const mockMessages = generateMockMessages(15, sessionTitle, friendAvatar, chatType).map(msg => ({
-        ...msg,
-        reactions: [], // Initialize with empty reactions array
-      }));
-      setMessages(mockMessages);
-      setLoading(false);
+    const getCurrentUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUser(user);
     };
-
-    loadMessages();
+    getCurrentUser();
   }, [chatId, sessionTitle, chatType]);
 
   // Show reaction picker with animation
@@ -414,52 +418,23 @@ export default function ChatThreadScreen({ navigation, route }) {
     hideReactionPicker();
   };
 
-  // Send message
-  const sendMessage = () => {
-    if (!inputText.trim()) return;
+  // Send message using real database
+  const handleSendMessage = async () => {
+    if (!inputText.trim() || !currentUser) return;
 
-    const newMessage = {
-      id: `msg_${Date.now()}`,
-      content: inputText.trim(),
-      message_type: 'text',
-      metadata: {},
-      user_id: 'user1',
-      user: { id: 'user1', name: 'You', avatar: null },
-      created_at: new Date().toISOString(),
-      isOwn: true,
-      delivery_status: 'sending', // Start as sending (single white checkmark)
-      reactions: [],
-    };
-
-    setMessages(prev => [...prev, newMessage]);
+    const messageContent = inputText.trim();
     setInputText('');
 
-    // Simulate message sending: sending → sent → read
-    // After 1 second: sending → sent (double white checkmarks)
-    setTimeout(() => {
-      setMessages(prev =>
-        prev.map(msg =>
-          msg.id === newMessage.id
-            ? { ...msg, delivery_status: 'sent' }
-            : msg
-        )
-      );
-    }, 1000);
-
-    // After 3 seconds: sent → read (double green checkmarks)
-    setTimeout(() => {
-      setMessages(prev =>
-        prev.map(msg =>
-          msg.id === newMessage.id
-            ? { ...msg, delivery_status: 'read' }
-            : msg
-        )
-      );
-    }, 3000);
-
-    setTimeout(() => {
-      flatListRef.current?.scrollToEnd({ animated: true });
-    }, 100);
+    try {
+      await sendMessage(messageContent, 'text', {}, currentUser);
+      // Scroll to bottom after sending
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      Alert.alert('Error', 'Failed to send message. Please try again.');
+    }
   };
 
   // Quick actions
@@ -515,29 +490,27 @@ export default function ChatThreadScreen({ navigation, route }) {
   // Render message item
   const renderMessage = ({ item, index }) => {
     const previousMessage = index > 0 ? messages[index - 1] : null;
-    // Always show avatar for messages that are not from the current user
-    const showAvatar = !item.isOwn;
+    const isOwn = currentUser && item.user_id === currentUser.id;
+    const showAvatar = !isOwn;
     const showTimestamp = !previousMessage ||
       new Date(item.created_at).getTime() - new Date(previousMessage.created_at).getTime() > 300000;
 
-    // Convert the mock message format to match the MessageBubble expected format
+    // Real database message format - already matches MessageBubble expectations
     const messageForBubble = {
       ...item,
-      message_type: item.message_type || 'text',
-      metadata: item.metadata || {},
-      is_deleted: false,
       reactions: item.reactions || [],
-      user: {
-        ...item.user,
-        full_name: item.user?.name || 'Unknown User',
-        username: item.user?.name?.toLowerCase() || 'unknown',
+      user: item.user || {
+        id: item.user_id,
+        full_name: 'Unknown User',
+        username: 'unknown',
+        avatar_url: null,
       },
     };
 
     return (
       <MessageBubble
         message={messageForBubble}
-        isOwn={item.isOwn}
+        isOwn={isOwn}
         showAvatar={showAvatar}
         showTimestamp={showTimestamp}
         onRetry={(message) => {
@@ -657,8 +630,24 @@ export default function ChatThreadScreen({ navigation, route }) {
           renderItem={renderMessage}
           keyExtractor={(item) => item.id}
           style={styles.messagesList}
-          contentContainerStyle={styles.messagesContent}
+          contentContainerStyle={[
+            styles.messagesContent,
+            messages.length === 0 && styles.emptyMessagesContent
+          ]}
           showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            !loading && (
+              <View style={styles.emptyState}>
+                <Ionicons name="chatbubbles-outline" size={48} color={colors.textSecondary} />
+                <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>
+                  No messages yet
+                </Text>
+                <Text style={[styles.emptyStateSubtext, { color: colors.textSecondary }]}>
+                  Start the conversation!
+                </Text>
+              </View>
+            )
+          }
         />
         
         {/* Full screen blur overlay */}
@@ -772,7 +761,7 @@ export default function ChatThreadScreen({ navigation, route }) {
           
           <TouchableOpacity
             style={[styles.sendButton, { backgroundColor: inputText.trim() ? colors.primary : colors.border }]}
-            onPress={sendMessage}
+            onPress={handleSendMessage}
             disabled={!inputText.trim()}
           >
             <Ionicons name="send" size={20} color="#FFFFFF" />
@@ -973,6 +962,24 @@ const createStyles = (colors) => StyleSheet.create({
   },
   messagesContent: {
     paddingVertical: 16,
+  },
+  emptyMessagesContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyStateText: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 16,
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    marginTop: 4,
   },
   centeredMessageContainer: {
     position: 'absolute',
