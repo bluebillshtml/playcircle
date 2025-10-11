@@ -544,16 +544,6 @@ const FriendsScreen = ({ navigation }) => {
                 </TouchableOpacity>
               )}
             </View>
-
-            <SearchDropdown
-              users={searchResults?.searchable_users || []}
-              loading={loading.search}
-              onUserSelect={handleDropdownUserSelect}
-              onAddFriend={handleAddFriend}
-              actionLoading={actionLoading}
-              visible={searchDropdownVisible}
-              style={styles.searchDropdown}
-            />
           </View>
 
           <TouchableOpacity
@@ -563,6 +553,17 @@ const FriendsScreen = ({ navigation }) => {
             <Ionicons name="settings-outline" size={24} color={colors.text} />
           </TouchableOpacity>
         </View>
+
+        {/* Search Dropdown - Outside of ScrollView to appear on top */}
+        <SearchDropdown
+          users={searchResults?.searchable_users || []}
+          loading={loading.search}
+          onUserSelect={handleDropdownUserSelect}
+          onAddFriend={handleAddFriend}
+          actionLoading={actionLoading}
+          visible={searchDropdownVisible}
+          style={styles.searchDropdownAbsolute}
+        />
 
         {/* Content */}
         <Animated.ScrollView 
@@ -582,25 +583,6 @@ const FriendsScreen = ({ navigation }) => {
             />
           }
         >
-          {/* Friend Requests Section */}
-          {renderFriendRequests()}
-
-          {/* Suggested Friends Section */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Suggested Friends
-            </Text>
-            {renderSuggestedFriends()}
-          </View>
-
-          {/* Recent Members Section */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Recent Members
-            </Text>
-            {renderRecentMembers()}
-          </View>
-
           {/* Empty State */}
           {!hasAnyData && !loading.suggested_friends && !loading.recent_members && (
             <View style={[styles.globalEmptyContainer, { backgroundColor: colors.surface + '40', borderRadius: 32, marginHorizontal: 24, borderWidth: 1, borderColor: colors.glassBorder }]}>
@@ -624,6 +606,25 @@ const FriendsScreen = ({ navigation }) => {
               </TouchableOpacity>
             </View>
           )}
+
+          {/* Friend Requests Section */}
+          {renderFriendRequests()}
+
+          {/* Suggested Friends Section */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Suggested Friends
+            </Text>
+            {renderSuggestedFriends()}
+          </View>
+
+          {/* Recent Members Section */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Recent Members
+            </Text>
+            {renderRecentMembers()}
+          </View>
         </Animated.ScrollView>
 
         {/* Settings Bottom Sheet */}
@@ -645,12 +646,23 @@ const createStyles = (colors) => StyleSheet.create({
 
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingTop: 60,
     paddingHorizontal: 20,
     paddingBottom: 20,
     paddingLeft: 76,
     gap: 16,
+    width: '100%',
+  },
+  searchBarContainer: {
+    flex: 1,
+  },
+  searchDropdownAbsolute: {
+    position: 'absolute',
+    top: 130, // Position below the header
+    left: 96, // Align with search bar (76 + 20)
+    right: 88, // Account for settings button and padding
+    zIndex: 99999,
   },
   headerSearchBar: {
     flex: 1,
