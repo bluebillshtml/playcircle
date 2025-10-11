@@ -236,6 +236,8 @@ export const useFriends = () => {
       if (!mountedRef.current) return;
 
       if (response.success && response.data) {
+        console.log('useFriends: Fetched friends:', response.data.length, 'friends');
+        console.log('useFriends: Friends list:', response.data.map(f => ({ id: f.id, name: f.full_name || f.username })));
         setFriends(response.data);
       } else {
         throw new Error(response.error || 'Failed to fetch friends');
