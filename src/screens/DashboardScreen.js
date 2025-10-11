@@ -18,6 +18,7 @@ import { useAuth } from '../context/AuthContext';
 import { leaderboardService, profileService } from '../services/supabase';
 import NavigationButton from '../components/NavigationButton';
 import ScrollableSportSelector from '../components/ScrollableSportSelector';
+import ProfilePicture from '../components/ProfilePicture';
 
 import AnimatedBackground from '../components/AnimatedBackground';
 
@@ -270,12 +271,14 @@ export default function DashboardScreen({ navigation }) {
           <View style={styles.top3Container}>
             {/* 2nd Place */}
             <View style={styles.top3Card}>
-              <View style={[styles.top3Avatar, { backgroundColor: top3Data[1]?.color || '#4A90E2' }]}>
-                {top3Data[1]?.avatar ? (
-                  <Image source={{ uri: top3Data[1].avatar }} style={styles.top3AvatarImage} />
-                ) : (
-                  <Ionicons name="person" size={32} color={colors.text} />
-                )}
+              <View style={styles.top3AvatarContainer}>
+                <ProfilePicture
+                  imageUrl={top3Data[1]?.avatar}
+                  size={80}
+                  fallbackText={top3Data[1]?.name?.charAt(0)}
+                  fallbackColor={top3Data[1]?.color || '#4A90E2'}
+                  showBorder={false}
+                />
                 <View style={styles.rankBadge}>
                   <Text style={styles.rankBadgeText}>2</Text>
                 </View>
@@ -290,12 +293,14 @@ export default function DashboardScreen({ navigation }) {
               <View style={styles.crownIcon}>
                 <Ionicons name="trophy" size={24} color={colors.warning} />
               </View>
-              <View style={[styles.top3Avatar, { backgroundColor: top3Data[0]?.color || '#FF6B35' }]}>
-                {top3Data[0]?.avatar ? (
-                  <Image source={{ uri: top3Data[0].avatar }} style={styles.top3AvatarImage} />
-                ) : (
-                  <Ionicons name="person" size={40} color={colors.text} />
-                )}
+              <View style={styles.top3AvatarContainer}>
+                <ProfilePicture
+                  imageUrl={top3Data[0]?.avatar}
+                  size={100}
+                  fallbackText={top3Data[0]?.name?.charAt(0)}
+                  fallbackColor={top3Data[0]?.color || '#FF6B35'}
+                  showBorder={false}
+                />
                 <View style={styles.rankBadge}>
                   <Text style={styles.rankBadgeText}>1</Text>
                 </View>
@@ -307,12 +312,14 @@ export default function DashboardScreen({ navigation }) {
 
             {/* 3rd Place */}
             <View style={styles.top3Card}>
-              <View style={[styles.top3Avatar, { backgroundColor: top3Data[2]?.color || '#7ED321' }]}>
-                {top3Data[2]?.avatar ? (
-                  <Image source={{ uri: top3Data[2].avatar }} style={styles.top3AvatarImage} />
-                ) : (
-                  <Ionicons name="person" size={32} color={colors.text} />
-                )}
+              <View style={styles.top3AvatarContainer}>
+                <ProfilePicture
+                  imageUrl={top3Data[2]?.avatar}
+                  size={80}
+                  fallbackText={top3Data[2]?.name?.charAt(0)}
+                  fallbackColor={top3Data[2]?.color || '#7ED321'}
+                  showBorder={false}
+                />
                 <View style={styles.rankBadge}>
                   <Text style={styles.rankBadgeText}>3</Text>
                 </View>
@@ -344,13 +351,13 @@ export default function DashboardScreen({ navigation }) {
 
               <View style={styles.userInfo}>
                 <View style={styles.avatarContainer}>
-                  {user.avatar ? (
-                    <Image source={{ uri: user.avatar }} style={styles.avatar} />
-                  ) : (
-                    <View style={styles.avatarPlaceholder}>
-                      <Ionicons name="person" size={20} color={colors.text} />
-                    </View>
-                  )}
+                  <ProfilePicture
+                    imageUrl={user.avatar}
+                    size={40}
+                    fallbackText={user.name?.charAt(0)}
+                    fallbackColor={user.color}
+                    showBorder={false}
+                  />
                 </View>
 
                 <View style={styles.userDetails}>
@@ -537,19 +544,9 @@ const createStyles = (colors) => StyleSheet.create({
   crownIcon: {
     marginBottom: 8,
   },
-  top3Avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
+  top3AvatarContainer: {
     position: 'relative',
-  },
-  top3AvatarImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    marginBottom: 12,
   },
   rankBadge: {
     position: 'absolute',
@@ -626,19 +623,7 @@ const createStyles = (colors) => StyleSheet.create({
   avatarContainer: {
     marginRight: 12,
   },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-  },
-  avatarPlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.surfaceLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+
   userDetails: {
     flex: 1,
   },

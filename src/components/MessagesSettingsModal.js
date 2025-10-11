@@ -144,9 +144,9 @@ const MessagesSettingsModal = ({ visible, onClose, settings, onUpdateSettings })
                 <Switch
                   value={localSettings.pushNotifications}
                   onValueChange={(value) => handleSettingChange('pushNotifications', value)}
-                  trackColor={{ false: colors.border + '60', true: colors.primary + '30' }}
-                  thumbColor={localSettings.pushNotifications ? colors.primary : colors.background}
-                  ios_backgroundColor={colors.border + '60'}
+                  trackColor={{ false: colors.glassBorder, true: colors.primary }}
+                  thumbColor="#FFFFFF"
+                  ios_backgroundColor={colors.glassBorder}
                 />
               </View>
 
@@ -160,9 +160,9 @@ const MessagesSettingsModal = ({ visible, onClose, settings, onUpdateSettings })
                 <Switch
                   value={localSettings.soundNotifications}
                   onValueChange={(value) => handleSettingChange('soundNotifications', value)}
-                  trackColor={{ false: colors.border + '60', true: colors.primary + '30' }}
-                  thumbColor={localSettings.soundNotifications ? colors.primary : colors.background}
-                  ios_backgroundColor={colors.border + '60'}
+                  trackColor={{ false: colors.glassBorder, true: colors.primary }}
+                  thumbColor="#FFFFFF"
+                  ios_backgroundColor={colors.glassBorder}
                 />
               </View>
 
@@ -176,9 +176,9 @@ const MessagesSettingsModal = ({ visible, onClose, settings, onUpdateSettings })
                 <Switch
                   value={localSettings.vibration}
                   onValueChange={(value) => handleSettingChange('vibration', value)}
-                  trackColor={{ false: colors.border + '60', true: colors.primary + '30' }}
-                  thumbColor={localSettings.vibration ? colors.primary : colors.background}
-                  ios_backgroundColor={colors.border + '60'}
+                  trackColor={{ false: colors.glassBorder, true: colors.primary }}
+                  thumbColor="#FFFFFF"
+                  ios_backgroundColor={colors.glassBorder}
                 />
               </View>
             </View>
@@ -197,9 +197,9 @@ const MessagesSettingsModal = ({ visible, onClose, settings, onUpdateSettings })
                 <Switch
                   value={localSettings.readReceipts}
                   onValueChange={(value) => handleSettingChange('readReceipts', value)}
-                  trackColor={{ false: colors.border + '60', true: colors.primary + '30' }}
-                  thumbColor={localSettings.readReceipts ? colors.primary : colors.background}
-                  ios_backgroundColor={colors.border + '60'}
+                  trackColor={{ false: colors.glassBorder, true: colors.primary }}
+                  thumbColor="#FFFFFF"
+                  ios_backgroundColor={colors.glassBorder}
                 />
               </View>
 
@@ -213,9 +213,9 @@ const MessagesSettingsModal = ({ visible, onClose, settings, onUpdateSettings })
                 <Switch
                   value={localSettings.onlineStatus}
                   onValueChange={(value) => handleSettingChange('onlineStatus', value)}
-                  trackColor={{ false: colors.border + '60', true: colors.primary + '30' }}
-                  thumbColor={localSettings.onlineStatus ? colors.primary : colors.background}
-                  ios_backgroundColor={colors.border + '60'}
+                  trackColor={{ false: colors.glassBorder, true: colors.primary }}
+                  thumbColor="#FFFFFF"
+                  ios_backgroundColor={colors.glassBorder}
                 />
               </View>
 
@@ -229,9 +229,9 @@ const MessagesSettingsModal = ({ visible, onClose, settings, onUpdateSettings })
                 <Switch
                   value={localSettings.typingIndicators}
                   onValueChange={(value) => handleSettingChange('typingIndicators', value)}
-                  trackColor={{ false: colors.border + '60', true: colors.primary + '30' }}
-                  thumbColor={localSettings.typingIndicators ? colors.primary : colors.background}
-                  ios_backgroundColor={colors.border + '60'}
+                  trackColor={{ false: colors.glassBorder, true: colors.primary }}
+                  thumbColor="#FFFFFF"
+                  ios_backgroundColor={colors.glassBorder}
                 />
               </View>
             </View>
@@ -250,9 +250,9 @@ const MessagesSettingsModal = ({ visible, onClose, settings, onUpdateSettings })
                 <Switch
                   value={localSettings.autoSaveMedia}
                   onValueChange={(value) => handleSettingChange('autoSaveMedia', value)}
-                  trackColor={{ false: colors.border + '60', true: colors.primary + '30' }}
-                  thumbColor={localSettings.autoSaveMedia ? colors.primary : colors.background}
-                  ios_backgroundColor={colors.border + '60'}
+                  trackColor={{ false: colors.glassBorder, true: colors.primary }}
+                  thumbColor="#FFFFFF"
+                  ios_backgroundColor={colors.glassBorder}
                 />
               </View>
 
@@ -266,9 +266,9 @@ const MessagesSettingsModal = ({ visible, onClose, settings, onUpdateSettings })
                 <Switch
                   value={localSettings.messageReactions}
                   onValueChange={(value) => handleSettingChange('messageReactions', value)}
-                  trackColor={{ false: colors.border + '60', true: colors.primary + '30' }}
-                  thumbColor={localSettings.messageReactions ? colors.primary : colors.background}
-                  ios_backgroundColor={colors.border + '60'}
+                  trackColor={{ false: colors.glassBorder, true: colors.primary }}
+                  thumbColor="#FFFFFF"
+                  ios_backgroundColor={colors.glassBorder}
                 />
               </View>
 
@@ -282,9 +282,9 @@ const MessagesSettingsModal = ({ visible, onClose, settings, onUpdateSettings })
                 <Switch
                   value={localSettings.quickActions}
                   onValueChange={(value) => handleSettingChange('quickActions', value)}
-                  trackColor={{ false: colors.border + '60', true: colors.primary + '30' }}
-                  thumbColor={localSettings.quickActions ? colors.primary : colors.background}
-                  ios_backgroundColor={colors.border + '60'}
+                  trackColor={{ false: colors.glassBorder, true: colors.primary }}
+                  thumbColor="#FFFFFF"
+                  ios_backgroundColor={colors.glassBorder}
                 />
               </View>
 
@@ -298,9 +298,9 @@ const MessagesSettingsModal = ({ visible, onClose, settings, onUpdateSettings })
                 <Switch
                   value={localSettings.autoDeleteChats}
                   onValueChange={(value) => handleSettingChange('autoDeleteChats', value)}
-                  trackColor={{ false: colors.border + '60', true: colors.primary + '30' }}
-                  thumbColor={localSettings.autoDeleteChats ? colors.primary : colors.background}
-                  ios_backgroundColor={colors.border + '60'}
+                  trackColor={{ false: colors.glassBorder, true: colors.primary }}
+                  thumbColor="#FFFFFF"
+                  ios_backgroundColor={colors.glassBorder}
                 />
               </View>
 

@@ -22,6 +22,7 @@ import { friendsService } from '../services/friendsService';
 import ChatCard from '../components/ChatCard';
 import AnimatedBackground from '../components/AnimatedBackground';
 import MessagesSettingsModal from '../components/MessagesSettingsModal';
+import ProfilePicture from '../components/ProfilePicture';
 
 // Simple mock data function as fallback
 const createMockChatListScenario = (count = 8) => {
@@ -974,11 +975,7 @@ const createStyles = (colors) => StyleSheet.create({
     borderColor: colors.primary,
     overflow: 'hidden',
   },
-  friendAvatarImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-  },
+
   friendName: {
     fontSize: 12,
     fontWeight: '600',
@@ -1324,11 +1321,7 @@ const createStyles = (colors) => StyleSheet.create({
     position: 'relative',
     marginBottom: 6,
   },
-  pinnedFriendAvatarImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-  },
+
   pinnedOnlineIndicator: {
     position: 'absolute',
     bottom: 0,
@@ -1408,11 +1401,7 @@ const createStyles = (colors) => StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
   },
-  friendListAvatarImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-  },
+
   friendListUnreadBadge: {
     position: 'absolute',
     top: -4,

@@ -163,8 +163,9 @@ const SettingsBottomSheet = ({
         <Switch
           value={value}
           onValueChange={onValueChange}
-          trackColor={{ false: colors.border, true: colors.primary + '40' }}
-          thumbColor={value ? colors.primary : colors.lightGray}
+          trackColor={{ false: colors.glassBorder, true: colors.primary }}
+          thumbColor="#FFFFFF"
+          ios_backgroundColor={colors.glassBorder}
         />
       )}
       

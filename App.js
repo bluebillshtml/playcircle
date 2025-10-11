@@ -7,6 +7,7 @@ import { StatusBar } from 'expo-status-bar';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { SportProvider } from './src/context/SportContext';
+import { LanguageProvider } from './src/context/LanguageContext';
 
 import SplashScreen from './src/screens/SplashScreen';
 import SignUpScreen from './src/screens/SignUpScreen';
@@ -202,11 +203,13 @@ function AppContent() {
 export default function App() {
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <SportProvider>
-          <AppContent />
-        </SportProvider>
-      </AuthProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <SportProvider>
+            <AppContent />
+          </SportProvider>
+        </AuthProvider>
+      </LanguageProvider>
     </ThemeProvider>
   );
 }

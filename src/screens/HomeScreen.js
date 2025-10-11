@@ -24,6 +24,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import PadelMatchHistory from '../components/PadelMatchHistory';
 import AnimatedBackground from '../components/AnimatedBackground';
+import ProfilePicture from '../components/ProfilePicture';
 
 const { width } = Dimensions.get('window');
 
@@ -855,13 +856,12 @@ export default function HomeScreen({ navigation }) {
 
                 <View style={styles.navDrawerFooter}>
                   <View style={styles.navUserInfo}>
-                    <View style={styles.navUserAvatar}>
-                      {profile?.avatar_url ? (
-                        <Image source={{ uri: profile.avatar_url }} style={styles.navUserAvatarImage} />
-                      ) : (
-                        <Ionicons name="person" size={20} color="#FFFFFF" />
-                      )}
-                    </View>
+                    <ProfilePicture
+                      useCurrentUser={true}
+                      size={40}
+                      borderColor="rgba(255, 255, 255, 0.2)"
+                      borderWidth={2}
+                    />
                     <View style={styles.navUserDetails}>
                       <Text style={styles.navUserName}>
                         {profile?.first_name && profile?.last_name
@@ -1662,21 +1662,7 @@ const createStyles = (colors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  navUserAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.surfaceLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-    overflow: 'hidden',
-  },
-  navUserAvatarImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-  },
+
   navUserDetails: {
     flex: 1,
   },

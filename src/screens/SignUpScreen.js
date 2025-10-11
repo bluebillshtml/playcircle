@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,30 +11,34 @@ import {
   Animated,
   Alert,
   ActivityIndicator,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../context/AuthContext';
-import EmailConfirmationOverlay from '../components/EmailConfirmationOverlay';
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
+import { useAuth } from "../context/AuthContext";
+import { useLanguage } from "../context/LanguageContext";
+import EmailConfirmationOverlay from "../components/EmailConfirmationOverlay";
 
 export default function SignUpScreen({ navigation }) {
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showConfirmationOverlay, setShowConfirmationOverlay] = useState(false);
   const { signUp } = useAuth();
+  const { t } = useLanguage();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const logoScale = useRef(new Animated.Value(0.8)).current;
   const logoRotate = useRef(new Animated.Value(0)).current;
   const cardScale = useRef(new Animated.Value(0.95)).current;
-  const inputAnims = useRef([...Array(5)].map(() => new Animated.Value(0))).current;
+  const inputAnims = useRef(
+    [...Array(5)].map(() => new Animated.Value(0))
+  ).current;
 
   useEffect(() => {
     // Logo entrance animation
@@ -90,17 +94,17 @@ export default function SignUpScreen({ navigation }) {
 
   const handleSignUp = async () => {
     if (!firstName || !lastName || !email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert(t("common.error"), t("signUp.errors.fillAllFields"));
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      Alert.alert(t("common.error"), t("signUp.errors.passwordMismatch"));
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+      Alert.alert(t("common.error"), t("signUp.errors.passwordTooShort"));
       return;
     }
 
@@ -109,13 +113,16 @@ export default function SignUpScreen({ navigation }) {
       await signUp(email, password, {
         firstName: firstName,
         lastName: lastName,
-        username: email.split('@')[0], // Use email prefix as username
-        skillLevel: 'Beginner',
+        username: email.split("@")[0], // Use email prefix as username
+        skillLevel: "Beginner",
       });
       // Show confirmation overlay instead of navigating
       setShowConfirmationOverlay(true);
     } catch (error) {
-      Alert.alert('Sign Up Failed', error.message || 'Unable to create account');
+      Alert.alert(
+        t("signUp.errors.signUpFailed"),
+        error.message || t("signUp.errors.unableToCreate")
+      );
     } finally {
       setLoading(false);
     }
@@ -124,13 +131,13 @@ export default function SignUpScreen({ navigation }) {
   const handleCloseConfirmation = () => {
     setShowConfirmationOverlay(false);
     // Optionally navigate to sign in screen
-    navigation.navigate('SignIn');
+    navigation.navigate("SignIn");
   };
 
   return (
     <View style={styles.container}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardView}
       >
         <ScrollView
@@ -158,7 +165,7 @@ export default function SignUpScreen({ navigation }) {
                     {
                       rotate: logoRotate.interpolate({
                         inputRange: [0, 1],
-                        outputRange: ['0deg', '360deg'],
+                        outputRange: ["0deg", "360deg"],
                       }),
                     },
                   ],
@@ -171,7 +178,7 @@ export default function SignUpScreen({ navigation }) {
             </Animated.View>
             <Animated.View style={{ opacity: fadeAnim }}>
               <Text style={styles.brandName}>PlayCircle</Text>
-              <Text style={styles.tagline}>Your Ultimate Sport Community</Text>
+              <Text style={styles.tagline}>{t("signUp.tagline")}</Text>
             </Animated.View>
 
             {/* Welcome Card */}
@@ -192,10 +199,15 @@ export default function SignUpScreen({ navigation }) {
                   },
                 ]}
               >
-                <Ionicons name="sparkles" size={32} color="#FFFFFF" style={styles.sparkleIcon} />
-                <Text style={styles.welcomeTitle}>Create Account</Text>
+                <Ionicons
+                  name="sparkles"
+                  size={32}
+                  color="#FFFFFF"
+                  style={styles.sparkleIcon}
+                />
+                <Text style={styles.welcomeTitle}>{t("signUp.title")}</Text>
                 <Text style={styles.welcomeSubtitle}>
-                  Join the community and start playing
+                  {t("signUp.subtitle")}
                 </Text>
               </Animated.View>
 
@@ -218,12 +230,17 @@ export default function SignUpScreen({ navigation }) {
                     },
                   ]}
                 >
-                  <Text style={styles.label}>First Name</Text>
+                  <Text style={styles.label}>{t("signUp.firstName")}</Text>
                   <View style={styles.inputWrapper}>
-                    <Ionicons name="person-outline" size={20} color="#999" style={styles.inputIcon} />
+                    <Ionicons
+                      name="person-outline"
+                      size={20}
+                      color="#999"
+                      style={styles.inputIcon}
+                    />
                     <TextInput
                       style={styles.input}
-                      placeholder="Enter your first name"
+                      placeholder={t("signUp.firstNamePlaceholder")}
                       placeholderTextColor="#999"
                       value={firstName}
                       onChangeText={setFirstName}
@@ -250,12 +267,17 @@ export default function SignUpScreen({ navigation }) {
                     },
                   ]}
                 >
-                  <Text style={styles.label}>Last Name</Text>
+                  <Text style={styles.label}>{t("signUp.lastName")}</Text>
                   <View style={styles.inputWrapper}>
-                    <Ionicons name="person-outline" size={20} color="#999" style={styles.inputIcon} />
+                    <Ionicons
+                      name="person-outline"
+                      size={20}
+                      color="#999"
+                      style={styles.inputIcon}
+                    />
                     <TextInput
                       style={styles.input}
-                      placeholder="Enter your last name"
+                      placeholder={t("signUp.lastNamePlaceholder")}
                       placeholderTextColor="#999"
                       value={lastName}
                       onChangeText={setLastName}
@@ -282,12 +304,17 @@ export default function SignUpScreen({ navigation }) {
                     },
                   ]}
                 >
-                  <Text style={styles.label}>Email address</Text>
+                  <Text style={styles.label}>{t("signUp.email")}</Text>
                   <View style={styles.inputWrapper}>
-                    <Ionicons name="mail-outline" size={20} color="#999" style={styles.inputIcon} />
+                    <Ionicons
+                      name="mail-outline"
+                      size={20}
+                      color="#999"
+                      style={styles.inputIcon}
+                    />
                     <TextInput
                       style={styles.input}
-                      placeholder="Enter email to get started"
+                      placeholder={t("signUp.emailPlaceholder")}
                       placeholderTextColor="#999"
                       value={email}
                       onChangeText={setEmail}
@@ -315,12 +342,17 @@ export default function SignUpScreen({ navigation }) {
                     },
                   ]}
                 >
-                  <Text style={styles.label}>Password</Text>
+                  <Text style={styles.label}>{t("signUp.password")}</Text>
                   <View style={styles.inputWrapper}>
-                    <Ionicons name="lock-closed-outline" size={20} color="#999" style={styles.inputIcon} />
+                    <Ionicons
+                      name="lock-closed-outline"
+                      size={20}
+                      color="#999"
+                      style={styles.inputIcon}
+                    />
                     <TextInput
                       style={styles.input}
-                      placeholder="Create a password"
+                      placeholder={t("signUp.passwordPlaceholder")}
                       placeholderTextColor="#999"
                       value={password}
                       onChangeText={setPassword}
@@ -333,7 +365,7 @@ export default function SignUpScreen({ navigation }) {
                       style={styles.eyeIcon}
                     >
                       <Ionicons
-                        name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                        name={showPassword ? "eye-off-outline" : "eye-outline"}
                         size={20}
                         color="#999"
                       />
@@ -358,12 +390,19 @@ export default function SignUpScreen({ navigation }) {
                     },
                   ]}
                 >
-                  <Text style={styles.label}>Confirm Password</Text>
+                  <Text style={styles.label}>
+                    {t("signUp.confirmPassword")}
+                  </Text>
                   <View style={styles.inputWrapper}>
-                    <Ionicons name="lock-closed-outline" size={20} color="#999" style={styles.inputIcon} />
+                    <Ionicons
+                      name="lock-closed-outline"
+                      size={20}
+                      color="#999"
+                      style={styles.inputIcon}
+                    />
                     <TextInput
                       style={styles.input}
-                      placeholder="Confirm your password"
+                      placeholder={t("signUp.confirmPasswordPlaceholder")}
                       placeholderTextColor="#999"
                       value={confirmPassword}
                       onChangeText={setConfirmPassword}
@@ -372,11 +411,17 @@ export default function SignUpScreen({ navigation }) {
                       autoCorrect={false}
                     />
                     <TouchableOpacity
-                      onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                      onPress={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
                       style={styles.eyeIcon}
                     >
                       <Ionicons
-                        name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                        name={
+                          showConfirmPassword
+                            ? "eye-off-outline"
+                            : "eye-outline"
+                        }
                         size={20}
                         color="#999"
                       />
@@ -391,7 +436,7 @@ export default function SignUpScreen({ navigation }) {
                   disabled={loading}
                 >
                   <LinearGradient
-                    colors={['#10B981', '#059669']}
+                    colors={["#10B981", "#059669"]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                     style={styles.gradientButton}
@@ -399,7 +444,9 @@ export default function SignUpScreen({ navigation }) {
                     {loading ? (
                       <ActivityIndicator color="#FFFFFF" />
                     ) : (
-                      <Text style={styles.signUpButtonText}>Create Account</Text>
+                      <Text style={styles.signUpButtonText}>
+                        {t("signUp.createAccount")}
+                      </Text>
                     )}
                   </LinearGradient>
                 </TouchableOpacity>
@@ -407,16 +454,18 @@ export default function SignUpScreen({ navigation }) {
                 {/* Divider */}
                 <View style={styles.divider}>
                   <View style={styles.dividerLine} />
-                  <Text style={styles.dividerText}>OR</Text>
+                  <Text style={styles.dividerText}>{t("signUp.or")}</Text>
                   <View style={styles.dividerLine} />
                 </View>
 
                 {/* Sign In Button */}
                 <TouchableOpacity
                   style={styles.signInButton}
-                  onPress={() => navigation.navigate('SignIn')}
+                  onPress={() => navigation.navigate("SignIn")}
                 >
-                  <Text style={styles.signInButtonText}>Already have an account? Sign In</Text>
+                  <Text style={styles.signInButtonText}>
+                    {t("signUp.alreadyHaveAccount")}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </Animated.View>
@@ -424,9 +473,12 @@ export default function SignUpScreen({ navigation }) {
             {/* Footer */}
             <View style={styles.footer}>
               <Text style={styles.footerText}>
-                By continuing, you agree to our{' '}
-                <Text style={styles.footerLink}>Terms</Text> and{' '}
-                <Text style={styles.footerLink}>Privacy Policy</Text>
+                {t("signUp.termsText")}{" "}
+                <Text style={styles.footerLink}>{t("signUp.terms")}</Text>{" "}
+                {t("signUp.and")}{" "}
+                <Text style={styles.footerLink}>
+                  {t("signUp.privacyPolicy")}
+                </Text>
               </Text>
             </View>
           </Animated.View>
@@ -446,7 +498,7 @@ export default function SignUpScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   keyboardView: {
     flex: 1,
@@ -455,49 +507,49 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     padding: 20,
     paddingTop: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   content: {
-    width: '100%',
+    width: "100%",
     maxWidth: 400,
   },
   logoContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 20,
   },
   iconCircle: {
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: '#10B981',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#10B981",
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 12,
   },
   brandName: {
     fontSize: 28,
-    fontWeight: '800',
-    color: '#FFFFFF',
+    fontWeight: "800",
+    color: "#FFFFFF",
     letterSpacing: -0.5,
     marginBottom: 6,
-    textAlign: 'center',
+    textAlign: "center",
   },
   tagline: {
     fontSize: 14,
-    color: '#9CA3AF',
-    fontWeight: '400',
-    textAlign: 'center',
+    color: "#9CA3AF",
+    fontWeight: "400",
+    textAlign: "center",
     marginBottom: 32,
   },
   welcomeCard: {
-    backgroundColor: 'rgba(55, 65, 81, 0.7)',
+    backgroundColor: "rgba(55, 65, 81, 0.7)",
     borderRadius: 24,
     padding: 20,
     marginBottom: 16,
   },
   welcomeHeader: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 16,
   },
   sparkleIcon: {
@@ -505,18 +557,18 @@ const styles = StyleSheet.create({
   },
   welcomeTitle: {
     fontSize: 26,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontWeight: "700",
+    color: "#FFFFFF",
     marginBottom: 6,
   },
   welcomeSubtitle: {
     fontSize: 14,
-    color: '#D1D5DB',
-    textAlign: 'center',
+    color: "#D1D5DB",
+    textAlign: "center",
     lineHeight: 20,
   },
   formCard: {
-    backgroundColor: '#1F2937',
+    backgroundColor: "#1F2937",
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
@@ -526,14 +578,14 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#E5E7EB',
+    fontWeight: "600",
+    color: "#E5E7EB",
     marginBottom: 8,
   },
   inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#374151',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#374151",
     borderRadius: 12,
     paddingHorizontal: 16,
     height: 48,
@@ -544,7 +596,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 15,
-    color: '#FFFFFF',
+    color: "#FFFFFF",
   },
   eyeIcon: {
     padding: 4,
@@ -552,60 +604,60 @@ const styles = StyleSheet.create({
   signUpButton: {
     marginTop: 8,
     borderRadius: 12,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   gradientButton: {
     paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   signUpButtonText: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
   divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginVertical: 12,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#4B5563',
+    backgroundColor: "#4B5563",
   },
   dividerText: {
     fontSize: 13,
-    color: '#9CA3AF',
+    color: "#9CA3AF",
     marginHorizontal: 12,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   signInButton: {
-    backgroundColor: '#374151',
+    backgroundColor: "#374151",
     borderRadius: 12,
     paddingVertical: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
-    borderColor: '#4B5563',
+    borderColor: "#4B5563",
   },
   signInButtonText: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#10B981',
+    fontWeight: "600",
+    color: "#10B981",
   },
   footer: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 12,
   },
   footerText: {
     fontSize: 12,
-    color: '#9CA3AF',
-    textAlign: 'center',
+    color: "#9CA3AF",
+    textAlign: "center",
     lineHeight: 16,
   },
   footerLink: {
-    color: '#10B981',
-    fontWeight: '500',
+    color: "#10B981",
+    fontWeight: "500",
   },
 });

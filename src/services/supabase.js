@@ -252,14 +252,20 @@ export const profileService = {
     // Map the updates to the actual database schema
     const dbUpdates = {
       username: updates.username,
-      full_name: updates.first_name && updates.last_name 
+      full_name: updates.first_name && updates.last_name
         ? `${updates.first_name} ${updates.last_name}`.trim()
         : updates.first_name || updates.last_name || updates.full_name,
       phone: updates.phone,
       bio: updates.bio,
       avatar_url: updates.avatar_url,
+<<<<<<< HEAD
       favorite_sports: updates.favorite_sports,
       onboarding_completed: updates.onboarding_completed,
+=======
+      location: updates.location,
+      onboarding_completed: updates.onboarding_completed,
+      favorite_sports: updates.favorite_sports,
+>>>>>>> c189818180afcf60e595993ba4e3443b18d1d89b
       updated_at: new Date().toISOString(),
     };
 
@@ -287,14 +293,20 @@ export const profileService = {
           .insert({
             id: userId,
             username: updates.username || `user_${userId.slice(0, 8)}`,
-            full_name: updates.first_name && updates.last_name 
+            full_name: updates.first_name && updates.last_name
               ? `${updates.first_name} ${updates.last_name}`.trim()
               : updates.first_name || updates.last_name || 'User',
             phone: updates.phone || '',
             bio: updates.bio || '',
             avatar_url: updates.avatar_url || '',
+<<<<<<< HEAD
             favorite_sports: updates.favorite_sports || [],
             onboarding_completed: updates.onboarding_completed || false,
+=======
+            location: updates.location || '',
+            onboarding_completed: updates.onboarding_completed !== undefined ? updates.onboarding_completed : false,
+            favorite_sports: updates.favorite_sports || [],
+>>>>>>> c189818180afcf60e595993ba4e3443b18d1d89b
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           })

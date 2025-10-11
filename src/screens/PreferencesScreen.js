@@ -7,11 +7,15 @@ import {
     TouchableOpacity,
     Alert,
     ActivityIndicator,
+    Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useSport } from '../context/SportContext';
+import { useLanguage } from '../context/LanguageContext';
 import { profileService, supabase } from '../services/supabase';
 import AnimatedBackground from '../components/AnimatedBackground';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -38,11 +42,13 @@ export default function PreferencesScreen({ navigation }) {
     const { colors } = useTheme();
     const { user, profile, setProfile } = useAuth();
     const { selectedSport, setSelectedSport } = useSport();
+    const { t } = useLanguage();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [selectedSports, setSelectedSports] = useState([]);
     const [skillLevels, setSkillLevels] = useState({});
     const [positions, setPositions] = useState({});
+    const [editingSport, setEditingSport] = useState(null);
 
     const styles = createStyles(colors);
 
@@ -351,9 +357,11 @@ export default function PreferencesScreen({ navigation }) {
     if (loading) {
         return (
             <AnimatedBackground>
-                <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-                    <ActivityIndicator size="large" color={colors.primary} />
-                    <Text style={styles.loadingText}>Loading preferences...</Text>
+                <View style={styles.loadingContainer}>
+                    <View style={styles.loadingCard}>
+                        <ActivityIndicator size="large" color={colors.primary} />
+                        <Text style={styles.loadingText}>Loading preferences...</Text>
+                    </View>
                 </View>
             </AnimatedBackground>
         );
@@ -382,19 +390,19 @@ export default function PreferencesScreen({ navigation }) {
                     </View>
                 </View>
 
-                <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-                    {/* Debug Info */}
-                    {__DEV__ && (
-                        <View style={styles.debugInfo}>
-                            <Text style={styles.debugText}>
-                                🔧 Debug: {selectedSports.length} sports loaded
-                            </Text>
-                        </View>
-                    )}
-
+                <ScrollView 
+                    style={styles.scrollView} 
+                    contentContainerStyle={styles.content}
+                    showsVerticalScrollIndicator={false}
+                >
                     {/* Sports Selection */}
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Sports You Play</Text>
+                        <View style={styles.sectionHeader}>
+                            <View style={styles.iconGlow}>
+                                <Ionicons name="sports" size={20} color={colors.primary} />
+                            </View>
+                            <Text style={styles.sectionTitle}>Sports You Play</Text>
+                        </View>
                         <Text style={styles.sectionSubtitle}>Select all sports you're interested in</Text>
 
                         <View style={styles.sportsGrid}>
@@ -426,69 +434,41 @@ export default function PreferencesScreen({ navigation }) {
                         </View>
                     </View>
 
-                    {/* Sport Details */}
-                    {selectedSports.map((sport) => (
-                        <View key={sport.id} style={styles.section}>
-                            <View style={styles.sportHeader}>
-                                <Ionicons name={sport.icon} size={24} color={colors.primary} />
-                                <Text style={styles.sportSectionTitle}>{sport.name}</Text>
-                            </View>
-
-                            {/* Skill Level */}
-                            <View style={styles.subsection}>
-                                <Text style={styles.subsectionTitle}>Skill Level</Text>
-                                <View style={styles.optionsGrid}>
-                                    {SKILL_LEVELS.map((level) => {
-                                        const isSelected = skillLevels[sport.id] === level;
-                                        return (
-                                            <TouchableOpacity
-                                                key={level}
-                                                style={[
-                                                    styles.optionCard,
-                                                    isSelected && styles.optionCardSelected,
-                                                ]}
-                                                onPress={() => handleSkillLevelSelect(sport.id, level)}
-                                            >
-                                                <Text style={[
-                                                    styles.optionText,
-                                                    isSelected && styles.optionTextSelected,
-                                                ]}>
-                                                    {level}
-                                                </Text>
-                                            </TouchableOpacity>
-                                        );
-                                    })}
+                    {/* Sport Summary Cards */}
+                    {selectedSports.length > 0 && (
+                        <View style={styles.section}>
+                            <View style={styles.sectionHeader}>
+                                <View style={styles.iconGlow}>
+                                    <Ionicons name="settings-outline" size={20} color={colors.primary} />
                                 </View>
+                                <Text style={styles.sectionTitle}>Sport Preferences</Text>
                             </View>
-
-                            {/* Preferred Position */}
-                            <View style={styles.subsection}>
-                                <Text style={styles.subsectionTitle}>Preferred Position</Text>
-                                <View style={styles.optionsGrid}>
-                                    {POSITIONS[sport.id]?.map((position) => {
-                                        const isSelected = positions[sport.id] === position;
-                                        return (
-                                            <TouchableOpacity
-                                                key={position}
-                                                style={[
-                                                    styles.optionCard,
-                                                    isSelected && styles.optionCardSelected,
-                                                ]}
-                                                onPress={() => handlePositionSelect(sport.id, position)}
-                                            >
-                                                <Text style={[
-                                                    styles.optionText,
-                                                    isSelected && styles.optionTextSelected,
-                                                ]}>
-                                                    {position}
+                            <Text style={styles.sectionSubtitle}>Tap any sport to customize your skill level and position</Text>
+                            
+                            <View style={styles.sportSummaryContainer}>
+                                {selectedSports.map((sport) => (
+                                    <TouchableOpacity
+                                        key={sport.id}
+                                        style={styles.sportSummaryCard}
+                                        onPress={() => setEditingSport(sport)}
+                                    >
+                                        <View style={styles.sportSummaryLeft}>
+                                            <View style={styles.sportIconContainer}>
+                                                <Ionicons name={sport.icon} size={20} color={colors.primary} />
+                                            </View>
+                                            <View style={styles.sportSummaryInfo}>
+                                                <Text style={styles.sportSummaryName}>{sport.name}</Text>
+                                                <Text style={styles.sportSummaryDetails}>
+                                                    {skillLevels[sport.id] || 'Beginner'} • {positions[sport.id] || 'No Preference'}
                                                 </Text>
-                                            </TouchableOpacity>
-                                        );
-                                    })}
-                                </View>
+                                            </View>
+                                        </View>
+                                        <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+                                    </TouchableOpacity>
+                                ))}
                             </View>
                         </View>
-                    ))}
+                    )}
 
                     {selectedSports.length === 0 && (
                         <View style={styles.emptyState}>
@@ -503,6 +483,112 @@ export default function PreferencesScreen({ navigation }) {
                     <View style={styles.bottomPadding} />
                 </ScrollView>
             </View>
+
+            {/* Sport Editing Modal */}
+            <Modal
+                visible={editingSport !== null}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setEditingSport(null)}
+                statusBarTranslucent={true}
+            >
+                <View style={styles.modalOverlay}>
+                    <BlurView intensity={80} style={StyleSheet.absoluteFill} tint="dark">
+                        <View style={styles.modalDarkOverlay} />
+                    </BlurView>
+                    <TouchableOpacity
+                        style={styles.modalBackdrop}
+                        activeOpacity={1}
+                        onPress={() => setEditingSport(null)}
+                    />
+                    <View style={styles.modalContainer}>
+                        <BlurView intensity={100} tint="dark" style={styles.modalBlur}>
+                            <LinearGradient
+                                colors={['rgba(16, 185, 129, 0.5)', 'rgba(5, 150, 105, 0.6)']}
+                                style={StyleSheet.absoluteFill}
+                            />
+                            <ScrollView 
+                                style={styles.modalScrollView}
+                                contentContainerStyle={styles.modalCard}
+                                showsVerticalScrollIndicator={false}
+                            >
+                                {editingSport && (
+                                    <>
+                                        <View style={styles.modalIconContainer}>
+                                            <Ionicons name={editingSport.icon} size={40} color="#FFFFFF" />
+                                        </View>
+                                        <Text style={styles.modalTitle}>{editingSport.name} Preferences</Text>
+                                        <Text style={styles.modalMessage}>
+                                            Customize your skill level and preferred position
+                                        </Text>
+                                        
+                                        {/* Skill Level Section */}
+                                        <View style={styles.modalSection}>
+                                            <Text style={styles.modalSectionTitle}>Skill Level</Text>
+                                            <View style={styles.modalOptionsGrid}>
+                                                {SKILL_LEVELS.map((level) => {
+                                                    const isSelected = skillLevels[editingSport.id] === level;
+                                                    return (
+                                                        <TouchableOpacity
+                                                            key={level}
+                                                            style={[
+                                                                styles.modalOptionCard,
+                                                                isSelected && styles.modalOptionCardSelected,
+                                                            ]}
+                                                            onPress={() => handleSkillLevelSelect(editingSport.id, level)}
+                                                        >
+                                                            <Text style={[
+                                                                styles.modalOptionText,
+                                                                isSelected && styles.modalOptionTextSelected,
+                                                            ]}>
+                                                                {level}
+                                                            </Text>
+                                                        </TouchableOpacity>
+                                                    );
+                                                })}
+                                            </View>
+                                        </View>
+
+                                        {/* Position Section */}
+                                        <View style={styles.modalSection}>
+                                            <Text style={styles.modalSectionTitle}>Preferred Position</Text>
+                                            <View style={styles.modalOptionsGrid}>
+                                                {POSITIONS[editingSport.id]?.map((position) => {
+                                                    const isSelected = positions[editingSport.id] === position;
+                                                    return (
+                                                        <TouchableOpacity
+                                                            key={position}
+                                                            style={[
+                                                                styles.modalOptionCard,
+                                                                isSelected && styles.modalOptionCardSelected,
+                                                            ]}
+                                                            onPress={() => handlePositionSelect(editingSport.id, position)}
+                                                        >
+                                                            <Text style={[
+                                                                styles.modalOptionText,
+                                                                isSelected && styles.modalOptionTextSelected,
+                                                            ]}>
+                                                                {position}
+                                                            </Text>
+                                                        </TouchableOpacity>
+                                                    );
+                                                })}
+                                            </View>
+                                        </View>
+
+                                        <TouchableOpacity
+                                            style={styles.modalDoneButton}
+                                            onPress={() => setEditingSport(null)}
+                                        >
+                                            <Text style={styles.modalDoneButtonText}>Done</Text>
+                                        </TouchableOpacity>
+                                    </>
+                                )}
+                            </ScrollView>
+                        </BlurView>
+                    </View>
+                </View>
+            </Modal>
         </AnimatedBackground>
     );
 }
@@ -518,156 +604,186 @@ const createStyles = (colors) => StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 20,
         paddingTop: 60,
-        paddingBottom: 20,
+        paddingBottom: 16,
+        backgroundColor: 'transparent',
     },
     backButton: {
-        padding: 8,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: colors.glass,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1.5,
+        borderColor: colors.glassBorder,
+        shadowColor: colors.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 4,
     },
     headerTitle: {
-        fontSize: 18,
+        fontSize: 20,
         fontWeight: '700',
         color: colors.text,
         flex: 1,
         textAlign: 'center',
-    },
-    headerActions: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 15,
-    },
-    refreshButton: {
-        padding: 4,
+        letterSpacing: -0.5,
     },
     saveButton: {
         fontSize: 16,
         fontWeight: '600',
         color: colors.primary,
+        width: 40,
+        textAlign: 'center',
     },
     scrollView: {
         flex: 1,
     },
-    debugInfo: {
-        backgroundColor: colors.card,
-        marginHorizontal: 16,
-        marginBottom: 8,
-        borderRadius: 8,
-        padding: 12,
-        borderWidth: 1,
-        borderColor: colors.border,
+    content: {
+        paddingBottom: 40,
+        paddingTop: 8,
     },
-    debugText: {
-        fontSize: 12,
-        color: colors.textSecondary,
-        textAlign: 'center',
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'transparent',
+    },
+    loadingCard: {
+        backgroundColor: colors.card,
+        borderRadius: 20,
+        padding: 32,
+        alignItems: 'center',
+        borderWidth: 1.5,
+        borderColor: colors.glassBorder,
+        shadowColor: colors.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 4,
     },
     loadingText: {
-        color: colors.textSecondary,
-        marginTop: 12,
+        color: colors.text,
+        marginTop: 16,
         textAlign: 'center',
+        fontSize: 16,
+        fontWeight: '500',
     },
     section: {
-        backgroundColor: colors.card,
-        marginHorizontal: 16,
+        marginHorizontal: 20,
         marginBottom: 16,
-        borderRadius: 16,
-        padding: 20,
+    },
+    sectionHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        marginBottom: 16,
+        paddingHorizontal: 20,
+    },
+    iconGlow: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: colors.card,
+        alignItems: 'center',
+        justifyContent: 'center',
         borderWidth: 1,
         borderColor: colors.glassBorder,
+        shadowColor: colors.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
     },
     sectionTitle: {
-        fontSize: 20,
+        fontSize: 18,
         fontWeight: '700',
         color: colors.text,
-        marginBottom: 4,
+        letterSpacing: -0.5,
     },
     sectionSubtitle: {
         fontSize: 14,
         color: colors.textSecondary,
         marginBottom: 20,
+        paddingHorizontal: 20,
+        lineHeight: 20,
     },
     sportsGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: 12,
+        paddingHorizontal: 20,
+        justifyContent: 'center',
     },
     sportCard: {
-        backgroundColor: colors.surface,
-        borderRadius: 12,
-        padding: 16,
+        backgroundColor: colors.card,
+        borderRadius: 16,
+        padding: 20,
         alignItems: 'center',
-        minWidth: 90,
-        borderWidth: 2,
-        borderColor: 'transparent',
+        width: 100,
+        borderWidth: 1.5,
+        borderColor: colors.glassBorder,
+        shadowColor: colors.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 4,
     },
     sportCardSelected: {
         backgroundColor: colors.primary,
         borderColor: colors.primary,
+        shadowColor: colors.primary,
+        shadowOpacity: 0.3,
+        transform: [{ scale: 1.02 }],
     },
     sportName: {
-        fontSize: 12,
+        fontSize: 13,
         fontWeight: '600',
         color: colors.text,
-        marginTop: 6,
+        marginTop: 8,
         textAlign: 'center',
     },
     sportNameSelected: {
-        color: colors.white,
+        color: '#FFFFFF',
     },
+
     sportHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 20,
-        gap: 8,
+        marginBottom: 24,
+        gap: 12,
+    },
+    sportIconContainer: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: colors.surface,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: colors.glassBorder,
     },
     sportSectionTitle: {
         fontSize: 18,
         fontWeight: '700',
         color: colors.text,
+        letterSpacing: -0.5,
     },
-    subsection: {
-        marginBottom: 20,
-    },
-    subsectionTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: colors.text,
-        marginBottom: 4,
-    },
-    debugText: {
-        fontSize: 12,
-        color: colors.textSecondary,
-        marginBottom: 8,
-        fontStyle: 'italic',
-    },
-    optionsGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
-    },
-    optionCard: {
-        backgroundColor: colors.surface,
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderWidth: 1,
-        borderColor: colors.glassBorder,
-    },
-    optionCardSelected: {
-        backgroundColor: colors.primary,
-        borderColor: colors.primary,
-    },
-    optionText: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: colors.text,
-    },
-    optionTextSelected: {
-        color: colors.white,
-    },
+
     emptyState: {
         alignItems: 'center',
         paddingVertical: 60,
         paddingHorizontal: 40,
+        backgroundColor: colors.card,
+        borderRadius: 20,
+        marginHorizontal: 20,
+        borderWidth: 1.5,
+        borderColor: colors.glassBorder,
+        shadowColor: colors.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 4,
     },
     emptyStateTitle: {
         fontSize: 20,
@@ -675,6 +791,7 @@ const createStyles = (colors) => StyleSheet.create({
         color: colors.text,
         marginTop: 16,
         marginBottom: 8,
+        letterSpacing: -0.5,
     },
     emptyStateText: {
         fontSize: 16,
@@ -684,5 +801,164 @@ const createStyles = (colors) => StyleSheet.create({
     },
     bottomPadding: {
         height: 40,
+    },
+    // Sport Summary Cards
+    sportSummaryContainer: {
+        paddingHorizontal: 20,
+    },
+    sportSummaryCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: colors.card,
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 12,
+        borderWidth: 1.5,
+        borderColor: colors.glassBorder,
+        shadowColor: colors.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    sportSummaryLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+    },
+    sportSummaryInfo: {
+        marginLeft: 12,
+        flex: 1,
+    },
+    sportSummaryName: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: colors.text,
+        marginBottom: 2,
+    },
+    sportSummaryDetails: {
+        fontSize: 13,
+        color: colors.textSecondary,
+        fontWeight: '500',
+    },
+    // Modal Styles
+    modalOverlay: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+    },
+    modalDarkOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    },
+    modalBackdrop: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+    },
+    modalContainer: {
+        width: '100%',
+        maxWidth: 340,
+        maxHeight: '85%',
+        borderRadius: 24,
+        overflow: 'hidden',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 20 },
+        shadowOpacity: 0.3,
+        shadowRadius: 30,
+        elevation: 20,
+    },
+    modalBlur: {
+        borderRadius: 24,
+    },
+    modalScrollView: {
+        maxHeight: '100%',
+    },
+    modalCard: {
+        padding: 24,
+        alignItems: 'center',
+    },
+    modalIconContainer: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 16,
+        borderWidth: 2,
+        borderColor: 'rgba(255, 255, 255, 0.2)',
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: '700',
+        color: '#FFFFFF',
+        textAlign: 'center',
+        marginBottom: 8,
+        letterSpacing: -0.5,
+    },
+    modalMessage: {
+        fontSize: 14,
+        color: 'rgba(255, 255, 255, 0.9)',
+        textAlign: 'center',
+        lineHeight: 20,
+        marginBottom: 24,
+    },
+    modalSection: {
+        width: '100%',
+        marginBottom: 20,
+    },
+    modalSectionTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#FFFFFF',
+        marginBottom: 12,
+        textAlign: 'center',
+    },
+    modalOptionsGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        justifyContent: 'center',
+    },
+    modalOptionCard: {
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        borderRadius: 12,
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.2)',
+    },
+    modalOptionCardSelected: {
+        backgroundColor: 'rgba(255, 255, 255, 0.3)',
+        borderColor: 'rgba(255, 255, 255, 0.5)',
+    },
+    modalOptionText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: 'rgba(255, 255, 255, 0.8)',
+    },
+    modalOptionTextSelected: {
+        color: '#FFFFFF',
+    },
+    modalDoneButton: {
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        paddingVertical: 14,
+        paddingHorizontal: 32,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.3)',
+        marginTop: 8,
+        minWidth: 120,
+        alignItems: 'center',
+    },
+    modalDoneButtonText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#FFFFFF',
     },
 });

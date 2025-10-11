@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import ProfilePicture from './ProfilePicture';
 
 const ChatMembersModal = ({ visible, onClose, chatMembers = [] }) => {
   const { colors } = useTheme();
@@ -101,15 +102,12 @@ const ChatMembersModal = ({ visible, onClose, chatMembers = [] }) => {
       >
         <View style={styles.memberInfo}>
           <View style={styles.avatarContainer}>
-            {item.avatar_url ? (
-              <Image source={{ uri: item.avatar_url }} style={styles.avatar} />
-            ) : (
-              <View style={[styles.avatarPlaceholder, { backgroundColor: colors.lightGray }]}>
-                <Text style={[styles.avatarText, { color: colors.text }]}>
-                  {item.full_name.charAt(0)}
-                </Text>
-              </View>
-            )}
+            <ProfilePicture
+              imageUrl={item.avatar_url}
+              size={48}
+              fallbackText={item.full_name?.charAt(0)}
+              showBorder={false}
+            />
             {item.is_online && <View style={[styles.onlineIndicator, { backgroundColor: colors.success }]} />}
           </View>
           

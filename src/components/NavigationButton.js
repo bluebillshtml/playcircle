@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import ProfilePicture from './ProfilePicture';
 import { BlurView } from 'expo-blur';
 
 const { width, height } = Dimensions.get('window');
@@ -274,13 +275,12 @@ export default function NavigationButton({ navigation, currentScreen, hide = fal
 
               <View style={styles.drawerFooter}>
                 <View style={styles.userInfo}>
-                  <View style={styles.userAvatar}>
-                    {profile?.avatar_url ? (
-                      <Image source={{ uri: profile.avatar_url }} style={styles.userAvatarImage} />
-                    ) : (
-                      <Ionicons name="person" size={20} color="#FFFFFF" />
-                    )}
-                  </View>
+                  <ProfilePicture
+                    useCurrentUser={true}
+                    size={40}
+                    borderColor="rgba(255, 255, 255, 0.2)"
+                    borderWidth={2}
+                  />
                   <View style={styles.userDetails}>
                     <Text style={styles.userName}>
                       {profile?.first_name && profile?.last_name
@@ -483,21 +483,7 @@ const createStyles = (colors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  userAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.surfaceLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-    overflow: 'hidden',
-  },
-  userAvatarImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-  },
+
   userDetails: {
     flex: 1,
   },
