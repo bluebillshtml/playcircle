@@ -223,7 +223,11 @@ export default function MessagesScreen({ navigation }) {
         try {
           if (friendsService && friendsService.getFriends) {
             const result = await friendsService.getFriends(user.id);
-            return Array.isArray(result) ? result : [];
+            // friendsService returns ApiResponse<Friend[]> with data property
+            if (result && result.success && Array.isArray(result.data)) {
+              return result.data;
+            }
+            return [];
           }
           return []; // Return empty array if service doesn't exist
         } catch (err) {

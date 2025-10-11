@@ -107,7 +107,7 @@ export const transformFriend = (dbRecord: any): Friend => {
     username: dbRecord.username || '',
     full_name: dbRecord.full_name || '',
     avatar_url: dbRecord.avatar_url || null,
-    friendship_date: dbRecord.friendship_date,
+    friendship_date: dbRecord.friendship_date || dbRecord.added_at,
     online_status: dbRecord.online_status || undefined,
   };
 };
