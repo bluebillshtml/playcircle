@@ -965,6 +965,8 @@ const createStyles = (colors) => StyleSheet.create({
   },
   headerWrapper: {
     position: 'relative',
+    marginTop: 0,
+    paddingTop: 24,
   },
   coverPhotoContainer: {
     position: 'absolute',
