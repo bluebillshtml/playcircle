@@ -22,6 +22,7 @@ import RequestStrip from '../components/RequestStrip';
 import SettingsBottomSheet from '../components/SettingsBottomSheet';
 import ScreenHeader from '../components/ScreenHeader';
 import AnimatedBackground from '../components/AnimatedBackground';
+import SearchDropdown from '../components/SearchDropdown';
 
 const FriendsScreen = ({ navigation }) => {
   const { colors } = useTheme();
@@ -29,6 +30,7 @@ const FriendsScreen = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState(null); // Track which action is loading
   const [isOffline, setIsOffline] = useState(false);
+  const [searchDropdownVisible, setSearchDropdownVisible] = useState(false);
   
   // Animation values
   const fadeAnim = useState(new Animated.Value(0))[0];
@@ -89,10 +91,30 @@ const FriendsScreen = ({ navigation }) => {
   // Handle search input changes
   const handleSearchInput = (query) => {
     handleSearch(query);
+    const shouldShow = query.trim().length > 0;
+    console.log('Search input:', query, 'Should show dropdown:', shouldShow);
+    setSearchDropdownVisible(shouldShow);
   };
 
   const handleClearSearch = () => {
     clearSearch();
+    setSearchDropdownVisible(false);
+  };
+
+  const handleSearchFocus = () => {
+    if (searchQuery.trim().length > 0) {
+      setSearchDropdownVisible(true);
+    }
+  };
+
+  const handleSearchBlur = () => {
+    // Keep dropdown visible for a brief moment to allow clicks
+    setTimeout(() => setSearchDropdownVisible(false), 150);
+  };
+
+  const handleDropdownUserSelect = (user) => {
+    // Close dropdown when user is selected
+    setSearchDropdownVisible(false);
   };
 
   // Enhanced error handling utilities
@@ -362,9 +384,9 @@ const FriendsScreen = ({ navigation }) => {
   };
 
   const renderSuggestedFriends = () => {
-    // Use search results if searching, otherwise use regular data
-    const friendsToShow = hasSearchResults ? searchResults.suggested_friends : suggestedFriends;
-    const isLoading = loading.search || (loading.suggested_friends && suggestedFriends.length === 0);
+    // Always show regular suggested friends, never search results
+    const friendsToShow = suggestedFriends;
+    const isLoading = loading.suggested_friends && suggestedFriends.length === 0;
 
     if (isLoading) {
       return (
@@ -378,10 +400,8 @@ const FriendsScreen = ({ navigation }) => {
     }
 
     if (friendsToShow.length === 0) {
-      const emptyTitle = hasSearchResults ? 'No friends found' : 'No suggestions yet';
-      const emptySubtitle = hasSearchResults 
-        ? 'Try a different search term' 
-        : 'Play more games to discover new friends';
+      const emptyTitle = 'No suggestions yet';
+      const emptySubtitle = 'Play more games to discover new friends';
 
       return (
         <View style={[styles.emptyContainer, { backgroundColor: colors.surface + '40', borderRadius: 24, marginHorizontal: 24, borderWidth: 1, borderColor: colors.glassBorder }]}>
@@ -420,9 +440,9 @@ const FriendsScreen = ({ navigation }) => {
   };
 
   const renderRecentMembers = () => {
-    // Use search results if searching, otherwise use regular data
-    const membersToShow = hasSearchResults ? searchResults.recent_members : recentMembers;
-    const isLoading = loading.search || (loading.recent_members && recentMembers.length === 0);
+    // Always show regular recent members, never search results
+    const membersToShow = recentMembers;
+    const isLoading = loading.recent_members && recentMembers.length === 0;
 
     if (isLoading) {
       return (
@@ -436,10 +456,8 @@ const FriendsScreen = ({ navigation }) => {
     }
 
     if (membersToShow.length === 0) {
-      const emptyTitle = hasSearchResults ? 'No members found' : 'No recent interactions';
-      const emptySubtitle = hasSearchResults 
-        ? 'Try a different search term' 
-        : 'Members you\'ve played with will appear here';
+      const emptyTitle = 'No recent interactions';
+      const emptySubtitle = 'Members you\'ve played with will appear here';
 
       return (
         <View style={[styles.emptyContainer, { backgroundColor: colors.surface + '40', borderRadius: 24, marginHorizontal: 24, borderWidth: 1, borderColor: colors.glassBorder }]}>
@@ -472,76 +490,6 @@ const FriendsScreen = ({ navigation }) => {
     );
   };
 
-  const renderSearchableUsers = () => {
-    if (!hasSearchResults || !searchResults.searchable_users) return null;
-    
-    const usersToShow = searchResults.searchable_users;
-    const isLoading = loading.search;
-
-    if (isLoading) {
-      return (
-        <View style={[styles.loadingContainer, { backgroundColor: colors.surface + '40', borderRadius: 24, marginHorizontal: 24 }]}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-            Searching users...
-          </Text>
-        </View>
-      );
-    }
-
-    if (usersToShow.length === 0) {
-      return null; // Don't show empty state for searchable users
-    }
-
-    return (
-      <View style={styles.membersContainer}>
-        {usersToShow.map((user, index) => (
-          <View key={user.id} style={styles.searchUserRow}>
-            <View style={styles.searchUserInfo}>
-              <View style={styles.searchUserAvatar}>
-                <Text style={[styles.searchUserAvatarText, { color: colors.primary }]}>
-                  {(user.first_name || user.full_name || user.username || '?')[0].toUpperCase()}
-                </Text>
-              </View>
-              <View style={styles.searchUserDetails}>
-                <Text style={[styles.searchUserName, { color: colors.text }]}>
-                  {user.full_name || user.username}
-                </Text>
-                <Text style={[styles.searchUserUsername, { color: colors.textSecondary }]}>
-                  @{user.username}
-                </Text>
-                {user.favorite_sports && user.favorite_sports.length > 0 && (
-                  <View style={styles.searchUserSports}>
-                    {user.favorite_sports.slice(0, 2).map((sport, sportIndex) => (
-                      <View key={sportIndex} style={[styles.sportTag, { backgroundColor: colors.primary + '20' }]}>
-                        <Text style={[styles.sportTagText, { color: colors.primary }]}>
-                          {sport}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
-              </View>
-            </View>
-            <TouchableOpacity
-              style={[styles.addFriendButton, { backgroundColor: colors.primary }]}
-              onPress={() => handleAddFriend(user.id)}
-              disabled={actionLoading === `add-${user.id}`}
-            >
-              {actionLoading === `add-${user.id}` ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <>
-                  <Ionicons name="person-add" size={16} color="#FFFFFF" />
-                  <Text style={styles.addFriendButtonText}>Add</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
-        ))}
-      </View>
-    );
-  };
 
   const renderFriendRequests = () => {
     if (!hasPendingRequests) return null;
@@ -578,20 +526,34 @@ const FriendsScreen = ({ navigation }) => {
       <View style={styles.container}>
         {/* Header with Search Bar and Settings */}
         <View style={styles.header}>
-          <View style={[styles.headerSearchBar, { backgroundColor: colors.card, borderColor: colors.glassBorder }]}>
-            <Ionicons name="search" size={18} color={colors.textSecondary} />
-            <TextInput
-              style={[styles.headerSearchInput, { color: colors.text }]}
-              placeholder="Search games"
-              placeholderTextColor={colors.textSecondary}
-              value={searchQuery}
-              onChangeText={handleSearchInput}
+          <View style={styles.searchBarContainer}>
+            <View style={[styles.headerSearchBar, { backgroundColor: colors.card, borderColor: colors.glassBorder }]}>
+              <Ionicons name="search" size={18} color={colors.textSecondary} />
+              <TextInput
+                style={[styles.headerSearchInput, { color: colors.text }]}
+                placeholder="Search friends"
+                placeholderTextColor={colors.textSecondary}
+                value={searchQuery}
+                onChangeText={handleSearchInput}
+                onFocus={handleSearchFocus}
+                onBlur={handleSearchBlur}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={handleClearSearch}>
+                  <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <SearchDropdown
+              users={searchResults?.searchable_users || []}
+              loading={loading.search}
+              onUserSelect={handleDropdownUserSelect}
+              onAddFriend={handleAddFriend}
+              actionLoading={actionLoading}
+              visible={searchDropdownVisible}
+              style={styles.searchDropdown}
             />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={handleClearSearch}>
-                <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
-              </TouchableOpacity>
-            )}
           </View>
 
           <TouchableOpacity
@@ -623,24 +585,10 @@ const FriendsScreen = ({ navigation }) => {
           {/* Friend Requests Section */}
           {renderFriendRequests()}
 
-          {/* Search Results Indicator */}
-          {hasSearchResults && (
-            <View style={styles.searchResultsHeader}>
-              <Text style={[styles.searchResultsText, { color: colors.textSecondary }]}>
-                Search results for "{searchQuery}"
-              </Text>
-              <TouchableOpacity onPress={handleClearSearch}>
-                <Text style={[styles.clearSearchText, { color: colors.primary }]}>
-                  Clear
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
           {/* Suggested Friends Section */}
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {hasSearchResults ? 'Friends' : 'Suggested Friends'}
+              Suggested Friends
             </Text>
             {renderSuggestedFriends()}
           </View>
@@ -648,20 +596,10 @@ const FriendsScreen = ({ navigation }) => {
           {/* Recent Members Section */}
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {hasSearchResults ? 'Members' : 'Recent Members'}
+              Recent Members
             </Text>
             {renderRecentMembers()}
           </View>
-
-          {/* Searchable Users Section - Only show when searching */}
-          {hasSearchResults && searchResults.searchable_users && searchResults.searchable_users.length > 0 && (
-            <View style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                Find New Friends
-              </Text>
-              {renderSearchableUsers()}
-            </View>
-          )}
 
           {/* Empty State */}
           {!hasAnyData && !loading.suggested_friends && !loading.recent_members && (
