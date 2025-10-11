@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import useFriends from '../hooks/useFriends';
@@ -837,11 +838,13 @@ const FriendsScreen = ({ navigation }) => {
           transparent={true}
           animationType="slide"
           onRequestClose={() => setShowAllFriendsModal(false)}
+          statusBarTranslucent={true}
         >
-          <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0, 0, 0, 0.8)' }]}>
-            <View style={[styles.allFriendsModal, { backgroundColor: colors.surface }]}>
+          <BlurView intensity={80} style={styles.modalOverlay} tint="dark">
+            <View style={styles.modalDarkOverlay} />
+            <View style={styles.allFriendsModal}>
               <View style={styles.modalHeader}>
-                <Text style={[styles.modalTitle, { color: colors.text }]}>All Friends</Text>
+                <Text style={styles.modalTitle}>All Friends</Text>
                 <TouchableOpacity
                   style={styles.modalCloseButton}
                   onPress={() => setShowAllFriendsModal(false)}
@@ -854,15 +857,68 @@ const FriendsScreen = ({ navigation }) => {
                 contentContainerStyle={styles.friendsListContent}
                 showsVerticalScrollIndicator={false}
               >
+                {/* Pinned Friends Section */}
+                <View style={styles.pinnedSection}>
+                  <Text style={styles.pinnedSectionTitle}>
+                    Pinned Friends ({Math.min(friends.length, 8)}/8)
+                  </Text>
+                  <View style={styles.pinnedGrid}>
+                    {Array.from({ length: 8 }, (_, index) => {
+                      const friend = [...friends, ...pendingSentRequests][index];
+                      const isPending = friend && pendingSentRequests.some(p => p.id === friend.id);
+                      return (
+                        <TouchableOpacity
+                          key={friend?.id || `empty_${index}`}
+                          style={[styles.pinnedFriendCard, !friend && styles.emptyPinnedCard]}
+                          onPress={() => {
+                            if (friend) {
+                              setShowAllFriendsModal(false);
+                              navigation.navigate('UserProfile', { userId: friend.id, userData: friend });
+                            }
+                          }}
+                          disabled={!friend}
+                        >
+                          {friend ? (
+                            <>
+                              <View style={styles.pinnedFriendAvatar}>
+                                {friend.avatar_url ? (
+                                  <Image
+                                    source={{ uri: friend.avatar_url }}
+                                    style={styles.pinnedFriendAvatarImage}
+                                  />
+                                ) : (
+                                  <View style={[styles.friendAvatarPlaceholder, { backgroundColor: colors.primary + '20', width: 56, height: 56, borderRadius: 28 }]}>
+                                    <Ionicons name="person" size={24} color={colors.primary} />
+                                  </View>
+                                )}
+                                {isPending && (
+                                  <View style={styles.pinnedPendingBadge}>
+                                    <Ionicons name="time" size={12} color="#FFFFFF" />
+                                  </View>
+                                )}
+                              </View>
+                              <Text style={styles.pinnedFriendName} numberOfLines={1}>
+                                {friend.full_name || friend.username}
+                              </Text>
+                            </>
+                          ) : (
+                            <View style={styles.emptyPinnedSlot}>
+                              <Ionicons name="add" size={24} color="rgba(255, 255, 255, 0.4)" />
+                            </View>
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
                 {/* All Friends Section */}
                 <View style={styles.allFriendsSection}>
-                  <Text style={[styles.allFriendsSectionTitle, { color: colors.text }]}>
-                    Friends ({friends.length})
-                  </Text>
+                  <Text style={styles.allFriendsSectionTitle}>All Friends</Text>
                   {friends.map((friend) => (
                     <TouchableOpacity
                       key={friend.id}
-                      style={[styles.friendListItem, { backgroundColor: colors.card }]}
+                      style={styles.friendListItem}
                       onPress={() => {
                         setShowAllFriendsModal(false);
                         navigation.navigate('UserProfile', { userId: friend.id, userData: friend });
@@ -875,68 +931,61 @@ const FriendsScreen = ({ navigation }) => {
                             style={styles.friendListAvatarImage}
                           />
                         ) : (
-                          <View style={[styles.friendAvatarPlaceholder, { backgroundColor: colors.primary + '20' }]}>
+                          <View style={[styles.friendAvatarPlaceholder, { backgroundColor: colors.primary + '20', width: 48, height: 48, borderRadius: 24 }]}>
                             <Ionicons name="person" size={20} color={colors.primary} />
                           </View>
                         )}
                       </View>
                       <View style={styles.friendListInfo}>
-                        <Text style={[styles.friendListName, { color: colors.text }]}>
+                        <Text style={styles.friendListName}>
                           {friend.full_name || friend.username}
                         </Text>
-                        <Text style={[styles.friendListStatus, { color: colors.textSecondary }]}>
+                        <Text style={styles.friendListStatus}>
                           Friends
                         </Text>
                       </View>
                     </TouchableOpacity>
                   ))}
-                </View>
 
-                {/* Pending Requests Section */}
-                {pendingSentRequests.length > 0 && (
-                  <View style={styles.allFriendsSection}>
-                    <Text style={[styles.allFriendsSectionTitle, { color: colors.text }]}>
-                      Pending ({pendingSentRequests.length})
-                    </Text>
-                    {pendingSentRequests.map((friend) => (
-                      <TouchableOpacity
-                        key={friend.id}
-                        style={[styles.friendListItem, { backgroundColor: colors.card }]}
-                        onPress={() => {
-                          setShowAllFriendsModal(false);
-                          navigation.navigate('UserProfile', { userId: friend.id, userData: friend });
-                        }}
-                      >
-                        <View style={styles.friendListAvatar}>
-                          {friend.avatar_url ? (
-                            <Image
-                              source={{ uri: friend.avatar_url }}
-                              style={styles.friendListAvatarImage}
-                            />
-                          ) : (
-                            <View style={[styles.friendAvatarPlaceholder, { backgroundColor: colors.primary + '20' }]}>
-                              <Ionicons name="person" size={20} color={colors.primary} />
-                            </View>
-                          )}
-                          <View style={[styles.pendingBadge, { backgroundColor: colors.textSecondary }]}>
-                            <Ionicons name="time" size={12} color="#FFFFFF" />
+                  {/* Pending Requests */}
+                  {pendingSentRequests.length > 0 && pendingSentRequests.map((friend) => (
+                    <TouchableOpacity
+                      key={friend.id}
+                      style={styles.friendListItem}
+                      onPress={() => {
+                        setShowAllFriendsModal(false);
+                        navigation.navigate('UserProfile', { userId: friend.id, userData: friend });
+                      }}
+                    >
+                      <View style={styles.friendListAvatar}>
+                        {friend.avatar_url ? (
+                          <Image
+                            source={{ uri: friend.avatar_url }}
+                            style={styles.friendListAvatarImage}
+                          />
+                        ) : (
+                          <View style={[styles.friendAvatarPlaceholder, { backgroundColor: colors.primary + '20', width: 48, height: 48, borderRadius: 24 }]}>
+                            <Ionicons name="person" size={20} color={colors.primary} />
                           </View>
+                        )}
+                        <View style={styles.onlineIndicatorLarge}>
+                          <Ionicons name="time" size={10} color="#FFFFFF" />
                         </View>
-                        <View style={styles.friendListInfo}>
-                          <Text style={[styles.friendListName, { color: colors.text }]}>
-                            {friend.full_name || friend.username}
-                          </Text>
-                          <Text style={[styles.friendListStatus, { color: colors.textSecondary }]}>
-                            Pending request
-                          </Text>
-                        </View>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
+                      </View>
+                      <View style={styles.friendListInfo}>
+                        <Text style={styles.friendListName}>
+                          {friend.full_name || friend.username}
+                        </Text>
+                        <Text style={styles.friendListStatus}>
+                          Pending request
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </ScrollView>
             </View>
-          </View>
+          </BlurView>
         </Modal>
       </View>
     </AnimatedBackground>
@@ -1287,58 +1336,167 @@ const createStyles = (colors) => StyleSheet.create({
     fontWeight: '600',
   },
 
-  // Modal Styles
+  // Modal Styles (matching Messages tab)
   modalOverlay: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+  },
+  modalDarkOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
   },
   allFriendsModal: {
-    width: '100%',
-    maxWidth: 500,
-    maxHeight: '80%',
-    borderRadius: 24,
-    overflow: 'hidden',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '85%',
+    backgroundColor: colors.card,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    paddingTop: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 20,
   },
   modalHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    justifyContent: 'space-between',
+    paddingHorizontal: 28,
+    paddingBottom: 24,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.border + '30',
   },
   modalTitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '800',
+    color: colors.text,
+    letterSpacing: -0.5,
   },
   modalCloseButton: {
-    padding: 8,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   friendsListContent: {
-    padding: 20,
+    paddingHorizontal: 28,
+    paddingTop: 20,
+    paddingBottom: 40,
   },
+
+  // Pinned Friends Section
+  pinnedSection: {
+    marginBottom: 32,
+  },
+  pinnedSectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 16,
+    letterSpacing: -0.3,
+  },
+  pinnedGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  pinnedFriendCard: {
+    width: '22%',
+    aspectRatio: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background,
+    borderRadius: 16,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  emptyPinnedCard: {
+    backgroundColor: colors.background + '60',
+    borderStyle: 'dashed',
+    borderColor: colors.border + '60',
+  },
+  pinnedFriendAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    overflow: 'hidden',
+    position: 'relative',
+    marginBottom: 6,
+  },
+  pinnedFriendAvatarImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  pinnedPendingBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: colors.textSecondary,
+    borderWidth: 2,
+    borderColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pinnedFriendName: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.text,
+    textAlign: 'center',
+  },
+  emptyPinnedSlot: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.border + '40',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+
+  // All Friends Section
   allFriendsSection: {
-    marginBottom: 24,
+    borderTopWidth: 1,
+    borderTopColor: colors.border + '30',
+    paddingTop: 24,
   },
   allFriendsSectionTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
-    marginBottom: 12,
+    color: colors.text,
+    marginBottom: 16,
+    letterSpacing: -0.3,
   },
   friendListItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: colors.background,
+    borderRadius: 16,
     marginBottom: 8,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: colors.border + '40',
   },
   friendListAvatar: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    marginRight: 12,
+    backgroundColor: colors.card,
+    overflow: 'hidden',
     position: 'relative',
   },
   friendListAvatarImage: {
@@ -1352,10 +1510,31 @@ const createStyles = (colors) => StyleSheet.create({
   friendListName: {
     fontSize: 16,
     fontWeight: '600',
+    color: colors.text,
     marginBottom: 2,
   },
   friendListStatus: {
     fontSize: 13,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  onlineIndicatorLarge: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.textSecondary,
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 
