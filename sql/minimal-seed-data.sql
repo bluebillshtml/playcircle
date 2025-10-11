@@ -133,6 +133,31 @@ INSERT INTO auth.users (
     NOW(),
     NOW(),
     NOW()
+),
+-- Additional searchable users
+(
+    '44444444-4444-4444-4444-444444444444',
+    'emma@example.com',
+    crypt('password123', gen_salt('bf')),
+    NOW(),
+    NOW(),
+    NOW()
+),
+(
+    '55555555-5555-5555-5555-555555555555',
+    'james@example.com',
+    crypt('password123', gen_salt('bf')),
+    NOW(),
+    NOW(),
+    NOW()
+),
+(
+    '66666666-6666-6666-6666-666666666666',
+    'lisa@example.com',
+    crypt('password123', gen_salt('bf')),
+    NOW(),
+    NOW(),
+    NOW()
 )
 ON CONFLICT (id) DO NOTHING;
 
@@ -168,6 +193,37 @@ INSERT INTO public.profiles (
     'Mike',
     'Chen',
     ARRAY['padel'],
+    true,
+    true
+),
+-- Additional searchable users for testing search functionality
+(
+    '44444444-4444-4444-4444-444444444444',
+    'emma_player',
+    'Emma Wilson',
+    'Emma',
+    'Wilson',
+    ARRAY['tennis'],
+    true,
+    true
+),
+(
+    '55555555-5555-5555-5555-555555555555',
+    'james_court',
+    'James Brown',
+    'James',
+    'Brown',
+    ARRAY['padel', 'basketball'],
+    true,
+    true
+),
+(
+    '66666666-6666-6666-6666-666666666666',
+    'lisa_sport',
+    'Lisa Davis',
+    'Lisa',
+    'Davis',
+    ARRAY['tennis', 'padel'],
     true,
     true
 )
@@ -207,6 +263,37 @@ INSERT INTO public.user_sport_profiles (
     3,
     5,
     120
+),
+-- Additional searchable users sport profiles
+(
+    '44444444-4444-4444-4444-444444444444',
+    'tennis',
+    'Intermediate',
+    'Baseline',
+    12,
+    7,
+    5,
+    200
+),
+(
+    '55555555-5555-5555-5555-555555555555',
+    'padel',
+    'Advanced',
+    'Right Side',
+    30,
+    22,
+    8,
+    520
+),
+(
+    '66666666-6666-6666-6666-666666666666',
+    'tennis',
+    'Beginner',
+    'All Court',
+    6,
+    2,
+    4,
+    80
 )
 ON CONFLICT (user_id, sport_id) DO NOTHING;
 

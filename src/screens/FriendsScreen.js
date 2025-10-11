@@ -172,7 +172,11 @@ const FriendsScreen = ({ navigation }) => {
   };
 
   const handleAddFriend = async (userId) => {
+    if (actionLoading === `add-${userId}`) return;
+    
     try {
+      setActionLoading(`add-${userId}`);
+      
       // Haptic feedback for add friend action
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       
@@ -197,6 +201,8 @@ const FriendsScreen = ({ navigation }) => {
           () => handleAddFriend(userId)
         );
       }
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -466,6 +472,77 @@ const FriendsScreen = ({ navigation }) => {
     );
   };
 
+  const renderSearchableUsers = () => {
+    if (!hasSearchResults || !searchResults.searchable_users) return null;
+    
+    const usersToShow = searchResults.searchable_users;
+    const isLoading = loading.search;
+
+    if (isLoading) {
+      return (
+        <View style={[styles.loadingContainer, { backgroundColor: colors.surface + '40', borderRadius: 24, marginHorizontal: 24 }]}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+            Searching users...
+          </Text>
+        </View>
+      );
+    }
+
+    if (usersToShow.length === 0) {
+      return null; // Don't show empty state for searchable users
+    }
+
+    return (
+      <View style={styles.membersContainer}>
+        {usersToShow.map((user, index) => (
+          <View key={user.id} style={styles.searchUserRow}>
+            <View style={styles.searchUserInfo}>
+              <View style={styles.searchUserAvatar}>
+                <Text style={[styles.searchUserAvatarText, { color: colors.primary }]}>
+                  {(user.first_name || user.full_name || user.username || '?')[0].toUpperCase()}
+                </Text>
+              </View>
+              <View style={styles.searchUserDetails}>
+                <Text style={[styles.searchUserName, { color: colors.text }]}>
+                  {user.full_name || user.username}
+                </Text>
+                <Text style={[styles.searchUserUsername, { color: colors.textSecondary }]}>
+                  @{user.username}
+                </Text>
+                {user.favorite_sports && user.favorite_sports.length > 0 && (
+                  <View style={styles.searchUserSports}>
+                    {user.favorite_sports.slice(0, 2).map((sport, sportIndex) => (
+                      <View key={sportIndex} style={[styles.sportTag, { backgroundColor: colors.primary + '20' }]}>
+                        <Text style={[styles.sportTagText, { color: colors.primary }]}>
+                          {sport}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            </View>
+            <TouchableOpacity
+              style={[styles.addFriendButton, { backgroundColor: colors.primary }]}
+              onPress={() => handleAddFriend(user.id)}
+              disabled={actionLoading === `add-${user.id}`}
+            >
+              {actionLoading === `add-${user.id}` ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <>
+                  <Ionicons name="person-add" size={16} color="#FFFFFF" />
+                  <Text style={styles.addFriendButtonText}>Add</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        ))}
+      </View>
+    );
+  };
+
   const renderFriendRequests = () => {
     if (!hasPendingRequests) return null;
 
@@ -575,6 +652,16 @@ const FriendsScreen = ({ navigation }) => {
             </Text>
             {renderRecentMembers()}
           </View>
+
+          {/* Searchable Users Section - Only show when searching */}
+          {hasSearchResults && searchResults.searchable_users && searchResults.searchable_users.length > 0 && (
+            <View style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                Find New Friends
+              </Text>
+              {renderSearchableUsers()}
+            </View>
+          )}
 
           {/* Empty State */}
           {!hasAnyData && !loading.suggested_friends && !loading.recent_members && (
@@ -816,6 +903,74 @@ const createStyles = (colors) => StyleSheet.create({
   },
   clearSearchText: {
     fontSize: 15,
+    fontWeight: '600',
+  },
+  
+  // Searchable Users Styles
+  searchUserRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border + '20',
+  },
+  searchUserInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+  },
+  searchUserAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primary + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchUserAvatarText: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  searchUserDetails: {
+    flex: 1,
+    gap: 2,
+  },
+  searchUserName: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  searchUserUsername: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  searchUserSports: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 4,
+  },
+  sportTag: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  sportTagText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  addFriendButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    gap: 4,
+  },
+  addFriendButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
     fontWeight: '600',
   },
 });

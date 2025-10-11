@@ -427,7 +427,8 @@ export const useFriends = () => {
         setSearchResults({
           suggested_friends: response.data.suggested_friends,
           recent_members: response.data.recent_members,
-          total_count: response.data.suggested_friends.length + response.data.recent_members.length,
+          searchable_users: response.data.searchable_users || [],
+          total_count: response.data.suggested_friends.length + response.data.recent_members.length + (response.data.searchable_users?.length || 0),
         });
       } else {
         throw new Error(response.error || 'Search failed');

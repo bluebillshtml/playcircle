@@ -566,11 +566,12 @@ export class FriendsService {
   // =====================================================
 
   /**
-   * Search for users across suggested friends and recent members
+   * Search for users globally (anyone who allows friend requests from everyone)
    */
   async searchUsers(userId: string, query: string): Promise<ApiResponse<{
     suggested_friends: SuggestedFriend[];
     recent_members: RecentMember[];
+    searchable_users: User[];
   }>> {
     try {
       const validation = validateUserId(userId);
@@ -590,43 +591,87 @@ export class FriendsService {
           data: {
             suggested_friends: [],
             recent_members: [],
+            searchable_users: [],
           },
           error: null,
           success: true,
         };
       }
 
-      // Get both suggested friends and recent members
+      // Search for users globally who allow friend requests from everyone
+      const { data: searchableUsers, error: searchError } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          username,
+          full_name,
+          first_name,
+          last_name,
+          avatar_url,
+          favorite_sports
+        `)
+        .neq('id', sanitizedUserId) // Exclude current user
+        .or(`first_name.ilike.%${sanitizedQuery}%,full_name.ilike.%${sanitizedQuery}%,username.ilike.%${sanitizedQuery}%`)
+        .eq('is_active', true)
+        .limit(20);
+
+      if (searchError) {
+        throw searchError;
+      }
+
+      // Filter out users who are already friends
+      const { data: userFriendsData } = await supabase
+        .from('user_friends')
+        .select('friends')
+        .eq('user_id', sanitizedUserId)
+        .single();
+
+      const existingFriendIds = new Set();
+      if (userFriendsData?.friends) {
+        userFriendsData.friends.forEach((friend: any) => {
+          if (friend.status === 'accepted') {
+            existingFriendIds.add(friend.user_id);
+          }
+        });
+      }
+
+      // Filter out existing friends and transform to User objects
+      const availableUsers = (searchableUsers || [])
+        .filter(user => !existingFriendIds.has(user.id))
+        .map(user => ({
+          id: user.id,
+          username: user.username || '',
+          full_name: user.full_name || '',
+          first_name: user.first_name || '',
+          last_name: user.last_name || '',
+          avatar_url: user.avatar_url,
+          favorite_sports: user.favorite_sports || [],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }));
+
+      // Get both suggested friends and recent members (existing functionality)
       const [suggestedResponse, recentResponse] = await Promise.all([
         this.getSuggestedFriends(sanitizedUserId),
         this.getRecentMembers(sanitizedUserId),
       ]);
 
-      if (!suggestedResponse.success || !recentResponse.success) {
-        return {
-          data: null,
-          error: suggestedResponse.error || recentResponse.error,
-          success: false,
-        };
-      }
-
-      // Filter results based on search query
+      // Filter existing results based on search query
       const filteredSuggested = (suggestedResponse.data || []).filter(friend =>
         friend.username.toLowerCase().includes(sanitizedQuery) ||
-        friend.full_name.toLowerCase().includes(sanitizedQuery) ||
-        friend.sport_tags.some(tag => tag.toLowerCase().includes(sanitizedQuery))
+        friend.full_name.toLowerCase().includes(sanitizedQuery)
       );
 
       const filteredRecent = (recentResponse.data || []).filter(member =>
         member.username.toLowerCase().includes(sanitizedQuery) ||
-        member.full_name.toLowerCase().includes(sanitizedQuery) ||
-        member.last_interaction.location.toLowerCase().includes(sanitizedQuery)
+        member.full_name.toLowerCase().includes(sanitizedQuery)
       );
 
       return {
         data: {
           suggested_friends: filteredSuggested,
           recent_members: filteredRecent,
+          searchable_users: availableUsers,
         },
         error: null,
         success: true,
