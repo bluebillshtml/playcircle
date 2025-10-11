@@ -366,7 +366,6 @@ export default function DashboardScreen({ navigation }) {
             </TouchableOpacity>
           ))}
         </ScrollView>
-
           </>
         )}
       </View>

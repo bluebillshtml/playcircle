@@ -1663,6 +1663,301 @@ export const chatService = {
       return null;
     }
   },
+
+  // Create a direct chat between two friends
+  createDirectChat: async (user1Id, user2Id) => {
+    try {
+      console.log('🗨️ Creating direct chat between users:', user1Id, user2Id);
+
+      // Check if a direct chat already exists between these users
+      const existingChat = await chatService.getDirectChatBetweenUsers(user1Id, user2Id);
+      if (existingChat) {
+        console.log('✅ Direct chat already exists:', existingChat.id);
+        return existingChat;
+      }
+
+      // Create new chat (court_session_id is null for direct chats)
+      const { data: chat, error: chatError } = await supabase
+        .from('chats')
+        .insert({
+          court_session_id: null, // null indicates this is a direct chat
+          is_active: true,
+        })
+        .select()
+        .single();
+
+      if (chatError) throw chatError;
+
+      // Add both users as chat members
+      const { error: membersError } = await supabase
+        .from('chat_members')
+        .insert([
+          {
+            chat_id: chat.id,
+            user_id: user1Id,
+            is_active: true,
+            unread_count: 0,
+          },
+          {
+            chat_id: chat.id,
+            user_id: user2Id,
+            is_active: true,
+            unread_count: 0,
+          },
+        ]);
+
+      if (membersError) throw membersError;
+
+      console.log('✅ Direct chat created successfully:', chat.id);
+      return chat;
+    } catch (error) {
+      console.error('❌ Error creating direct chat:', error);
+      throw error;
+    }
+  },
+
+  // Get direct chat between two users
+  getDirectChatBetweenUsers: async (user1Id, user2Id) => {
+    try {
+      // Find chats where both users are members and court_session_id is null
+      const { data, error } = await supabase
+        .rpc('get_direct_chat_between_users', {
+          p_user1_id: user1Id,
+          p_user2_id: user2Id
+        });
+
+      if (error) {
+        // If function doesn't exist, use fallback query
+        if (error.code === '42883') {
+          return await chatService._getDirectChatFallback(user1Id, user2Id);
+        }
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error getting direct chat between users:', error);
+      return null;
+    }
+  },
+
+  // Fallback method for getting direct chat between users
+  _getDirectChatFallback: async (user1Id, user2Id) => {
+    try {
+      // Get all chats where user1 is a member and court_session_id is null
+      const { data: user1Chats, error: error1 } = await supabase
+        .from('chat_members')
+        .select(`
+          chat_id,
+          chat:chats!inner(
+            id,
+            court_session_id,
+            created_at,
+            updated_at,
+            last_message_at,
+            is_active
+          )
+        `)
+        .eq('user_id', user1Id)
+        .eq('is_active', true)
+        .is('chat.court_session_id', null);
+
+      if (error1) throw error1;
+
+      // For each chat, check if user2 is also a member
+      for (const chatMember of user1Chats || []) {
+        const { data: user2InChat, error: error2 } = await supabase
+          .from('chat_members')
+          .select('id')
+          .eq('chat_id', chatMember.chat_id)
+          .eq('user_id', user2Id)
+          .eq('is_active', true)
+          .single();
+
+        if (!error2 && user2InChat) {
+          return chatMember.chat;
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error in direct chat fallback:', error);
+      return null;
+    }
+  },
+
+  // Create a match chat for a court session
+  createMatchChat: async (matchId, playerIds) => {
+    try {
+      console.log('🏆 Creating match chat for match:', matchId, 'with players:', playerIds);
+
+      // Check if chat already exists for this match
+      const existingChat = await chatService.getChatBySessionId(matchId);
+      if (existingChat) {
+        console.log('✅ Match chat already exists:', existingChat.id);
+        return existingChat;
+      }
+
+      // Create new match chat
+      const { data: chat, error: chatError } = await supabase
+        .from('chats')
+        .insert({
+          court_session_id: matchId,
+          is_active: true,
+        })
+        .select()
+        .single();
+
+      if (chatError) throw chatError;
+
+      // Add all players as chat members
+      const chatMembers = playerIds.map(playerId => ({
+        chat_id: chat.id,
+        user_id: playerId,
+        is_active: true,
+        unread_count: 0,
+      }));
+
+      const { error: membersError } = await supabase
+        .from('chat_members')
+        .insert(chatMembers);
+
+      if (membersError) throw membersError;
+
+      console.log('✅ Match chat created successfully:', chat.id);
+      return chat;
+    } catch (error) {
+      console.error('❌ Error creating match chat:', error);
+      throw error;
+    }
+  },
+
+  // Get user's friend chats (direct chats only)
+  getFriendChats: async (userId) => {
+    try {
+      const { data, error } = await supabase
+        .from('chat_members')
+        .select(`
+          chat:chats!inner(
+            id,
+            court_session_id,
+            created_at,
+            updated_at,
+            last_message_at,
+            is_active
+          ),
+          unread_count,
+          last_read_at
+        `)
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .is('chat.court_session_id', null); // Only direct chats
+
+      if (error) throw error;
+
+      // For each chat, get the other user's info
+      const friendChats = [];
+      for (const chatMember of data || []) {
+        // Get the other user in this chat
+        const { data: otherMembers, error: membersError } = await supabase
+          .from('chat_members')
+          .select(`
+            user:profiles(
+              id,
+              username,
+              full_name,
+              avatar_url
+            )
+          `)
+          .eq('chat_id', chatMember.chat.id)
+          .eq('is_active', true)
+          .neq('user_id', userId);
+
+        if (!membersError && otherMembers && otherMembers.length > 0) {
+          const otherUser = otherMembers[0].user;
+          friendChats.push({
+            chat_id: chatMember.chat.id,
+            friend: otherUser,
+            last_message_at: chatMember.chat.last_message_at,
+            unread_count: chatMember.unread_count || 0,
+            created_at: chatMember.chat.created_at,
+          });
+        }
+      }
+
+      return friendChats;
+    } catch (error) {
+      console.error('Error getting friend chats:', error);
+      return [];
+    }
+  },
+
+  // Get user's match chats (upcoming and past)
+  getMatchChats: async (userId, upcoming = true) => {
+    try {
+      const now = new Date().toISOString();
+      
+      const { data, error } = await supabase
+        .from('chat_members')
+        .select(`
+          chat:chats!inner(
+            id,
+            court_session_id,
+            created_at,
+            updated_at,
+            last_message_at,
+            is_active,
+            match:matches!court_session_id(
+              id,
+              match_date,
+              match_time,
+              duration_minutes,
+              sport_id,
+              status,
+              court:courts(
+                id,
+                name
+              )
+            )
+          ),
+          unread_count,
+          last_read_at
+        `)
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .not('chat.court_session_id', 'is', null); // Only match chats
+
+      if (error) throw error;
+
+      // Filter by upcoming/past based on match date
+      const filteredChats = (data || []).filter(chatMember => {
+        if (!chatMember.chat.match) return false;
+        
+        const matchDateTime = new Date(`${chatMember.chat.match.match_date}T${chatMember.chat.match.match_time}`);
+        const isUpcoming = matchDateTime > new Date();
+        
+        return upcoming ? isUpcoming : !isUpcoming;
+      });
+
+      return filteredChats.map(chatMember => ({
+        chat_id: chatMember.chat.id,
+        court_session_id: chatMember.chat.court_session_id,
+        match: chatMember.chat.match,
+        session_title: `${chatMember.chat.match.court?.name || 'Court'} – ${new Date(chatMember.chat.match.match_date).toLocaleDateString()}`,
+        session_date: chatMember.chat.match.match_date,
+        session_time: chatMember.chat.match.match_time,
+        session_duration: chatMember.chat.match.duration_minutes,
+        court_name: chatMember.chat.match.court?.name,
+        sport_id: chatMember.chat.match.sport_id,
+        last_message_at: chatMember.chat.last_message_at,
+        unread_count: chatMember.unread_count || 0,
+        is_happening_soon: upcoming && new Date(chatMember.chat.match.match_date) <= new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+      }));
+    } catch (error) {
+      console.error('Error getting match chats:', error);
+      return [];
+    }
+  },
 };
 
 // =====================================================

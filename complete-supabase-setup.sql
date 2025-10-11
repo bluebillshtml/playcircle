@@ -712,6 +712,61 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- Function to get direct chat between two users
+CREATE OR REPLACE FUNCTION get_direct_chat_between_users(
+    p_user1_id UUID,
+    p_user2_id UUID
+)
+RETURNS TABLE(
+    id UUID,
+    court_session_id UUID,
+    created_at TIMESTAMP WITH TIME ZONE,
+    updated_at TIMESTAMP WITH TIME ZONE,
+    last_message_at TIMESTAMP WITH TIME ZONE,
+    is_active BOOLEAN
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT DISTINCT c.id, c.court_session_id, c.created_at, c.updated_at, c.last_message_at, c.is_active
+    FROM chats c
+    INNER JOIN chat_members cm1 ON c.id = cm1.chat_id
+    INNER JOIN chat_members cm2 ON c.id = cm2.chat_id
+    WHERE c.court_session_id IS NULL  -- Direct chats only
+      AND c.is_active = true
+      AND cm1.user_id = p_user1_id
+      AND cm1.is_active = true
+      AND cm2.user_id = p_user2_id
+      AND cm2.is_active = true
+      AND cm1.user_id != cm2.user_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to get user's friends
+CREATE OR REPLACE FUNCTION get_user_friends(p_user_id UUID)
+RETURNS TABLE(
+    id UUID,
+    username TEXT,
+    full_name TEXT,
+    avatar_url TEXT,
+    status TEXT
+) AS $$
+BEGIN
+    -- For now, return a simple query from profiles
+    -- This can be enhanced later with the friends system
+    RETURN QUERY
+    SELECT 
+        p.id,
+        p.username,
+        p.full_name,
+        p.avatar_url,
+        'offline'::TEXT as status
+    FROM profiles p
+    WHERE p.id != p_user_id
+    AND p.is_active = true
+    LIMIT 10;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- =====================================================
 -- 15. TRIGGERS
 -- =====================================================
