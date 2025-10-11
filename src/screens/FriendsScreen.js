@@ -159,10 +159,14 @@ const FriendsScreen = ({ navigation }) => {
         .eq('user_id', user.id)
         .single();
 
+      console.log('FriendsScreen: friend_requests_sent from DB:', userData?.friend_requests_sent);
+
       if (userData?.friend_requests_sent) {
         const pendingRequests = userData.friend_requests_sent
           .filter((request) => request.status === 'pending')
           .map((request) => request.user_id);
+
+        console.log('FriendsScreen: Pending request user IDs:', pendingRequests);
 
         if (pendingRequests.length > 0) {
           // Get profiles for pending users
@@ -171,6 +175,7 @@ const FriendsScreen = ({ navigation }) => {
             .select('id, username, full_name, avatar_url')
             .in('id', pendingRequests);
 
+          console.log('FriendsScreen: Pending profiles fetched:', profiles?.map(p => ({ id: p.id, name: p.full_name || p.username })));
           setPendingSentRequests(profiles || []);
         } else {
           setPendingSentRequests([]);
