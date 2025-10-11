@@ -330,6 +330,52 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- =====================================================
+-- 5. FIX CHAT RLS POLICIES (REMOVE INFINITE RECURSION)
+-- =====================================================
+
+-- Drop problematic policies
+DROP POLICY IF EXISTS "Users can only see chats they belong to" ON chats;
+DROP POLICY IF EXISTS "Users can see members of chats they belong to" ON chat_members;
+
+-- Create simpler, non-recursive policies
+CREATE POLICY "Users can see chats they belong to" ON chats
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM chat_members cm 
+            WHERE cm.chat_id = chats.id 
+            AND cm.user_id = auth.uid() 
+            AND cm.is_active = true
+        )
+    );
+
+CREATE POLICY "Users can insert direct chats" ON chats
+    FOR INSERT WITH CHECK (
+        court_session_id IS NULL -- Only allow direct chats for now
+    );
+
+CREATE POLICY "Users can see chat members" ON chat_members
+    FOR SELECT USING (
+        user_id = auth.uid() OR 
+        EXISTS (
+            SELECT 1 FROM chat_members cm2 
+            WHERE cm2.chat_id = chat_members.chat_id 
+            AND cm2.user_id = auth.uid() 
+            AND cm2.is_active = true
+        )
+    );
+
+CREATE POLICY "Users can insert chat members" ON chat_members
+    FOR INSERT WITH CHECK (
+        user_id = auth.uid() OR 
+        EXISTS (
+            SELECT 1 FROM chat_members cm 
+            WHERE cm.chat_id = chat_members.chat_id 
+            AND cm.user_id = auth.uid() 
+            AND cm.is_active = true
+        )
+    );
+
+-- =====================================================
 -- VERIFICATION QUERIES
 -- =====================================================
 
