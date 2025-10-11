@@ -187,9 +187,28 @@ export class FriendsService {
    */
   async acceptFriendRequest(requestId: string, accepterId: string): Promise<FriendActionResult> {
     try {
-      // For now, return success but don't actually accept the request
-      // This functionality can be implemented later when needed
-      console.log('Friend request would be accepted:', requestId, 'by', accepterId);
+      // Extract sender ID from request ID (format: "request_<sender_id>")
+      const senderId = requestId.replace('request_', '');
+      
+      console.log('Accepting friend request from', senderId, 'by', accepterId);
+
+      // Use the JSONB database function which bypasses RLS with SECURITY DEFINER
+      const { data, error } = await supabase
+        .rpc('accept_friend_request_jsonb', {
+          accepter_id: accepterId,
+          sender_id: senderId,
+        });
+
+      if (error) {
+        console.error('RPC error:', error);
+        throw error;
+      }
+
+      console.log('Friend request accepted successfully');
+
+      // Clear cache for both users
+      this.clearUserCaches(accepterId);
+      this.clearUserCaches(senderId);
 
       return {
         success: true,
@@ -209,9 +228,28 @@ export class FriendsService {
    */
   async declineFriendRequest(requestId: string, declinerId: string): Promise<FriendActionResult> {
     try {
-      // For now, return success but don't actually decline the request
-      // This functionality can be implemented later when needed
-      console.log('Friend request would be declined:', requestId, 'by', declinerId);
+      // Extract sender ID from request ID (format: "request_<sender_id>")
+      const senderId = requestId.replace('request_', '');
+      
+      console.log('Declining friend request from', senderId, 'by', declinerId);
+
+      // Use the JSONB database function which bypasses RLS with SECURITY DEFINER
+      const { data, error } = await supabase
+        .rpc('decline_friend_request_jsonb', {
+          decliner_id: declinerId,
+          sender_id: senderId,
+        });
+
+      if (error) {
+        console.error('RPC error:', error);
+        throw error;
+      }
+
+      console.log('Friend request declined successfully');
+
+      // Clear cache for both users
+      this.clearUserCaches(declinerId);
+      this.clearUserCaches(senderId);
 
       return {
         success: true,
