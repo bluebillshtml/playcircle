@@ -583,8 +583,8 @@ const FriendsScreen = ({ navigation }) => {
             />
           }
         >
-          {/* Empty State */}
-          {!hasAnyData && !loading.suggested_friends && !loading.recent_members && (
+          {/* Empty State - Only show when user has no friends, no suggestions, no recent members, and no pending requests */}
+          {!hasAnyData && !hasPendingRequests && !loading.suggested_friends && !loading.recent_members && (
             <View style={[styles.globalEmptyContainer, { backgroundColor: colors.surface + '40', borderRadius: 32, marginHorizontal: 24, borderWidth: 1, borderColor: colors.glassBorder }]}>
               <View style={[styles.globalEmptyIconContainer, { backgroundColor: colors.primary + '20' }]}>
                 <Ionicons name="people-outline" size={72} color={colors.primary} />
