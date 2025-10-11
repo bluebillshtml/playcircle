@@ -92,11 +92,13 @@ export default function AccountSettingsScreen({ navigation }) {
         location: location,
         full_name: `${firstName} ${lastName}`.trim() || 'User',
         updated_at: new Date().toISOString(),
+        // Preserve onboarding_completed flag
+        onboarding_completed: profile?.onboarding_completed ?? true,
       };
 
       console.log('Auto-saving profile updates:', updates);
       const updatedProfile = await profileService.updateProfile(user.id, updates);
-      setProfile(updatedProfile);
+      setProfile({ ...profile, ...updatedProfile });
       console.log('Auto-save successful');
     } catch (error) {
       // Silent fail for auto-save, don't disturb user
@@ -135,17 +137,19 @@ export default function AccountSettingsScreen({ navigation }) {
         location: location.trim(),
         full_name: `${firstName.trim()} ${lastName.trim()}`.trim() || 'User',
         updated_at: new Date().toISOString(),
+        // Preserve onboarding_completed flag
+        onboarding_completed: profile?.onboarding_completed ?? true,
       };
 
       console.log('Manually saving profile updates:', updates);
       const updatedProfile = await profileService.updateProfile(user.id, updates);
-      setProfile(updatedProfile);
+      setProfile({ ...profile, ...updatedProfile });
 
       Alert.alert('Success', 'Profile updated successfully!');
       navigation.goBack();
     } catch (error) {
       console.error('Error updating profile:', error);
-      
+
       // Provide more specific error messages
       let errorMessage = 'Failed to update profile';
       if (error.message && error.message.includes('coerce')) {
@@ -159,7 +163,7 @@ export default function AccountSettingsScreen({ navigation }) {
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       Alert.alert('Error', errorMessage);
     } finally {
       setSaving(false);
@@ -437,8 +441,6 @@ const createStyles = (colors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
     gap: 12,
   },
   actionButtonText: {

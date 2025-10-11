@@ -1,15 +1,15 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Switch,
-  ImageBackground,
   Image,
   Alert,
   Animated,
+  TextInput,
+  Modal,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,15 +19,16 @@ import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { supabase, supabaseService } from '../services/supabase';
-import NavigationButton from '../components/NavigationButton';
 import AnimatedBackground from '../components/AnimatedBackground';
-
 
 export default function ProfileScreen() {
   const { colors } = useTheme();
   const { user, profile, signOut, refreshProfile } = useAuth();
   const navigation = useNavigation();
   const [profileImage, setProfileImage] = useState(profile?.profile_picture_url || null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -57,9 +58,6 @@ export default function ProfileScreen() {
     return 'User';
   };
 
-  const getUserEmail = () => {
-    return user?.email || 'user@email.com';
-  };
 
   const handlePickImage = async () => {
     try {
@@ -141,37 +139,55 @@ export default function ProfileScreen() {
   return (
     <AnimatedBackground>
       <View style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-        scrollEventThrottle={16}
-        bounces={false}
-      >
+        {/* Sticky Header */}
+        <View style={styles.stickyHeader}>
+          <TouchableOpacity
+            style={styles.menuButton}
+            onPress={() => console.log('Menu pressed')}
+          >
+            <Ionicons name="menu" size={28} color={colors.text} />
+          </TouchableOpacity>
+
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color={colors.textSecondary} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search games"
+              placeholderTextColor={colors.textSecondary}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <TouchableOpacity
+            style={styles.notificationButton}
+            onPress={() => setShowNotifications(true)}
+          >
+            <Ionicons name="notifications-outline" size={28} color={colors.text} />
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          scrollEventThrottle={16}
+          bounces={false}
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+            { useNativeDriver: false }
+          )}
+        >
         {/* Header */}
         <View style={styles.headerWrapper}>
-          {/* Zoomed and Blurred Profile Background */}
+          {/* Green Header Background */}
           <View style={styles.headerBackgroundContainer}>
-            {profileImage ? (
-              <Image
-                source={{ uri: profileImage }}
-                style={styles.headerBackground}
-                blurRadius={10}
-              />
-            ) : (
-              <LinearGradient
-                colors={['#667eea', '#764ba2', '#f093fb']}
-                style={styles.headerBackground}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              />
-            )}
-            <View style={styles.headerBackgroundDarkOverlay} />
-            <LinearGradient
-              colors={['transparent', 'rgba(184, 230, 213, 0.05)', 'rgba(184, 230, 213, 0.15)', 'rgba(184, 230, 213, 0.3)', 'rgba(184, 230, 213, 0.5)', 'rgba(184, 230, 213, 0.7)', 'rgba(184, 230, 213, 0.85)', 'rgba(184, 230, 213, 0.95)', '#B8E6D5']}
-              style={styles.headerEdgeFade}
-              locations={[0, 0.1, 0.2, 0.35, 0.5, 0.65, 0.8, 0.92, 1]}
-            />
+            <View style={styles.headerBackground} />
           </View>
 
           <View style={styles.header}>
@@ -198,83 +214,98 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Upcoming Matches Section */}
-        <View style={styles.upcomingMatchesCard}>
-          <View style={styles.cardBlur}>
-            <View style={styles.cardHeader}>
-              <View style={styles.iconGlow}>
-                <Ionicons name="calendar-outline" size={22} color="#67E8F9" />
-              </View>
-              <Text style={styles.cardTitle}>Upcoming Matches</Text>
-            </View>
-
-            <View style={styles.matchesList}>
-              {/* Match Item */}
-              <View style={styles.matchItem}>
-                <View style={styles.matchDateContainer}>
-                  <Text style={styles.matchDay}>15</Text>
-                  <Text style={styles.matchMonth}>OCT</Text>
+        {/* Horizontal Scrollable Cards Section */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.horizontalCardsContainer}
+          style={styles.horizontalCardsScroll}
+          pagingEnabled={true}
+          decelerationRate="fast"
+          snapToInterval={376}
+          snapToAlignment="start"
+          onScroll={(event) => {
+            const scrollPosition = event.nativeEvent.contentOffset.x;
+            const cardIndex = Math.round(scrollPosition / 376);
+            setCurrentCardIndex(cardIndex);
+          }}
+          scrollEventThrottle={16}
+        >
+          {/* Upcoming Matches Card */}
+          <View style={styles.horizontalCard}>
+            <View style={styles.cardBlur}>
+              <View style={styles.cardHeader}>
+                <View style={styles.iconGlow}>
+                  <Ionicons name="calendar-outline" size={22} color={colors.primary} />
                 </View>
-                <View style={styles.matchDetails}>
-                  <Text style={styles.matchSport}>Basketball</Text>
-                  <Text style={styles.matchTime}>6:00 PM - 8:00 PM</Text>
-                  <Text style={styles.matchLocation}>Downtown Court</Text>
-                </View>
-                <View style={styles.matchStatus}>
-                  <Ionicons name="checkmark-circle" size={24} color="#10B981" />
-                </View>
-              </View>
-
-              {/* Match Item */}
-              <View style={styles.matchItem}>
-                <View style={styles.matchDateContainer}>
-                  <Text style={styles.matchDay}>18</Text>
-                  <Text style={styles.matchMonth}>OCT</Text>
-                </View>
-                <View style={styles.matchDetails}>
-                  <Text style={styles.matchSport}>Tennis</Text>
-                  <Text style={styles.matchTime}>4:00 PM - 6:00 PM</Text>
-                  <Text style={styles.matchLocation}>City Tennis Club</Text>
-                </View>
-                <View style={styles.matchStatus}>
-                  <Ionicons name="checkmark-circle" size={24} color="#10B981" />
-                </View>
+                <Text style={styles.cardTitle}>Upcoming Matches</Text>
               </View>
 
-              {/* Match Item */}
-              <View style={styles.matchItem}>
-                <View style={styles.matchDateContainer}>
-                  <Text style={styles.matchDay}>22</Text>
-                  <Text style={styles.matchMonth}>OCT</Text>
+              <View style={styles.matchesList}>
+                {/* Match Item */}
+                <View style={styles.matchItem}>
+                  <View style={styles.matchDateContainer}>
+                    <Text style={styles.matchDay}>15</Text>
+                    <Text style={styles.matchMonth}>OCT</Text>
+                  </View>
+                  <View style={styles.matchDetails}>
+                    <Text style={styles.matchSport}>Basketball</Text>
+                    <Text style={styles.matchTime}>6:00 PM - 8:00 PM</Text>
+                    <Text style={styles.matchLocation}>Downtown Court</Text>
+                  </View>
+                  <View style={styles.matchStatus}>
+                    <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+                  </View>
                 </View>
-                <View style={styles.matchDetails}>
-                  <Text style={styles.matchSport}>Soccer</Text>
-                  <Text style={styles.matchTime}>7:00 PM - 9:00 PM</Text>
-                  <Text style={styles.matchLocation}>Park Field #3</Text>
+
+                {/* Match Item */}
+                <View style={styles.matchItem}>
+                  <View style={styles.matchDateContainer}>
+                    <Text style={styles.matchDay}>18</Text>
+                    <Text style={styles.matchMonth}>OCT</Text>
+                  </View>
+                  <View style={styles.matchDetails}>
+                    <Text style={styles.matchSport}>Tennis</Text>
+                    <Text style={styles.matchTime}>4:00 PM - 6:00 PM</Text>
+                    <Text style={styles.matchLocation}>City Tennis Club</Text>
+                  </View>
+                  <View style={styles.matchStatus}>
+                    <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+                  </View>
                 </View>
-                <View style={styles.matchStatus}>
-                  <Ionicons name="time-outline" size={24} color="#F59E0B" />
+
+                {/* Match Item */}
+                <View style={styles.matchItem}>
+                  <View style={styles.matchDateContainer}>
+                    <Text style={styles.matchDay}>22</Text>
+                    <Text style={styles.matchMonth}>OCT</Text>
+                  </View>
+                  <View style={styles.matchDetails}>
+                    <Text style={styles.matchSport}>Soccer</Text>
+                    <Text style={styles.matchTime}>7:00 PM - 9:00 PM</Text>
+                    <Text style={styles.matchLocation}>Park Field #3</Text>
+                  </View>
+                  <View style={styles.matchStatus}>
+                    <Ionicons name="time-outline" size={24} color="#F59E0B" />
+                  </View>
                 </View>
               </View>
             </View>
           </View>
-        </View>
 
-        {/* Stats Section */}
-        <View style={styles.statsSection}>
           {/* Performance Card */}
-          <View style={styles.statCard}>
+          <View style={styles.horizontalCard}>
             <View style={styles.cardBlur}>
               <View style={styles.cardHeader}>
                 <View style={styles.iconGlow}>
-                  <Ionicons name="trophy" size={22} color="#FF6B9D" />
+                  <Ionicons name="trophy" size={22} color={colors.primary} />
                 </View>
                 <Text style={styles.cardTitle}>Performance</Text>
               </View>
 
               <Text style={styles.cardSubtitle}>This Month</Text>
 
-              <View style={[styles.progressBar, { backgroundColor: '#FF6B9D' }]} />
+              <View style={styles.progressBar} />
 
               <Text style={styles.mainStat}>24</Text>
               <Text style={styles.mainStatLabel}>matches played</Text>
@@ -311,7 +342,7 @@ export default function ProfileScreen() {
               <View style={styles.bottomStats}>
                 <View style={styles.bottomStatItem}>
                   <View style={styles.iconGlowSmall}>
-                    <Ionicons name="calendar" size={18} color="#FFA06B" />
+                    <Ionicons name="calendar" size={18} color={colors.primary} />
                   </View>
                   <Text style={styles.bottomStatNumber}>18</Text>
                   <Text style={styles.bottomStatLabel}>this week</Text>
@@ -319,7 +350,7 @@ export default function ProfileScreen() {
 
                 <View style={styles.bottomStatItem}>
                   <View style={styles.iconGlowSmall}>
-                    <Ionicons name="flame" size={18} color="#FF6B9D" />
+                    <Ionicons name="flame" size={18} color={colors.primary} />
                   </View>
                   <Text style={styles.bottomStatNumber}>7</Text>
                   <Text style={styles.bottomStatLabel}>win streak</Text>
@@ -329,11 +360,11 @@ export default function ProfileScreen() {
           </View>
 
           {/* Achievements Card */}
-          <View style={styles.statCard}>
+          <View style={styles.horizontalCard}>
             <View style={styles.cardBlur}>
               <View style={styles.cardHeader}>
                 <View style={styles.iconGlow}>
-                  <Ionicons name="ribbon" size={22} color="#FFD06B" />
+                  <Ionicons name="ribbon" size={22} color={colors.primary} />
                 </View>
                 <Text style={styles.cardTitle}>Achievements</Text>
               </View>
@@ -341,42 +372,74 @@ export default function ProfileScreen() {
               <View style={styles.achievementsList}>
                 <View style={styles.achievementItem}>
                   <View style={styles.achievementIconContainer}>
-                    <Ionicons name="star" size={18} color="#FFD06B" />
+                    <Ionicons name="star" size={18} color={colors.primary} />
                   </View>
                   <View style={styles.achievementInfo}>
                     <Text style={styles.achievementName}>First Victory</Text>
                     <View style={styles.achievementProgress}>
-                      <View style={[styles.achievementProgressBar, { width: '100%', backgroundColor: '#FFD06B' }]} />
+                      <View
+                        style={[
+                          styles.achievementProgressBar,
+                          { width: '100%', backgroundColor: colors.primary },
+                        ]}
+                      />
                     </View>
                   </View>
                 </View>
 
                 <View style={styles.achievementItem}>
                   <View style={styles.achievementIconContainer}>
-                    <Ionicons name="people" size={18} color="#C768FF" />
+                    <Ionicons name="people" size={18} color={colors.primary} />
                   </View>
                   <View style={styles.achievementInfo}>
                     <Text style={styles.achievementName}>Team Player</Text>
                     <View style={styles.achievementProgress}>
-                      <View style={[styles.achievementProgressBar, { width: '75%', backgroundColor: '#C768FF' }]} />
+                      <View
+                        style={[
+                          styles.achievementProgressBar,
+                          { width: '75%', backgroundColor: colors.primary },
+                        ]}
+                      />
                     </View>
                   </View>
                 </View>
 
                 <View style={styles.achievementItem}>
                   <View style={styles.achievementIconContainer}>
-                    <Ionicons name="flash" size={18} color="#FF6B9D" />
+                    <Ionicons name="flash" size={18} color={colors.primary} />
                   </View>
                   <View style={styles.achievementInfo}>
                     <Text style={styles.achievementName}>Speed Demon</Text>
                     <View style={styles.achievementProgress}>
-                      <View style={[styles.achievementProgressBar, { width: '50%', backgroundColor: '#FF6B9D' }]} />
+                      <View
+                        style={[
+                          styles.achievementProgressBar,
+                          { width: '50%', backgroundColor: colors.primary },
+                        ]}
+                      />
                     </View>
                   </View>
                 </View>
               </View>
             </View>
           </View>
+        </ScrollView>
+
+        {/* Card Scroll Indicator */}
+        <View style={styles.scrollIndicator}>
+          {[0, 1, 2].map((index) => (
+            <View
+              key={index}
+              style={[
+                styles.indicatorDot,
+                {
+                  backgroundColor:
+                    currentCardIndex === index ? colors.primary : colors.primary + '40',
+                  transform: [{ scale: currentCardIndex === index ? 1.2 : 1 }],
+                },
+              ]}
+            />
+          ))}
         </View>
 
         {/* Menu Items */}
@@ -468,6 +531,109 @@ export default function ProfileScreen() {
         {/* Version */}
         <Text style={styles.versionText}>Version 1.0.0</Text>
       </ScrollView>
+
+      {/* Notifications Modal */}
+      <Modal
+        visible={showNotifications}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowNotifications(false)}
+        statusBarTranslucent={true}
+      >
+        <BlurView intensity={80} style={styles.modalOverlay} tint="dark">
+          <View style={styles.modalDarkOverlay} />
+          <View style={styles.notificationsModal}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Notifications</Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowNotifications(false)}
+              >
+                <Ionicons name="close" size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              contentContainerStyle={styles.notificationsContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {/* Notification Items */}
+              <View style={styles.notificationItem}>
+                <View style={styles.notificationIcon}>
+                  <Ionicons name="calendar" size={20} color={colors.primary} />
+                </View>
+                <View style={styles.notificationContent}>
+                  <Text style={styles.notificationTitle}>Match Reminder</Text>
+                  <Text style={styles.notificationMessage}>
+                    Basketball game starts in 30 minutes at Downtown Court
+                  </Text>
+                  <Text style={styles.notificationTime}>5 minutes ago</Text>
+                </View>
+                <View style={styles.notificationDot} />
+              </View>
+
+              <View style={styles.notificationItem}>
+                <View style={styles.notificationIcon}>
+                  <Ionicons name="people" size={20} color={colors.primary} />
+                </View>
+                <View style={styles.notificationContent}>
+                  <Text style={styles.notificationTitle}>New Friend Request</Text>
+                  <Text style={styles.notificationMessage}>
+                    Alex Johnson wants to connect with you
+                  </Text>
+                  <Text style={styles.notificationTime}>2 hours ago</Text>
+                </View>
+                <View style={styles.notificationDot} />
+              </View>
+
+              <View style={styles.notificationItem}>
+                <View style={styles.notificationIcon}>
+                  <Ionicons name="trophy" size={20} color={colors.primary} />
+                </View>
+                <View style={styles.notificationContent}>
+                  <Text style={styles.notificationTitle}>Achievement Unlocked</Text>
+                  <Text style={styles.notificationMessage}>
+                    You've completed the "Team Player" achievement!
+                  </Text>
+                  <Text style={styles.notificationTime}>1 day ago</Text>
+                </View>
+              </View>
+
+              <View style={styles.notificationItem}>
+                <View style={styles.notificationIcon}>
+                  <Ionicons name="chatbubble" size={20} color={colors.primary} />
+                </View>
+                <View style={styles.notificationContent}>
+                  <Text style={styles.notificationTitle}>New Message</Text>
+                  <Text style={styles.notificationMessage}>
+                    Sarah: "Great game today! Same time next week?"
+                  </Text>
+                  <Text style={styles.notificationTime}>2 days ago</Text>
+                </View>
+              </View>
+
+              <View style={styles.notificationItem}>
+                <View style={styles.notificationIcon}>
+                  <Ionicons name="location" size={20} color={colors.primary} />
+                </View>
+                <View style={styles.notificationContent}>
+                  <Text style={styles.notificationTitle}>Court Update</Text>
+                  <Text style={styles.notificationMessage}>
+                    Tennis Court #2 is now available for booking
+                  </Text>
+                  <Text style={styles.notificationTime}>3 days ago</Text>
+                </View>
+              </View>
+            </ScrollView>
+
+            <View style={styles.notificationActions}>
+              <TouchableOpacity style={styles.markAllReadButton}>
+                <Text style={styles.markAllReadText}>Mark All as Read</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </BlurView>
+      </Modal>
     </View>
     </AnimatedBackground>
   );
@@ -485,48 +651,102 @@ const createStyles = (colors) => StyleSheet.create({
     paddingBottom: 40,
     paddingTop: 0,
   },
+  stickyHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    backgroundColor: 'transparent',
+    gap: 12,
+    elevation: 1000,
+  },
+  menuButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: colors.glassBorder,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  searchContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 24,
+    gap: 12,
+    height: 48,
+    borderWidth: 1.5,
+    borderColor: colors.glassBorder,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: colors.text,
+    fontWeight: '500',
+  },
+  notificationButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: colors.glassBorder,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 12,
+  },
   headerWrapper: {
     overflow: 'hidden',
+    position: 'relative',
   },
   headerBackgroundContainer: {
     position: 'absolute',
-    top: -60,
+    top: 0,
     left: 0,
     right: 0,
-    height: 280,
+    height: 180,
     overflow: 'hidden',
   },
   headerBackground: {
-    position: 'absolute',
-    top: -100,
-    left: -100,
-    right: -100,
-    bottom: -100,
-    transform: [{ scale: 1.5 }],
-    resizeMode: 'cover',
-  },
-  headerBackgroundDarkOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-    zIndex: 1,
-  },
-  headerEdgeFade: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: 200,
-    zIndex: 3,
+    backgroundColor: colors.card,
   },
   header: {
     backgroundColor: 'transparent',
-    paddingTop: 110,
-    paddingBottom: 24,
+    paddingTop: 120,
+    paddingBottom: 20,
     paddingHorizontal: 20,
+    position: 'relative',
+    zIndex: 10,
   },
   headerTitle: {
     fontSize: 24,
@@ -540,49 +760,49 @@ const createStyles = (colors) => StyleSheet.create({
     gap: 12,
   },
   avatarContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#E5E5E5',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
     position: 'relative',
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
+    borderColor: colors.primary + '40',
     alignSelf: 'center',
   },
   avatarImage: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
   },
   cameraIconContainer: {
     position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: '#667eea',
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    bottom: -1,
+    right: -1,
+    backgroundColor: colors.primary,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: colors.background,
   },
   editButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    backgroundColor: colors.surface + '80',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: colors.glassBorder,
     alignSelf: 'center',
   },
   userInfoContainer: {
@@ -590,29 +810,35 @@ const createStyles = (colors) => StyleSheet.create({
     justifyContent: 'center',
   },
   userName: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 2,
+    color: colors.text,
+    marginBottom: 4,
     letterSpacing: -0.5,
   },
   userEmail: {
-    fontSize: 13,
-    color: '#FFFFFF',
-    fontWeight: '400',
-    opacity: 0.7,
+    fontSize: 14,
+    color: colors.textSecondary,
+    fontWeight: '500',
   },
-  upcomingMatchesCard: {
-    marginHorizontal: 16,
+  horizontalCardsScroll: {
     marginTop: 16,
-    borderRadius: 28,
-    backgroundColor: 'rgba(52, 73, 94, 0.8)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
-    borderWidth: 0,
+  },
+  horizontalCardsContainer: {
+    paddingHorizontal: 20,
+    gap: 16,
+  },
+  horizontalCard: {
+    width: 360,
+    borderRadius: 24,
+    backgroundColor: colors.glass,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 12,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
     overflow: 'hidden',
   },
   matchesList: {
@@ -622,33 +848,33 @@ const createStyles = (colors) => StyleSheet.create({
   matchItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: colors.primary + '20',
     borderRadius: 16,
     padding: 16,
     gap: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.primary + '40',
   },
   matchDateContainer: {
     width: 60,
     height: 60,
     borderRadius: 16,
-    backgroundColor: 'rgba(103, 232, 249, 0.15)',
+    backgroundColor: colors.primary + '20',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(103, 232, 249, 0.3)',
+    borderColor: colors.primary + '40',
   },
   matchDay: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#67E8F9',
+    color: colors.primary,
     lineHeight: 28,
   },
   matchMonth: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#67E8F9',
+    color: colors.primary,
     opacity: 0.8,
   },
   matchDetails: {
@@ -657,40 +883,25 @@ const createStyles = (colors) => StyleSheet.create({
   matchSport: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.text,
     marginBottom: 4,
   },
   matchTime: {
     fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.textSecondary,
     marginBottom: 2,
     fontWeight: '500',
   },
   matchLocation: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: colors.textSecondary,
     fontWeight: '400',
+    opacity: 0.8,
   },
   matchStatus: {
     width: 32,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  statsSection: {
-    gap: 16,
-    marginTop: 16,
-  },
-  statCard: {
-    marginHorizontal: 16,
-    borderRadius: 28,
-    backgroundColor: 'rgba(52, 73, 94, 0.8)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
-    borderWidth: 0,
-    overflow: 'hidden',
   },
   cardBlur: {
     padding: 24,
@@ -702,34 +913,34 @@ const createStyles = (colors) => StyleSheet.create({
     marginBottom: 16,
   },
   iconGlow: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+  },
+  iconGlowSmall: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  iconGlowSmall: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: colors.glassBorder,
   },
   cardTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
+    color: colors.text,
+    letterSpacing: -0.5,
   },
   cardSubtitle: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.textSecondary,
     marginBottom: 12,
     fontWeight: '500',
   },
@@ -737,21 +948,22 @@ const createStyles = (colors) => StyleSheet.create({
     height: 6,
     borderRadius: 3,
     marginBottom: 20,
-    shadowColor: '#FF6B9D',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
+    backgroundColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
     shadowRadius: 8,
   },
   mainStat: {
     fontSize: 42,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: colors.text,
     marginBottom: 4,
     letterSpacing: -1,
   },
   mainStatLabel: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.textSecondary,
     marginBottom: 24,
     fontWeight: '500',
   },
@@ -762,14 +974,22 @@ const createStyles = (colors) => StyleSheet.create({
   },
   circleStatContainer: {
     alignItems: 'center',
+    backgroundColor: colors.primary + '15',
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: colors.primary + '30',
+    flex: 1,
+    marginHorizontal: 2,
+    minWidth: 90,
   },
   circleProgress: {
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: 'rgba(255, 107, 157, 0.2)',
+    backgroundColor: colors.primary + '20',
     borderWidth: 3,
-    borderColor: '#FF6B9D',
+    borderColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
@@ -781,32 +1001,42 @@ const createStyles = (colors) => StyleSheet.create({
   circlePercent: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.text,
   },
   circleLabel: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 11,
+    color: colors.textSecondary,
     fontWeight: '500',
+    textAlign: 'center',
+    numberOfLines: 1,
+    maxWidth: 80,
   },
   bottomStats: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingTop: 20,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    borderTopColor: colors.glassBorder,
   },
   bottomStatItem: {
     alignItems: 'center',
     gap: 8,
+    backgroundColor: colors.primary + '20',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: colors.primary + '40',
+    flex: 1,
+    marginHorizontal: 4,
   },
   bottomStatNumber: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.text,
   },
   bottomStatLabel: {
     fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: colors.textSecondary,
     fontWeight: '500',
   },
   achievementsList: {
@@ -817,16 +1047,21 @@ const createStyles = (colors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    backgroundColor: colors.primary + '20',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: colors.primary + '40',
   },
   achievementIconContainer: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: colors.glassBorder,
   },
   achievementInfo: {
     flex: 1,
@@ -834,12 +1069,12 @@ const createStyles = (colors) => StyleSheet.create({
   achievementName: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.text,
     marginBottom: 6,
   },
   achievementProgress: {
     height: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: colors.surface,
     borderRadius: 3,
     overflow: 'hidden',
   },
@@ -847,17 +1082,32 @@ const createStyles = (colors) => StyleSheet.create({
     height: 6,
     borderRadius: 3,
   },
+  scrollIndicator: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 16,
+    marginBottom: 8,
+    gap: 8,
+  },
+  indicatorDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    transition: 'all 0.3s ease',
+  },
   menuContainer: {
     marginTop: 16,
-    marginHorizontal: 16,
-    borderRadius: 28,
-    backgroundColor: 'rgba(82, 95, 94, 0.7)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
-    borderWidth: 0,
+    marginHorizontal: 20,
+    borderRadius: 24,
+    backgroundColor: colors.glass,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 12,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
     overflow: 'hidden',
   },
   blurContainer: {
@@ -867,10 +1117,10 @@ const createStyles = (colors) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingVertical: 18,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
+    borderBottomColor: colors.glassBorder,
     backgroundColor: 'transparent',
   },
   menuItemLeft: {
@@ -889,5 +1139,121 @@ const createStyles = (colors) => StyleSheet.create({
     color: colors.textSecondary,
     marginTop: 24,
     marginBottom: 20,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalDarkOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  notificationsModal: {
+    backgroundColor: colors.card,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '80%',
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.glassBorder,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -0.5,
+  },
+  modalCloseButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notificationsContent: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  notificationItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: colors.primary + '15',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.primary + '30',
+    position: 'relative',
+  },
+  notificationIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primary + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: colors.primary + '40',
+  },
+  notificationContent: {
+    flex: 1,
+  },
+  notificationTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  notificationMessage: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    lineHeight: 20,
+    marginBottom: 6,
+  },
+  notificationTime: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    opacity: 0.7,
+  },
+  notificationDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+    position: 'absolute',
+    top: 16,
+    right: 16,
+  },
+  notificationActions: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: colors.glassBorder,
+  },
+  markAllReadButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  markAllReadText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });
