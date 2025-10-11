@@ -9,13 +9,17 @@ import {
   ActivityIndicator,
   Animated,
   Image,
+  Modal,
+  FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { groupChats } from '../services/chatUtils';
 import ChatCard from '../components/ChatCard';
 import AnimatedBackground from '../components/AnimatedBackground';
+import MessagesSettingsModal from '../components/MessagesSettingsModal';
 
 // Simple mock data function as fallback
 const createMockChatListScenario = (count = 8) => {
@@ -67,12 +71,84 @@ const createMockChatListScenario = (count = 8) => {
   }
   return mockChats;
 };
+// Friends list data
+const FRIENDS_LIST = [
+  { id: 'friend_1', name: 'Sarah', avatar: 'https://i.pravatar.cc/150?img=1', status: 'online', isPinned: true, unreadCount: 2 },
+  { id: 'friend_2', name: 'Mike', avatar: 'https://i.pravatar.cc/150?img=12', status: 'online', isPinned: true, unreadCount: 0 },
+  { id: 'friend_3', name: 'Emma', avatar: 'https://i.pravatar.cc/150?img=5', status: 'offline', isPinned: true, unreadCount: 1 },
+  { id: 'friend_4', name: 'James', avatar: 'https://i.pravatar.cc/150?img=13', status: 'online', isPinned: true, unreadCount: 0 },
+  { id: 'friend_5', name: 'Lisa', avatar: 'https://i.pravatar.cc/150?img=9', status: 'offline', isPinned: true, unreadCount: 3 },
+  { id: 'friend_6', name: 'David', avatar: 'https://i.pravatar.cc/150?img=14', status: 'online', isPinned: true, unreadCount: 0 },
+  { id: 'friend_7', name: 'Anna', avatar: 'https://i.pravatar.cc/150?img=47', status: 'online', isPinned: true, unreadCount: 1 },
+  { id: 'friend_8', name: 'Tom', avatar: 'https://i.pravatar.cc/150?img=33', status: 'offline', isPinned: true, unreadCount: 0 },
+  { id: 'friend_9', name: 'Sophie', avatar: 'https://i.pravatar.cc/150?img=44', status: 'online', isPinned: false, unreadCount: 0 },
+  { id: 'friend_10', name: 'Chris', avatar: 'https://i.pravatar.cc/150?img=15', status: 'offline', isPinned: false, unreadCount: 2 },
+  { id: 'friend_11', name: 'Alex', avatar: 'https://i.pravatar.cc/150?img=16', status: 'online', isPinned: false, unreadCount: 0 },
+  { id: 'friend_12', name: 'Maya', avatar: 'https://i.pravatar.cc/150?img=17', status: 'offline', isPinned: false, unreadCount: 1 },
+];
+
+// Upcoming matches data
+const UPCOMING_MATCHES = [
+  {
+    id: 'match_1',
+    chatId: 'session_chat_1',
+    court_session_id: 'session_1',
+    court: 'Elite Padel Club',
+    time: 'Today 7:00 PM',
+    players: 4,
+    sport: 'Padel',
+    icon: 'tennisball',
+    sessionTitle: 'Elite Padel Club – Today 7:00 PM'
+  },
+  {
+    id: 'match_2',
+    chatId: 'session_chat_2',
+    court_session_id: 'session_2',
+    court: 'Downtown Tennis Court',
+    time: 'Tomorrow 9:30 AM',
+    players: 4,
+    sport: 'Tennis',
+    icon: 'tennisball',
+    sessionTitle: 'Downtown Tennis Court – Tomorrow 9:30 AM'
+  },
+  {
+    id: 'match_3',
+    chatId: 'session_chat_3',
+    court_session_id: 'session_3',
+    court: 'City Basketball Arena',
+    time: 'Sat 6:00 PM',
+    players: 8,
+    sport: 'Basketball',
+    icon: 'basketball',
+    sessionTitle: 'City Basketball Arena – Sat 6:00 PM'
+  },
+];
+
 export default function MessagesScreen({ navigation }) {
   const { colors } = useTheme();
   const { user } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
+  const [showAllFriendsModal, setShowAllFriendsModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [pinnedFriends, setPinnedFriends] = useState(FRIENDS_LIST.filter(f => f.isPinned).slice(0, 8));
+  
+  // Settings state
+  const [messagesSettings, setMessagesSettings] = useState({
+    pushNotifications: true,
+    soundNotifications: true,
+    vibration: true,
+    readReceipts: true,
+    onlineStatus: true,
+    typingIndicators: true,
+    autoSaveMedia: false,
+    messageReactions: true,
+    quickActions: true,
+    autoDeleteChats: false,
+    friendMessagesDeleteDuration: '30days', // Options: '24hours', '7days', '30days', '1year', 'never'
+    gameChatsDeleteDuration: '7days', // Separate duration for game chats
+  });
 
   // Mock chat data for now (will be replaced with real hook later)
   const [chats, setChats] = useState([]);
@@ -182,12 +258,48 @@ export default function MessagesScreen({ navigation }) {
   }, [refreshChats]);
 
   // Handle chat card press
-  const handleChatPress = useCallback((chatId, sessionTitle) => {
-    navigation.navigate('ChatThread', { 
-      chatId, 
-      sessionTitle 
+  const handleChatPress = useCallback((chatId, sessionTitle, chat) => {
+    navigation.navigate('ChatThread', {
+      chatId,
+      court_session_id: chat?.court_session_id,
+      sessionTitle,
+      chatType: 'group'
     });
   }, [navigation]);
+
+  // Handle pin/unpin friend
+  const handleTogglePin = useCallback((friendId) => {
+    const friend = FRIENDS_LIST.find(f => f.id === friendId);
+    if (!friend) return;
+
+    const currentPinnedCount = pinnedFriends.length;
+    const isCurrentlyPinned = pinnedFriends.some(f => f.id === friendId);
+
+    if (isCurrentlyPinned) {
+      // Unpin friend
+      setPinnedFriends(prev => prev.filter(f => f.id !== friendId));
+      // Update the main friends list
+      const friendIndex = FRIENDS_LIST.findIndex(f => f.id === friendId);
+      if (friendIndex !== -1) {
+        FRIENDS_LIST[friendIndex].isPinned = false;
+      }
+    } else if (currentPinnedCount < 8) {
+      // Pin friend (only if under 8 limit)
+      setPinnedFriends(prev => [...prev, friend]);
+      // Update the main friends list
+      const friendIndex = FRIENDS_LIST.findIndex(f => f.id === friendId);
+      if (friendIndex !== -1) {
+        FRIENDS_LIST[friendIndex].isPinned = true;
+      }
+    }
+  }, [pinnedFriends]);
+
+  // Handle settings update
+  const handleSettingsUpdate = (newSettings) => {
+    setMessagesSettings(newSettings);
+    // In a real app, you would save these to AsyncStorage or send to server
+    console.log('Settings updated:', newSettings);
+  };
 
   // Animate in on mount
   useEffect(() => {
@@ -248,7 +360,7 @@ export default function MessagesScreen({ navigation }) {
 
             <TouchableOpacity 
               style={styles.settingsButton}
-              onPress={() => console.log('Settings pressed')}
+              onPress={() => setShowSettingsModal(true)}
             >
               <Ionicons name="settings-outline" size={28} color={colors.primary} />
             </TouchableOpacity>
@@ -284,7 +396,7 @@ export default function MessagesScreen({ navigation }) {
 
             <TouchableOpacity 
               style={styles.settingsButton}
-              onPress={() => console.log('Settings pressed')}
+              onPress={() => setShowSettingsModal(true)}
             >
               <Ionicons name="settings-outline" size={28} color={colors.primary} />
             </TouchableOpacity>
@@ -336,7 +448,7 @@ export default function MessagesScreen({ navigation }) {
 
           <TouchableOpacity 
             style={styles.settingsButton}
-            onPress={() => console.log('Settings pressed')}
+            onPress={() => setShowSettingsModal(true)}
           >
             <Ionicons name="settings-outline" size={28} color={colors.text} />
           </TouchableOpacity>
@@ -361,33 +473,41 @@ export default function MessagesScreen({ navigation }) {
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Friends</Text>
-                <TouchableOpacity>
+                <TouchableOpacity onPress={() => setShowAllFriendsModal(true)}>
                   <Text style={styles.seeAllText}>See All</Text>
                 </TouchableOpacity>
               </View>
-              <ScrollView 
-                horizontal 
+              <ScrollView
+                horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.friendsScrollContent}
               >
-                {[
-                  { name: 'Sarah', avatar: 'https://i.pravatar.cc/150?img=1' },
-                  { name: 'Mike', avatar: 'https://i.pravatar.cc/150?img=12' },
-                  { name: 'Emma', avatar: 'https://i.pravatar.cc/150?img=5' },
-                  { name: 'James', avatar: 'https://i.pravatar.cc/150?img=13' },
-                  { name: 'Lisa', avatar: 'https://i.pravatar.cc/150?img=9' },
-                  { name: 'David', avatar: 'https://i.pravatar.cc/150?img=14' },
-                ].map((friend, index) => (
-                  <TouchableOpacity 
-                    key={index}
+                {pinnedFriends.map((friend) => (
+                  <TouchableOpacity
+                    key={friend.id}
                     style={styles.friendCard}
-                    onPress={() => console.log('Friend pressed:', friend.name)}
+                    onPress={() => navigation.navigate('ChatThread', {
+                      chatId: `dm_${friend.id}`,
+                      sessionTitle: friend.name,
+                      recipientId: friend.id,
+                      chatType: 'direct'
+                    })}
                   >
                     <View style={styles.friendAvatar}>
-                      <Image 
-                        source={{ uri: friend.avatar }} 
+                      <Image
+                        source={{ uri: friend.avatar }}
                         style={styles.friendAvatarImage}
                       />
+                      {friend.status === 'online' && (
+                        <View style={styles.onlineIndicator} />
+                      )}
+                      {friend.unreadCount > 0 && (
+                        <View style={styles.unreadBadge}>
+                          <Text style={styles.unreadBadgeText}>
+                            {friend.unreadCount > 9 ? '9+' : friend.unreadCount}
+                          </Text>
+                        </View>
+                      )}
                     </View>
                     <Text style={styles.friendName}>{friend.name}</Text>
                   </TouchableOpacity>
@@ -400,18 +520,19 @@ export default function MessagesScreen({ navigation }) {
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Upcoming Matches</Text>
                 <View style={styles.sectionBadge}>
-                  <Text style={styles.sectionBadgeText}>3</Text>
+                  <Text style={styles.sectionBadgeText}>{UPCOMING_MATCHES.length}</Text>
                 </View>
               </View>
-              {[
-                { court: 'Elite Padel Club', time: 'Today 7:00 PM', players: 4, sport: 'Padel', icon: 'tennisball' },
-                { court: 'Downtown Tennis Court', time: 'Tomorrow 9:30 AM', players: 4, sport: 'Tennis', icon: 'tennisball' },
-                { court: 'City Basketball Arena', time: 'Sat 6:00 PM', players: 8, sport: 'Basketball', icon: 'basketball' },
-              ].map((match, index) => (
-                <TouchableOpacity 
-                  key={index}
+              {UPCOMING_MATCHES.map((match) => (
+                <TouchableOpacity
+                  key={match.id}
                   style={styles.matchCard}
-                  onPress={() => console.log('Match pressed:', match.court)}
+                  onPress={() => navigation.navigate('ChatThread', {
+                    chatId: match.chatId,
+                    court_session_id: match.court_session_id,
+                    sessionTitle: match.sessionTitle,
+                    chatType: 'group'
+                  })}
                 >
                   <View style={styles.matchIcon}>
                     <Ionicons name={match.icon} size={24} color={colors.primary} />
@@ -456,6 +577,153 @@ export default function MessagesScreen({ navigation }) {
             <View style={styles.bottomPadding} />
           </ScrollView>
         </Animated.View>
+
+        {/* All Friends Modal */}
+        <Modal
+          visible={showAllFriendsModal}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setShowAllFriendsModal(false)}
+          statusBarTranslucent={true}
+        >
+          <BlurView intensity={80} style={styles.modalOverlay} tint="dark">
+            <View style={styles.modalDarkOverlay} />
+            <View style={styles.allFriendsModal}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>All Friends</Text>
+                <TouchableOpacity
+                  style={styles.modalCloseButton}
+                  onPress={() => setShowAllFriendsModal(false)}
+                >
+                  <Ionicons name="close" size={24} color={colors.text} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView 
+                contentContainerStyle={styles.friendsListContent}
+                showsVerticalScrollIndicator={false}
+              >
+                {/* Pinned Friends Section */}
+                <View style={styles.pinnedSection}>
+                  <Text style={styles.pinnedSectionTitle}>Pinned Friends ({pinnedFriends.length}/8)</Text>
+                  <View style={styles.pinnedGrid}>
+                    {Array.from({ length: 8 }, (_, index) => {
+                      const friend = pinnedFriends[index];
+                      return (
+                        <TouchableOpacity
+                          key={friend?.id || `empty_${index}`}
+                          style={[styles.pinnedFriendCard, !friend && styles.emptyPinnedCard]}
+                          onPress={() => {
+                            if (friend) {
+                              setShowAllFriendsModal(false);
+                              navigation.navigate('ChatThread', {
+                                chatId: `dm_${friend.id}`,
+                                sessionTitle: friend.name,
+                                recipientId: friend.id,
+                                chatType: 'direct'
+                              });
+                            }
+                          }}
+                          disabled={!friend}
+                        >
+                          {friend ? (
+                            <>
+                              <View style={styles.pinnedFriendAvatar}>
+                                <Image
+                                  source={{ uri: friend.avatar }}
+                                  style={styles.pinnedFriendAvatarImage}
+                                />
+                                {friend.status === 'online' && (
+                                  <View style={styles.pinnedOnlineIndicator} />
+                                )}
+                                {friend.unreadCount > 0 && (
+                                  <View style={styles.pinnedUnreadBadge}>
+                                    <Text style={styles.pinnedUnreadBadgeText}>
+                                      {friend.unreadCount > 9 ? '9+' : friend.unreadCount}
+                                    </Text>
+                                  </View>
+                                )}
+                              </View>
+                              <Text style={styles.pinnedFriendName}>{friend.name}</Text>
+                            </>
+                          ) : (
+                            <View style={styles.emptyPinnedSlot}>
+                              <Ionicons name="add" size={24} color="rgba(255, 255, 255, 0.4)" />
+                            </View>
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                {/* All Friends Section */}
+                <View style={styles.allFriendsSection}>
+                  <Text style={styles.allFriendsSectionTitle}>All Friends</Text>
+                  {FRIENDS_LIST.map((friend) => (
+                    <TouchableOpacity
+                      key={friend.id}
+                      style={styles.friendListItem}
+                      onPress={() => {
+                        setShowAllFriendsModal(false);
+                        navigation.navigate('ChatThread', {
+                          chatId: `dm_${friend.id}`,
+                          sessionTitle: friend.name,
+                          recipientId: friend.id,
+                          chatType: 'direct'
+                        });
+                      }}
+                    >
+                      <View style={styles.friendListAvatar}>
+                        <Image
+                          source={{ uri: friend.avatar }}
+                          style={styles.friendListAvatarImage}
+                        />
+                        {friend.status === 'online' && (
+                          <View style={styles.onlineIndicatorLarge} />
+                        )}
+                        {friend.unreadCount > 0 && (
+                          <View style={styles.friendListUnreadBadge}>
+                            <Text style={styles.friendListUnreadBadgeText}>
+                              {friend.unreadCount > 9 ? '9+' : friend.unreadCount}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                      <View style={styles.friendListInfo}>
+                        <Text style={styles.friendListName}>{friend.name}</Text>
+                        <Text style={styles.friendListStatus}>
+                          {friend.status === 'online' ? 'Active now' : 'Offline'}
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.pinButton}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          handleTogglePin(friend.id);
+                        }}
+                      >
+                        <Ionicons 
+                          name={friend.isPinned ? "bookmark" : "bookmark-outline"} 
+                          size={20} 
+                          color={friend.isPinned ? "#FFD700" : "rgba(255, 255, 255, 0.6)"} 
+                        />
+                      </TouchableOpacity>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+            </View>
+          </BlurView>
+        </Modal>
+
+        {/* Messages Settings Modal */}
+        <MessagesSettingsModal
+          visible={showSettingsModal}
+          onClose={() => setShowSettingsModal(false)}
+          settings={messagesSettings}
+          onUpdateSettings={handleSettingsUpdate}
+        />
       </View>
     </AnimatedBackground>
   );
@@ -765,5 +1033,275 @@ const createStyles = (colors) => StyleSheet.create({
   
   bottomPadding: {
     height: 40,
+  },
+
+  // Online indicator
+  onlineIndicator: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#10B981',
+    borderWidth: 2,
+    borderColor: colors.background,
+  },
+  onlineIndicatorLarge: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#10B981',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+
+  // All Friends Modal
+  modalOverlay: {
+    flex: 1,
+  },
+  modalDarkOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+  },
+  allFriendsModal: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '85%',
+    backgroundColor: colors.card,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    paddingTop: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 28,
+    paddingBottom: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border + '30',
+  },
+  modalTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: colors.text,
+    letterSpacing: -0.5,
+  },
+  modalCloseButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  friendsListContent: {
+    paddingHorizontal: 28,
+    paddingTop: 20,
+    paddingBottom: 40,
+  },
+
+  // Pinned Friends Section
+  pinnedSection: {
+    marginBottom: 32,
+  },
+  pinnedSectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 16,
+    letterSpacing: -0.3,
+  },
+  pinnedGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  pinnedFriendCard: {
+    width: '22%',
+    aspectRatio: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background,
+    borderRadius: 16,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  emptyPinnedCard: {
+    backgroundColor: colors.background + '60',
+    borderStyle: 'dashed',
+    borderColor: colors.border + '60',
+  },
+  pinnedFriendAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    overflow: 'hidden',
+    position: 'relative',
+    marginBottom: 6,
+  },
+  pinnedFriendAvatarImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  pinnedOnlineIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#10B981',
+    borderWidth: 2,
+    borderColor: colors.background,
+  },
+  pinnedUnreadBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#FF3B30',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.background,
+  },
+  pinnedUnreadBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  pinnedFriendName: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.text,
+    textAlign: 'center',
+    numberOfLines: 1,
+  },
+  emptyPinnedSlot: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.border + '40',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+
+  // All Friends Section
+  allFriendsSection: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border + '30',
+    paddingTop: 24,
+  },
+  allFriendsSectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 16,
+    letterSpacing: -0.3,
+  },
+  friendListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: colors.background,
+    borderRadius: 16,
+    marginBottom: 8,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: colors.border + '40',
+  },
+  friendListAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.card,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  friendListAvatarImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+  },
+  friendListUnreadBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#FF3B30',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.background,
+  },
+  friendListUnreadBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  friendListInfo: {
+    flex: 1,
+  },
+  friendListName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 2,
+  },
+  friendListStatus: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  pinButton: {
+    padding: 8,
+  },
+
+  // Unread badge for main friends section
+  unreadBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#FF3B30',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.background,
+  },
+  unreadBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
   },
 });
