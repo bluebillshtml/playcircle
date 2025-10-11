@@ -258,14 +258,10 @@ export const profileService = {
       phone: updates.phone,
       bio: updates.bio,
       avatar_url: updates.avatar_url,
-<<<<<<< HEAD
-      favorite_sports: updates.favorite_sports,
-      onboarding_completed: updates.onboarding_completed,
-=======
+
       location: updates.location,
       onboarding_completed: updates.onboarding_completed,
       favorite_sports: updates.favorite_sports,
->>>>>>> c189818180afcf60e595993ba4e3443b18d1d89b
       updated_at: new Date().toISOString(),
     };
 
@@ -299,14 +295,11 @@ export const profileService = {
             phone: updates.phone || '',
             bio: updates.bio || '',
             avatar_url: updates.avatar_url || '',
-<<<<<<< HEAD
-            favorite_sports: updates.favorite_sports || [],
-            onboarding_completed: updates.onboarding_completed || false,
-=======
+
             location: updates.location || '',
             onboarding_completed: updates.onboarding_completed !== undefined ? updates.onboarding_completed : false,
             favorite_sports: updates.favorite_sports || [],
->>>>>>> c189818180afcf60e595993ba4e3443b18d1d89b
+            
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           })
