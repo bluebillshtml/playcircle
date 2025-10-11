@@ -309,6 +309,7 @@ export const useFriends = () => {
   }, [user?.id, showErrorAlert, fetchSuggestedFriends, fetchRecentMembers]);
 
   const acceptFriendRequest = useCallback(async (requestId) => {
+    console.log('useFriends: acceptFriendRequest called with:', { requestId, userId: user?.id });
     if (!user?.id) {
       showErrorAlert('Error', 'You must be logged in to accept friend requests');
       return false;
@@ -316,6 +317,7 @@ export const useFriends = () => {
 
     try {
       const result = await friendsService.acceptFriendRequest(requestId, user.id);
+      console.log('useFriends: acceptFriendRequest result:', result);
       
       if (result.success) {
         // Optimistically update the UI
@@ -330,6 +332,7 @@ export const useFriends = () => {
 
         return true;
       } else {
+        console.error('useFriends: acceptFriendRequest failed:', result.error);
         showErrorAlert('Accept Request Failed', result.error || 'Unable to accept friend request');
         return false;
       }
@@ -341,6 +344,7 @@ export const useFriends = () => {
   }, [user?.id, showErrorAlert, fetchFriendRequests, fetchSuggestedFriends, fetchRecentMembers]);
 
   const declineFriendRequest = useCallback(async (requestId) => {
+    console.log('useFriends: declineFriendRequest called with:', { requestId, userId: user?.id });
     if (!user?.id) {
       showErrorAlert('Error', 'You must be logged in to decline friend requests');
       return false;
@@ -348,6 +352,7 @@ export const useFriends = () => {
 
     try {
       const result = await friendsService.declineFriendRequest(requestId, user.id);
+      console.log('useFriends: declineFriendRequest result:', result);
       
       if (result.success) {
         // Optimistically update the UI
@@ -360,6 +365,7 @@ export const useFriends = () => {
 
         return true;
       } else {
+        console.error('useFriends: declineFriendRequest failed:', result.error);
         showErrorAlert('Decline Request Failed', result.error || 'Unable to decline friend request');
         return false;
       }

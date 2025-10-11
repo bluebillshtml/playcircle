@@ -14,6 +14,7 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
@@ -84,6 +85,16 @@ const ActionButton = ({
     }
   };
 
+  const handlePress = () => {
+    console.log('ActionButton: onPress triggered for variant:', variant);
+    console.log('ActionButton: disabled:', disabled, 'loading:', loading);
+    if (onPress) {
+      onPress();
+    } else {
+      console.log('ActionButton: No onPress handler provided!');
+    }
+  };
+
   return (
     <TouchableOpacity
       style={[
@@ -91,7 +102,7 @@ const ActionButton = ({
         getButtonStyle(),
         (disabled || loading) && styles.disabledActionButton
       ]}
-      onPress={onPress}
+      onPress={handlePress}
       disabled={disabled || loading}
       activeOpacity={0.8}
       accessibilityLabel={accessibilityLabel}
@@ -128,11 +139,43 @@ const RequestStrip = ({
   // =====================================================
 
   const handleAccept = async () => {
-    if (disabled || loading || actionLoading.accept || actionLoading.decline) return;
+    console.log('RequestStrip: handleAccept CALLED - START');
+    console.log('RequestStrip: State check:', { disabled, loading, actionLoading });
+    
+    if (disabled || loading || actionLoading.accept || actionLoading.decline) {
+      console.log('RequestStrip: handleAccept BLOCKED by state check');
+      return;
+    }
 
-    try {
-      setActionLoading(prev => ({ ...prev, accept: true }));
+    // For web, use window.confirm; for native, use Alert.alert
+    if (Platform.OS === 'web') {
+      console.log('RequestStrip: Using window.confirm for web');
+      const confirmed = window.confirm(`Accept friend request from ${request.from_user.full_name || request.from_user.username}?`);
       
+      if (!confirmed) {
+        console.log('RequestStrip: User cancelled accept');
+        return;
+      }
+
+      console.log('RequestStrip: User confirmed accept');
+      try {
+        setActionLoading(prev => ({ ...prev, accept: true }));
+        
+        console.log('RequestStrip: Calling onAccept with request.id:', request.id);
+        const success = await onAccept(request.id);
+        console.log('RequestStrip: onAccept returned:', success);
+        
+        if (!success) {
+          window.alert('Failed to accept friend request. Please try again.');
+        }
+      } catch (error) {
+        console.error('RequestStrip: Error accepting friend request:', error);
+        window.alert('Failed to accept friend request. Please try again.');
+      } finally {
+        setActionLoading(prev => ({ ...prev, accept: false }));
+      }
+    } else {
+      console.log('RequestStrip: Showing Alert for accept');
       // Show confirmation for important action
       Alert.alert(
         'Accept Friend Request',
@@ -146,33 +189,71 @@ const RequestStrip = ({
             text: 'Accept',
             style: 'default',
             onPress: async () => {
-              // Haptic feedback for accept action
-              await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              
-              const success = await onAccept(request.id);
-              
-              if (success) {
-                // Success haptic feedback
-                await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              try {
+                setActionLoading(prev => ({ ...prev, accept: true }));
+                
+                // Haptic feedback for accept action
+                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                
+                console.log('RequestStrip: Calling onAccept with request.id:', request.id);
+                const success = await onAccept(request.id);
+                console.log('RequestStrip: onAccept returned:', success);
+                
+                if (success) {
+                  // Success haptic feedback
+                  await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                }
+              } catch (error) {
+                console.error('RequestStrip: Error accepting friend request:', error);
+                Alert.alert('Error', 'Failed to accept friend request. Please try again.');
+              } finally {
+                setActionLoading(prev => ({ ...prev, accept: false }));
               }
             },
           },
         ]
       );
-    } catch (error) {
-      console.error('Error accepting friend request:', error);
-      Alert.alert('Error', 'Failed to accept friend request. Please try again.');
-    } finally {
-      setActionLoading(prev => ({ ...prev, accept: false }));
     }
   };
 
   const handleDecline = async () => {
-    if (disabled || loading || actionLoading.accept || actionLoading.decline) return;
+    console.log('RequestStrip: handleDecline CALLED - START');
+    console.log('RequestStrip: State check:', { disabled, loading, actionLoading });
+    
+    if (disabled || loading || actionLoading.accept || actionLoading.decline) {
+      console.log('RequestStrip: handleDecline BLOCKED by state check');
+      return;
+    }
 
-    try {
-      setActionLoading(prev => ({ ...prev, decline: true }));
+    // For web, use window.confirm; for native, use Alert.alert
+    if (Platform.OS === 'web') {
+      console.log('RequestStrip: Using window.confirm for web');
+      const confirmed = window.confirm(`Decline friend request from ${request.from_user.full_name || request.from_user.username}?`);
       
+      if (!confirmed) {
+        console.log('RequestStrip: User cancelled decline');
+        return;
+      }
+
+      console.log('RequestStrip: User confirmed decline');
+      try {
+        setActionLoading(prev => ({ ...prev, decline: true }));
+        
+        console.log('RequestStrip: Calling onDecline with request.id:', request.id);
+        const success = await onDecline(request.id);
+        console.log('RequestStrip: onDecline returned:', success);
+        
+        if (!success) {
+          window.alert('Failed to decline friend request. Please try again.');
+        }
+      } catch (error) {
+        console.error('RequestStrip: Error declining friend request:', error);
+        window.alert('Failed to decline friend request. Please try again.');
+      } finally {
+        setActionLoading(prev => ({ ...prev, decline: false }));
+      }
+    } else {
+      console.log('RequestStrip: Showing Alert for decline');
       // Show confirmation for destructive action
       Alert.alert(
         'Decline Friend Request',
@@ -186,24 +267,30 @@ const RequestStrip = ({
             text: 'Decline',
             style: 'destructive',
             onPress: async () => {
-              // Haptic feedback for decline action
-              await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              
-              const success = await onDecline(request.id);
-              
-              if (success) {
-                // Success haptic feedback
+              try {
+                setActionLoading(prev => ({ ...prev, decline: true }));
+                
+                // Haptic feedback for decline action
                 await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                
+                console.log('RequestStrip: Calling onDecline with request.id:', request.id);
+                const success = await onDecline(request.id);
+                console.log('RequestStrip: onDecline returned:', success);
+                
+                if (success) {
+                  // Success haptic feedback
+                  await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+              } catch (error) {
+                console.error('RequestStrip: Error declining friend request:', error);
+                Alert.alert('Error', 'Failed to decline friend request. Please try again.');
+              } finally {
+                setActionLoading(prev => ({ ...prev, decline: false }));
               }
             },
           },
         ]
       );
-    } catch (error) {
-      console.error('Error declining friend request:', error);
-      Alert.alert('Error', 'Failed to decline friend request. Please try again.');
-    } finally {
-      setActionLoading(prev => ({ ...prev, decline: false }));
     }
   };
 

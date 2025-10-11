@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import useFriends from '../hooks/useFriends';
+import { supabase } from '../services/supabase';
 import FriendChip from '../components/FriendChip';
 import MemberRow from '../components/MemberRow';
 import RequestStrip from '../components/RequestStrip';
@@ -31,6 +32,7 @@ const FriendsScreen = ({ navigation }) => {
   const [actionLoading, setActionLoading] = useState(null); // Track which action is loading
   const [isOffline, setIsOffline] = useState(false);
   const [searchDropdownVisible, setSearchDropdownVisible] = useState(false);
+  const [friendshipStatuses, setFriendshipStatuses] = useState({}); // Track friendship statuses for search results
   
   // Animation values
   const fadeAnim = useState(new Animated.Value(0))[0];
@@ -87,6 +89,58 @@ const FriendsScreen = ({ navigation }) => {
       }),
     ]).start();
   }, []);
+
+  // Check friendship statuses for search results
+  const checkFriendshipStatuses = useCallback(async (userIds) => {
+    if (!user?.id || !userIds || userIds.length === 0) return;
+
+    try {
+      // Get current user's friends and sent requests
+      const { data: userData } = await supabase
+        .from('user_friends')
+        .select('friends, friend_requests_sent')
+        .eq('user_id', user.id)
+        .single();
+
+      const statuses = {};
+
+      userIds.forEach(userId => {
+        // Check if already friends
+        const isFriend = userData?.friends?.some(
+          friend => friend.user_id === userId && friend.status === 'accepted'
+        );
+
+        if (isFriend) {
+          statuses[userId] = 'friends';
+          return;
+        }
+
+        // Check if request is pending
+        const hasPendingRequest = userData?.friend_requests_sent?.some(
+          request => request.user_id === userId && request.status === 'pending'
+        );
+
+        if (hasPendingRequest) {
+          statuses[userId] = 'pending';
+          return;
+        }
+
+        statuses[userId] = 'none';
+      });
+
+      setFriendshipStatuses(statuses);
+    } catch (error) {
+      console.error('Error checking friendship statuses:', error);
+    }
+  }, [user?.id]);
+
+  // Check statuses when search results change
+  useEffect(() => {
+    if (searchResults?.searchable_users && searchResults.searchable_users.length > 0) {
+      const userIds = searchResults.searchable_users.map(u => u.id);
+      checkFriendshipStatuses(userIds);
+    }
+  }, [searchResults, checkFriendshipStatuses]);
 
   // Handle search input changes
   const handleSearchInput = (query) => {
@@ -361,11 +415,13 @@ const FriendsScreen = ({ navigation }) => {
   };
 
   const handleAcceptRequest = async (requestId) => {
+    console.log('FriendsScreen: handleAcceptRequest called with requestId:', requestId);
     try {
       // Haptic feedback for accept action
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       
       const success = await acceptFriendRequest(requestId);
+      console.log('FriendsScreen: acceptFriendRequest result:', success);
       if (success) {
         // Success haptic feedback
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -379,8 +435,10 @@ const FriendsScreen = ({ navigation }) => {
   };
 
   const handleDeclineRequest = async (requestId) => {
+    console.log('FriendsScreen: handleDeclineRequest called with requestId:', requestId);
     try {
       const success = await declineFriendRequest(requestId);
+      console.log('FriendsScreen: declineFriendRequest result:', success);
       if (success) {
         Alert.alert('Success', 'Friend request declined.');
       }
@@ -577,6 +635,7 @@ const FriendsScreen = ({ navigation }) => {
           actionLoading={actionLoading}
           visible={searchDropdownVisible}
           style={styles.searchDropdownAbsolute}
+          friendshipStatuses={friendshipStatuses}
         />
 
         {/* Content */}

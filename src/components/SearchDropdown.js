@@ -18,6 +18,7 @@ const SearchDropdown = ({
   actionLoading,
   visible = false,
   style,
+  friendshipStatuses = {}, // Object mapping userId to status: 'none', 'pending', 'friends'
 }) => {
   const { colors } = useTheme();
 
@@ -26,6 +27,10 @@ const SearchDropdown = ({
   if (!visible) {
     return null;
   }
+
+  const getFriendshipStatus = (userId) => {
+    return friendshipStatuses[userId] || 'none';
+  };
 
   return (
     <Animated.View style={[styles.container, style]}>
@@ -69,23 +74,35 @@ const SearchDropdown = ({
                 )}
               </View>
             </View>
-            <TouchableOpacity
-              style={[styles.addFriendButton, { backgroundColor: colors.primary }]}
-              onPress={(e) => {
-                e.stopPropagation();
-                onAddFriend(user.id);
-              }}
-              disabled={actionLoading === `add-${user.id}`}
-            >
-              {actionLoading === `add-${user.id}` ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <>
-                  <Ionicons name="person-add" size={14} color="#FFFFFF" />
-                  <Text style={styles.addFriendButtonText}>Add</Text>
-                </>
-              )}
-            </TouchableOpacity>
+            {getFriendshipStatus(user.id) === 'friends' ? (
+              <View style={[styles.statusButton, { backgroundColor: '#10B981' + '30' }]}>
+                <Ionicons name="checkmark-circle" size={14} color="#10B981" />
+                <Text style={[styles.statusButtonText, { color: '#10B981' }]}>Friends</Text>
+              </View>
+            ) : getFriendshipStatus(user.id) === 'pending' ? (
+              <View style={[styles.statusButton, { backgroundColor: colors.textSecondary + '30' }]}>
+                <Ionicons name="time" size={14} color={colors.textSecondary} />
+                <Text style={[styles.statusButtonText, { color: colors.textSecondary }]}>Pending</Text>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[styles.addFriendButton, { backgroundColor: colors.primary }]}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  onAddFriend(user.id);
+                }}
+                disabled={actionLoading === `add-${user.id}`}
+              >
+                {actionLoading === `add-${user.id}` ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Ionicons name="person-add" size={14} color="#FFFFFF" />
+                    <Text style={styles.addFriendButtonText}>Add</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
           </TouchableOpacity>
         ))
       ) : (
@@ -202,6 +219,18 @@ const createStyles = (colors) => StyleSheet.create({
   },
   addFriendButtonText: {
     color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  statusButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+    gap: 4,
+  },
+  statusButtonText: {
     fontSize: 12,
     fontWeight: '600',
   },
