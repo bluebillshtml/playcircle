@@ -13,6 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import AnimatedBackground from '../components/AnimatedBackground';
+import { friendsService } from '../services/friendsService';
 
 export default function UserProfileScreen({ route, navigation }) {
   const { userId, userData } = route.params;
@@ -24,13 +25,23 @@ export default function UserProfileScreen({ route, navigation }) {
   const styles = createStyles(colors);
 
   const handleAddFriend = async () => {
+    if (!user?.id) {
+      Alert.alert('Error', 'You must be logged in to send friend requests');
+      return;
+    }
+
     setLoading(true);
     try {
-      // TODO: Implement actual friend request logic
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      setFriendStatus('pending');
-      Alert.alert('Success', 'Friend request sent!');
+      const result = await friendsService.sendFriendRequest(user.id, userId);
+      
+      if (result.success) {
+        setFriendStatus('pending');
+        Alert.alert('Success', 'Friend request sent!');
+      } else {
+        Alert.alert('Error', result.error || 'Failed to send friend request');
+      }
     } catch (error) {
+      console.error('Error sending friend request:', error);
       Alert.alert('Error', 'Failed to send friend request');
     } finally {
       setLoading(false);

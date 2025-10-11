@@ -71,7 +71,10 @@ const SearchDropdown = ({
             </View>
             <TouchableOpacity
               style={[styles.addFriendButton, { backgroundColor: colors.primary }]}
-              onPress={() => onAddFriend(user.id)}
+              onPress={(e) => {
+                e.stopPropagation();
+                onAddFriend(user.id);
+              }}
               disabled={actionLoading === `add-${user.id}`}
             >
               {actionLoading === `add-${user.id}` ? (

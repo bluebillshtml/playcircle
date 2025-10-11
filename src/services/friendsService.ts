@@ -132,7 +132,7 @@ export class FriendsService {
   // =====================================================
 
   /**
-   * Send a friend request to another user using JSONB structure
+   * Send a friend request to another user using database function
    */
   async sendFriendRequest(senderId: string, recipientId: string): Promise<FriendActionResult> {
     try {
@@ -148,13 +148,29 @@ export class FriendsService {
         };
       }
 
-      // For now, return success but don't actually send the request
-      // This functionality can be implemented later when needed
-      console.log('Friend request would be sent from', sanitizedSenderId, 'to', sanitizedRecipientId);
+      console.log('Sending friend request from', sanitizedSenderId, 'to', sanitizedRecipientId);
+
+      // Use the JSONB database function which bypasses RLS with SECURITY DEFINER
+      const { data: friendshipId, error } = await supabase
+        .rpc('send_friend_request_jsonb', {
+          sender_id: sanitizedSenderId,
+          recipient_id: sanitizedRecipientId,
+        });
+
+      if (error) {
+        console.error('RPC error:', error);
+        throw error;
+      }
+
+      console.log('Friend request sent successfully, friendship_id:', friendshipId);
+
+      // Clear cache for both users
+      this.clearUserCaches(sanitizedSenderId);
+      this.clearUserCaches(sanitizedRecipientId);
 
       return {
         success: true,
-        friendship_id: `request_${sanitizedSenderId}_${sanitizedRecipientId}`,
+        friendship_id: friendshipId,
         updated_status: 'pending',
       };
     } catch (error) {
