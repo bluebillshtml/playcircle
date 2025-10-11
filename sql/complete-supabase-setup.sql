@@ -1204,7 +1204,7 @@ DROP FUNCTION IF EXISTS get_recent_members(UUID);
 
 -- Function to send friend request
 CREATE OR REPLACE FUNCTION send_friend_request(sender_id UUID, recipient_id UUID)
-RETURNS UUID AS $$
+RETURNS UUID AS $$$
 DECLARE
   friendship_id UUID;
   smaller_id UUID;
@@ -1235,7 +1235,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to accept friend request
 CREATE OR REPLACE FUNCTION accept_friend_request(friendship_id UUID, accepter_id UUID)
-RETURNS BOOLEAN AS $$
+RETURNS BOOLEAN AS $$$
 DECLARE
   friendship_record RECORD;
 BEGIN
@@ -1261,7 +1261,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to decline friend request
 CREATE OR REPLACE FUNCTION decline_friend_request(friendship_id UUID, decliner_id UUID)
-RETURNS BOOLEAN AS $$
+RETURNS BOOLEAN AS $$$
 BEGIN
   -- Update status to declined
   UPDATE friendships
@@ -1282,7 +1282,7 @@ RETURNS TABLE (
   full_name TEXT,
   avatar_url TEXT,
   friendship_date TIMESTAMP WITH TIME ZONE
-) AS $$
+) AS $$$
 BEGIN
   RETURN QUERY
   SELECT 
@@ -1316,7 +1316,7 @@ RETURNS TABLE (
   from_full_name TEXT,
   from_avatar_url TEXT,
   requested_at TIMESTAMP WITH TIME ZONE
-) AS $$
+) AS $$$
 BEGIN
   RETURN QUERY
   SELECT 
@@ -1346,7 +1346,7 @@ RETURNS TABLE (
   sport_tags TEXT[],
   last_played_together TIMESTAMP WITH TIME ZONE,
   friendship_status TEXT
-) AS $$
+) AS $$$
 BEGIN
   RETURN QUERY
   SELECT DISTINCT
@@ -1391,7 +1391,7 @@ RETURNS TABLE (
   last_interaction TIMESTAMP WITH TIME ZONE,
   friendship_status TEXT,
   online_status BOOLEAN
-) AS $$
+) AS $$$
 BEGIN
   RETURN QUERY
   (
