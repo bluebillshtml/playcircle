@@ -556,19 +556,66 @@ CREATE INDEX IF NOT EXISTS idx_friendships_user2 ON friendships(user2_id, status
 -- 14. FUNCTIONS AND TRIGGERS
 -- =====================================================
 
--- Function to handle new user signup
+-- Function to handle new user signup and populate related tables
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
+DECLARE
+    user_skill_level TEXT;
+    user_preferred_sport TEXT;
 BEGIN
-    INSERT INTO public.profiles (id, username, full_name, first_name, last_name, skill_level)
+    -- Get skill level and preferred sport from metadata
+    user_skill_level := COALESCE(NEW.raw_user_meta_data->>'skill_level', 'Beginner');
+    user_preferred_sport := COALESCE(NEW.raw_user_meta_data->>'preferred_sport', 'padel');
+    
+    -- 1. Create the main profile
+    INSERT INTO public.profiles (id, username, full_name, first_name, last_name, skill_level, preferred_sport)
     VALUES (
         NEW.id,
         COALESCE(NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1)),
         COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
         COALESCE(NEW.raw_user_meta_data->>'first_name', ''),
         COALESCE(NEW.raw_user_meta_data->>'last_name', ''),
-        COALESCE(NEW.raw_user_meta_data->>'skill_level', 'Beginner')
+        user_skill_level,
+        user_preferred_sport
     );
+    
+    -- 2. Create default user preferences
+    INSERT INTO public.user_preferences (user_id, theme, language)
+    VALUES (
+        NEW.id,
+        COALESCE(NEW.raw_user_meta_data->>'theme', 'light'),
+        COALESCE(NEW.raw_user_meta_data->>'language', 'en')
+    );
+    
+    -- 3. Create user sport profile for their preferred sport
+    INSERT INTO public.user_sport_profiles (user_id, sport_id, skill_level, favorite_position)
+    VALUES (
+        NEW.id,
+        user_preferred_sport,
+        user_skill_level,
+        COALESCE(NEW.raw_user_meta_data->>'favorite_position', 'Any')
+    );
+    
+    -- 4. Create user sport stats for their preferred sport
+    INSERT INTO public.user_sport_stats (user_id, sport_id)
+    VALUES (NEW.id, user_preferred_sport);
+    
+    -- 5. Create initial leaderboard entry for global ranking
+    INSERT INTO public.leaderboard (user_id, region, period, rank, points)
+    VALUES 
+        (NEW.id, 'global', 'all_time', NULL, 0),
+        (NEW.id, 'global', 'monthly', NULL, 0),
+        (NEW.id, 'global', 'weekly', NULL, 0);
+    
+    -- 6. Create welcome notification
+    INSERT INTO public.notifications (user_id, type, title, message)
+    VALUES (
+        NEW.id,
+        'match_invite',
+        'Welcome to PlayCircle!',
+        'Welcome to PlayCircle! Complete your profile and start finding matches in your area.'
+    );
+    
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
