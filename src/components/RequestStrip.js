@@ -165,7 +165,10 @@ const RequestStrip = ({
         const success = await onAccept(request.id);
         console.log('RequestStrip: onAccept returned:', success);
         
-        if (!success) {
+        if (success) {
+          // Show success message
+          window.alert('Friend request accepted!');
+        } else {
           window.alert('Failed to accept friend request. Please try again.');
         }
       } catch (error) {
@@ -243,7 +246,10 @@ const RequestStrip = ({
         const success = await onDecline(request.id);
         console.log('RequestStrip: onDecline returned:', success);
         
-        if (!success) {
+        if (success) {
+          // Success - no need to show message for decline
+          console.log('RequestStrip: Friend request declined successfully');
+        } else {
           window.alert('Failed to decline friend request. Please try again.');
         }
       } catch (error) {
