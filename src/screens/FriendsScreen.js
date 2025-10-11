@@ -362,8 +362,8 @@ const FriendsScreen = ({ navigation }) => {
 
     if (isLoading) {
       return (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color={colors.primary} />
+        <View style={[styles.loadingContainer, { backgroundColor: colors.surface + '40', borderRadius: 24, marginHorizontal: 24 }]}>
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
             {hasSearchResults ? 'Searching...' : 'Finding suggested friends...'}
           </Text>
@@ -378,8 +378,10 @@ const FriendsScreen = ({ navigation }) => {
         : 'Play more games to discover new friends';
 
       return (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="people-outline" size={48} color={colors.textSecondary} />
+        <View style={[styles.emptyContainer, { backgroundColor: colors.surface + '40', borderRadius: 24, marginHorizontal: 24, borderWidth: 1, borderColor: colors.glassBorder }]}>
+          <View style={[styles.emptyIconContainer, { backgroundColor: colors.primary + '20' }]}>
+            <Ionicons name="people-outline" size={56} color={colors.primary} />
+          </View>
           <Text style={[styles.emptyTitle, { color: colors.text }]}>
             {emptyTitle}
           </Text>
@@ -418,8 +420,8 @@ const FriendsScreen = ({ navigation }) => {
 
     if (isLoading) {
       return (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color={colors.primary} />
+        <View style={[styles.loadingContainer, { backgroundColor: colors.surface + '40', borderRadius: 24, marginHorizontal: 24 }]}>
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
             {hasSearchResults ? 'Searching...' : 'Loading recent members...'}
           </Text>
@@ -434,8 +436,10 @@ const FriendsScreen = ({ navigation }) => {
         : 'Members you\'ve played with will appear here';
 
       return (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="time-outline" size={48} color={colors.textSecondary} />
+        <View style={[styles.emptyContainer, { backgroundColor: colors.surface + '40', borderRadius: 24, marginHorizontal: 24, borderWidth: 1, borderColor: colors.glassBorder }]}>
+          <View style={[styles.emptyIconContainer, { backgroundColor: colors.primary + '20' }]}>
+            <Ionicons name="time-outline" size={56} color={colors.primary} />
+          </View>
           <Text style={[styles.emptyTitle, { color: colors.text }]}>
             {emptyTitle}
           </Text>
@@ -574,14 +578,25 @@ const FriendsScreen = ({ navigation }) => {
 
           {/* Empty State */}
           {!hasAnyData && !loading.suggested_friends && !loading.recent_members && (
-            <View style={styles.globalEmptyContainer}>
-              <Ionicons name="people-outline" size={64} color={colors.textSecondary} />
+            <View style={[styles.globalEmptyContainer, { backgroundColor: colors.surface + '40', borderRadius: 32, marginHorizontal: 24, borderWidth: 1, borderColor: colors.glassBorder }]}>
+              <View style={[styles.globalEmptyIconContainer, { backgroundColor: colors.primary + '20' }]}>
+                <Ionicons name="people-outline" size={72} color={colors.primary} />
+              </View>
               <Text style={[styles.globalEmptyTitle, { color: colors.text }]}>
                 Welcome to Friends!
               </Text>
               <Text style={[styles.globalEmptySubtitle, { color: colors.textSecondary }]}>
                 Start playing games to discover and connect with other players
               </Text>
+              <TouchableOpacity 
+                style={[styles.exploreButton, { backgroundColor: colors.primary }]}
+                onPress={() => navigation.navigate('Matches')}
+              >
+                <Ionicons name="search" size={20} color="#065F46" />
+                <Text style={[styles.exploreButtonText, { color: '#065F46' }]}>
+                  Explore Games
+                </Text>
+              </TouchableOpacity>
             </View>
           )}
         </Animated.ScrollView>
@@ -607,146 +622,201 @@ const createStyles = (colors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingTop: 60,
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
     paddingLeft: 76,
-    gap: 12,
+    gap: 16,
   },
   headerSearchBar: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 28,
-    gap: 10,
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderRadius: 32,
+    gap: 12,
+    borderWidth: 1.5,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 12,
   },
   headerSearchInput: {
     flex: 1,
     fontSize: 16,
+    fontWeight: '500',
   },
   settingsButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    borderWidth: 1.5,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 12,
   },
   content: {
     flex: 1,
+    paddingTop: 8,
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 32,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 16,
-    gap: 8,
+    paddingHorizontal: 24,
+    marginBottom: 20,
+    gap: 12,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    paddingHorizontal: 20,
-    marginBottom: 16,
+    fontSize: 24,
+    fontWeight: '700',
+    paddingHorizontal: 24,
+    marginBottom: 20,
+    letterSpacing: -0.5,
   },
   sectionHeaderTitle: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: 24,
+    fontWeight: '700',
+    letterSpacing: -0.5,
   },
   badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    minWidth: 24,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    minWidth: 32,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
   },
   badgeText: {
     color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '700',
   },
   horizontalScrollContent: {
-    paddingHorizontal: 20,
-    gap: 12,
+    paddingHorizontal: 24,
+    gap: 16,
   },
   membersContainer: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
+    gap: 4,
   },
   requestsContainer: {
-    paddingHorizontal: 20,
-    gap: 8,
+    paddingHorizontal: 24,
+    gap: 12,
   },
   loadingContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 32,
-    gap: 8,
+    paddingVertical: 48,
+    gap: 16,
   },
   loadingText: {
-    fontSize: 14,
+    fontSize: 16,
+    fontWeight: '500',
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 32,
-    paddingHorizontal: 20,
-    gap: 8,
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+    gap: 20,
+  },
+  emptyIconContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 22,
+    fontWeight: '700',
+    letterSpacing: -0.5,
   },
   emptySubtitle: {
-    fontSize: 14,
+    fontSize: 16,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 24,
+    fontWeight: '500',
   },
   globalEmptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 64,
-    paddingHorizontal: 20,
-    gap: 12,
+    paddingVertical: 80,
+    paddingHorizontal: 32,
+    gap: 24,
+  },
+  globalEmptyIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
   },
   globalEmptyTitle: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 28,
+    fontWeight: '800',
+    letterSpacing: -0.5,
   },
   globalEmptySubtitle: {
-    fontSize: 16,
+    fontSize: 18,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 26,
+    fontWeight: '500',
+  },
+  exploreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderRadius: 28,
+    gap: 8,
+    marginTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  exploreButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
   },
   searchResultsHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    marginBottom: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    marginBottom: 16,
+    backgroundColor: colors.surface + '80',
+    borderRadius: 16,
+    marginHorizontal: 24,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
   },
   searchResultsText: {
-    fontSize: 14,
+    fontSize: 15,
     fontStyle: 'italic',
+    fontWeight: '500',
   },
   clearSearchText: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });
 

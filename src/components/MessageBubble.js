@@ -11,17 +11,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import MessageTypeIndicator from './MessageTypeIndicator';
 
-const MessageBubble = ({ 
-  message, 
-  isOwn, 
-  showAvatar = true, 
+const MessageBubble = ({
+  message,
+  isOwn,
+  showAvatar = true,
   showTimestamp = true,
   onRetry,
-  onLongPress 
+  onLongPress
 }) => {
   const { colors } = useTheme();
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
+  const longPressTimer = useRef(null);
+  const messageRef = useRef(null);
 
   useEffect(() => {
     // Gentle bubble pop animation on message appearance
@@ -96,11 +98,11 @@ const MessageBubble = ({
       case 'status':
         return (
           <View style={styles.statusContainer}>
-            <MessageTypeIndicator 
+            <MessageTypeIndicator
               messageType={message.message_type}
               messageStatus={message.metadata?.status?.status}
               size="large"
-              showText={true}
+              showText={false}
             />
             <Text style={[styles.messageText, { color: colors.text }]}>
               {message.content}
@@ -119,32 +121,85 @@ const MessageBubble = ({
 
   const renderDeliveryStatus = () => {
     if (!isOwn || !message.delivery_status) return null;
-    
-    let icon, color;
+
+    const whiteColor = '#FFFFFF';
+    const greenColor = '#25D366'; // WhatsApp green
+
     switch (message.delivery_status) {
       case 'sending':
-        icon = 'time-outline';
-        color = colors.textSecondary;
-        break;
+        // Single white checkmark
+        return (
+          <View style={styles.deliveryStatus}>
+            <Ionicons name="checkmark" size={14} color={whiteColor} />
+          </View>
+        );
+
       case 'sent':
-        icon = 'checkmark';
-        color = colors.success;
-        break;
+        // Double white checkmark
+        return (
+          <View style={styles.deliveryStatus}>
+            <View style={styles.doubleCheck}>
+              <Ionicons name="checkmark" size={14} color={whiteColor} style={styles.checkmark1} />
+              <Ionicons name="checkmark" size={14} color={whiteColor} style={styles.checkmark2} />
+            </View>
+          </View>
+        );
+
+      case 'read':
+        // Double green checkmark
+        return (
+          <View style={styles.deliveryStatus}>
+            <View style={styles.doubleCheck}>
+              <Ionicons name="checkmark" size={14} color={greenColor} style={styles.checkmark1} />
+              <Ionicons name="checkmark" size={14} color={greenColor} style={styles.checkmark2} />
+            </View>
+          </View>
+        );
+
       case 'failed':
-        icon = 'alert-circle-outline';
-        color = colors.error;
-        break;
+        return (
+          <TouchableOpacity
+            onPress={() => onRetry?.(message)}
+            style={styles.deliveryStatus}
+          >
+            <Ionicons name="alert-circle-outline" size={14} color={colors.error} />
+          </TouchableOpacity>
+        );
+
       default:
         return null;
     }
+  };
+
+  const handlePressIn = (event) => {
+    longPressTimer.current = setTimeout(() => {
+      // Get the touch position for the reaction overlay
+      const { pageX, pageY } = event.nativeEvent;
+      onLongPress?.(message, { x: pageX, y: pageY });
+    }, 500); // 0.5 seconds
+  };
+
+  const handlePressOut = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
+  const renderReactions = () => {
+    if (!message.reactions || message.reactions.length === 0) return null;
 
     return (
-      <TouchableOpacity 
-        onPress={message.delivery_status === 'failed' ? () => onRetry?.(message) : undefined}
-        style={styles.deliveryStatus}
-      >
-        <Ionicons name={icon} size={12} color={color} />
-      </TouchableOpacity>
+      <View style={styles.reactionsContainer}>
+        {message.reactions.map((reaction, index) => (
+          <View key={`${reaction.emoji}-${index}`} style={styles.reactionBubble}>
+            <Text style={styles.reactionEmoji}>{reaction.emoji}</Text>
+            {reaction.count > 1 && (
+              <Text style={styles.reactionCount}>{reaction.count}</Text>
+            )}
+          </View>
+        ))}
+      </View>
     );
   };
 
@@ -152,6 +207,7 @@ const MessageBubble = ({
 
   return (
     <Animated.View 
+      ref={messageRef}
       style={[
         styles.container,
         {
@@ -180,25 +236,31 @@ const MessageBubble = ({
         )}
 
         {/* Message bubble */}
-        <TouchableOpacity
-          onLongPress={() => onLongPress?.(message)}
-          style={styles.bubbleContainer}
-          activeOpacity={0.8}
-        >
-          <View style={styles.bubble}>
-            {renderMessageContent()}
-          </View>
-          
-          {/* Timestamp and delivery status */}
-          {showTimestamp && (
-            <View style={styles.messageFooter}>
-              <Text style={styles.timestamp}>
-                {formatTimestamp(message.created_at)}
-              </Text>
-              {renderDeliveryStatus()}
+        <View style={styles.bubbleContainer}>
+          <TouchableOpacity
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
+            activeOpacity={0.8}
+            style={styles.touchableArea}
+          >
+            <View style={styles.bubble}>
+              {renderMessageContent()}
             </View>
-          )}
-        </TouchableOpacity>
+
+            {/* Reactions */}
+            {renderReactions()}
+
+            {/* Timestamp and delivery status */}
+            {showTimestamp && (
+              <View style={styles.messageFooter}>
+                <Text style={styles.timestamp}>
+                  {formatTimestamp(message.created_at)}
+                </Text>
+                {renderDeliveryStatus()}
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
 
         {/* Spacer for own messages to push them right */}
         {isOwn && <View style={styles.spacer} />}
@@ -240,6 +302,9 @@ const createStyles = (colors, isOwn) => StyleSheet.create({
   bubbleContainer: {
     maxWidth: '75%',
     alignItems: isOwn ? 'flex-end' : 'flex-start',
+  },
+  touchableArea: {
+    width: '100%',
   },
   bubble: {
     paddingHorizontal: 16,
@@ -304,9 +369,51 @@ const createStyles = (colors, isOwn) => StyleSheet.create({
   },
   deliveryStatus: {
     padding: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  doubleCheck: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+    width: 18,
+  },
+  checkmark1: {
+    position: 'absolute',
+    left: 0,
+  },
+  checkmark2: {
+    position: 'absolute',
+    left: 5,
   },
   spacer: {
     width: 40, // Space for avatar on the other side
+  },
+  reactionsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 6,
+    alignItems: isOwn ? 'flex-end' : 'flex-start',
+  },
+  reactionBubble: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: colors.border + '40',
+    gap: 4,
+  },
+  reactionEmoji: {
+    fontSize: 14,
+  },
+  reactionCount: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textSecondary,
   },
 });
 
