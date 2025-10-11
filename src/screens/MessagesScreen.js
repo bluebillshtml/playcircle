@@ -223,12 +223,12 @@ export default function MessagesScreen({ navigation }) {
         try {
           if (friendsService && friendsService.getFriends) {
             const result = await friendsService.getFriends(user.id);
-            return Array.isArray(result) ? result : FRIENDS_LIST;
+            return Array.isArray(result) ? result : [];
           }
-          return FRIENDS_LIST; // Fallback to mock friends
+          return []; // Return empty array if service doesn't exist
         } catch (err) {
           console.error('❌ Error loading friends:', err);
-          return FRIENDS_LIST; // Fallback to mock friends
+          return []; // Return empty array on error
         }
       };
 
@@ -251,18 +251,17 @@ export default function MessagesScreen({ navigation }) {
       setFriendChats(Array.isArray(friendChatsData) ? friendChatsData : []);
       setUpcomingMatchChats(Array.isArray(upcomingChatsData) ? upcomingChatsData : []);
       setPastMatchChats(Array.isArray(pastChatsData) ? pastChatsData : []);
-      setFriends(Array.isArray(friendsData) ? friendsData : FRIENDS_LIST);
+      setFriends(Array.isArray(friendsData) ? friendsData : []);
     } catch (err) {
       console.error('❌ Error loading messages data:', err);
       setError('Failed to load messages');
 
-      // Fallback to mock data if real data fails
-      console.log('🔄 Falling back to mock data...');
-      const mockChats = createMockChatListScenario(8);
-      setFriendChats(mockChats.slice(0, 3));
-      setUpcomingMatchChats(mockChats.slice(3, 6));
-      setPastMatchChats(mockChats.slice(6, 8));
-      setFriends(FRIENDS_LIST);
+      // Set empty arrays instead of mock data
+      console.log('🔄 Setting empty states...');
+      setFriendChats([]);
+      setUpcomingMatchChats([]);
+      setPastMatchChats([]);
+      setFriends([]); // Start with empty friends list
     } finally {
       setLoading(false);
     }
@@ -451,59 +450,7 @@ export default function MessagesScreen({ navigation }) {
     );
   }
 
-  // Empty state
-  const totalItems = friends.length + upcomingMatchChats.length + pastMatchChats.length;
-  if (totalItems === 0 && !loading) {
-    return (
-      <AnimatedBackground>
-        <View style={styles.container}>
-          <View style={styles.header}>
-            <TouchableOpacity style={styles.menuButton} onPress={() => console.log('Menu pressed')}>
-              <Ionicons name="menu" size={28} color={colors.primary} />
-            </TouchableOpacity>
 
-            <View style={styles.searchContainer}>
-              <Ionicons name="search" size={20} color={colors.textSecondary} />
-              <Text style={styles.searchPlaceholder}>Search chats</Text>
-            </View>
-
-            <TouchableOpacity
-              style={styles.settingsButton}
-              onPress={() => setShowSettingsModal(true)}
-            >
-              <Ionicons name="settings-outline" size={28} color={colors.primary} />
-            </TouchableOpacity>
-          </View>
-          <ScrollView
-            contentContainerStyle={styles.emptyScrollContent}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                tintColor={colors.primary}
-                colors={[colors.primary]}
-              />
-            }
-          >
-            <View style={styles.emptyContainer}>
-              <Ionicons name="chatbubbles-outline" size={64} color={colors.textSecondary} />
-              <Text style={styles.emptyTitle}>No chats yet</Text>
-              <Text style={styles.emptyMessage}>
-                Join a session to start chatting with other players!
-              </Text>
-              <TouchableOpacity
-                style={styles.exploreButton}
-                onPress={() => navigation.navigate('Home')}
-              >
-                <Ionicons name="search-outline" size={20} color="#FFFFFF" />
-                <Text style={styles.exploreButtonText}>Find Sessions</Text>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
-        </View>
-      </AnimatedBackground>
-    );
-  }
 
   return (
     <AnimatedBackground>
@@ -550,37 +497,51 @@ export default function MessagesScreen({ navigation }) {
                   <Text style={styles.seeAllText}>See All</Text>
                 </TouchableOpacity>
               </View>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.friendsScrollContent}
-              >
-                {filteredData.friends.slice(0, 8).map((friend) => (
+              {filteredData.friends.length > 0 ? (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.friendsScrollContent}
+                >
+                  {filteredData.friends.slice(0, 8).map((friend) => (
+                    <TouchableOpacity
+                      key={friend.id}
+                      style={styles.friendCard}
+                      onPress={() => handleFriendPress(friend)}
+                    >
+                      <View style={styles.friendAvatar}>
+                        <Image
+                          source={{ uri: friend.avatar_url || friend.avatar || `https://i.pravatar.cc/150?u=${friend.id}` }}
+                          style={styles.friendAvatarImage}
+                        />
+                        {friend.status === 'online' && (
+                          <View style={styles.onlineIndicator} />
+                        )}
+                        {friend.unreadCount > 0 && (
+                          <View style={styles.unreadBadge}>
+                            <Text style={styles.unreadBadgeText}>
+                              {friend.unreadCount > 9 ? '9+' : friend.unreadCount}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={styles.friendName}>{friend.full_name || friend.username || friend.name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              ) : (
+                <View style={styles.emptySection}>
+                  <Ionicons name="people-outline" size={40} color={colors.textSecondary} />
+                  <Text style={styles.emptySectionText}>No friends yet</Text>
                   <TouchableOpacity
-                    key={friend.id}
-                    style={styles.friendCard}
-                    onPress={() => handleFriendPress(friend)}
+                    style={styles.addFriendsButton}
+                    onPress={() => navigation.navigate('Friends')}
                   >
-                    <View style={styles.friendAvatar}>
-                      <Image
-                        source={{ uri: friend.avatar_url || friend.avatar || `https://i.pravatar.cc/150?u=${friend.id}` }}
-                        style={styles.friendAvatarImage}
-                      />
-                      {friend.status === 'online' && (
-                        <View style={styles.onlineIndicator} />
-                      )}
-                      {friend.unreadCount > 0 && (
-                        <View style={styles.unreadBadge}>
-                          <Text style={styles.unreadBadgeText}>
-                            {friend.unreadCount > 9 ? '9+' : friend.unreadCount}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text style={styles.friendName}>{friend.full_name || friend.username || friend.name}</Text>
+                    <Ionicons name="person-add" size={18} color="#FFFFFF" />
+                    <Text style={styles.addFriendsButtonText}>Add Friends</Text>
                   </TouchableOpacity>
-                ))}
-              </ScrollView>
+                </View>
+              )}
             </View>
 
             {/* Upcoming Matches Section */}
@@ -588,33 +549,40 @@ export default function MessagesScreen({ navigation }) {
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Upcoming Matches</Text>
                 <View style={styles.sectionBadge}>
-                  <Text style={styles.sectionBadgeText}>{UPCOMING_MATCHES.length}</Text>
+                  <Text style={styles.sectionBadgeText}>{filteredData.upcomingMatchChats.length}</Text>
                 </View>
               </View>
-              {filteredData.upcomingMatchChats.map((match) => (
-                <TouchableOpacity
-                  key={match.chat_id}
-                  style={styles.matchCard}
-                  onPress={() => handleMatchChatPress(match)}
-                >
-                  <View style={styles.matchIcon}>
-                    <Ionicons
-                      name={match.sport_id === 'padel' ? 'tennisball' :
-                        match.sport_id === 'tennis' ? 'tennisball-outline' :
-                          match.sport_id === 'basketball' ? 'basketball' : 'tennisball'}
-                      size={24}
-                      color={colors.primary}
-                    />
-                  </View>
-                  <View style={styles.matchInfo}>
-                    <Text style={styles.matchTitle}>{match.court_name}</Text>
-                    <Text style={styles.matchDetails}>
-                      {new Date(match.session_date).toLocaleDateString()} {match.session_time}
-                    </Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-                </TouchableOpacity>
-              ))}
+              {filteredData.upcomingMatchChats.length > 0 ? (
+                filteredData.upcomingMatchChats.map((match) => (
+                  <TouchableOpacity
+                    key={match.chat_id}
+                    style={styles.matchCard}
+                    onPress={() => handleMatchChatPress(match)}
+                  >
+                    <View style={styles.matchIcon}>
+                      <Ionicons
+                        name={match.sport_id === 'padel' ? 'tennisball' :
+                          match.sport_id === 'tennis' ? 'tennisball-outline' :
+                            match.sport_id === 'basketball' ? 'basketball' : 'tennisball'}
+                        size={24}
+                        color={colors.primary}
+                      />
+                    </View>
+                    <View style={styles.matchInfo}>
+                      <Text style={styles.matchTitle}>{match.court_name}</Text>
+                      <Text style={styles.matchDetails}>
+                        {new Date(match.session_date).toLocaleDateString()} {match.session_time}
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <View style={styles.emptySection}>
+                  <Ionicons name="calendar-outline" size={40} color={colors.textSecondary} />
+                  <Text style={styles.emptySectionText}>No upcoming matches yet</Text>
+                </View>
+              )}
             </View>
 
             {/* Past Matches Section */}
@@ -970,6 +938,27 @@ const createStyles = (colors) => StyleSheet.create({
   emptySectionText: {
     fontSize: 14,
     color: colors.textSecondary,
+  },
+  emptySubText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    opacity: 0.7,
+    marginTop: 4,
+  },
+  addFriendsButton: {
+    backgroundColor: colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginTop: 12,
+    gap: 6,
+  },
+  addFriendsButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
 
   // Loading state
