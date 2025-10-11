@@ -91,6 +91,11 @@ export default function OnboardingScreen({ navigation }) {
 
   const styles = createStyles(colors);
 
+  // Track step changes
+  useEffect(() => {
+    console.log(`📍 Current step changed to: ${currentStep}`);
+  }, [currentStep]);
+
   // Intro screen animation on mount
   useEffect(() => {
     if (currentStep === 0) {
@@ -249,6 +254,19 @@ export default function OnboardingScreen({ navigation }) {
   const canProceedFromStep2 = selectedSports.every(sport => skillLevels[sport.id]);
   const canProceedFromStep3 = selectedSports.every(sport => positions[sport.id]);
 
+  // Debug validation
+  useEffect(() => {
+    console.log('🔍 Step validation:', {
+      currentStep,
+      canProceedFromStep1,
+      canProceedFromStep2,
+      canProceedFromStep3,
+      selectedSports: selectedSports.length,
+      skillLevels: Object.keys(skillLevels).length,
+      positions: Object.keys(positions).length
+    });
+  }, [currentStep, canProceedFromStep1, canProceedFromStep2, canProceedFromStep3]);
+
   const handleNext = () => {
     if (currentStep < 4) {
       // Animate out current step
@@ -356,6 +374,7 @@ export default function OnboardingScreen({ navigation }) {
   };
 
   const handleComplete = async () => {
+    console.log('🚀 handleComplete called!');
     try {
       setLoading(true);
       
@@ -368,10 +387,28 @@ export default function OnboardingScreen({ navigation }) {
       
       // Check if table exists and is accessible
       try {
-        const tableCheck = await profileService.checkUserSportProfilesTable();
-        console.log('Table check result:', tableCheck);
+        const tableCheck = await profileService.ensureUserSportProfilesTable();
+        console.log('Table existence check:', tableCheck);
+        
+        if (tableCheck.success) {
+          // Check existing records
+          const existingProfiles = await profileService.getUserSportProfiles(user.id);
+          console.log('Existing sport profiles:', existingProfiles);
+          
+          // Test database connectivity
+          const insertTest = await profileService.testUserSportProfileInsert(user.id);
+          console.log('Database test result:', insertTest);
+        } else {
+          console.error('❌ Cannot proceed - table does not exist:', tableCheck.error);
+          Alert.alert(
+            'Database Setup Required',
+            'The user_sport_profiles table does not exist.\n\nPlease run one of these SQL files in your Supabase SQL Editor:\n\n1. complete-supabase-setup.sql (full setup)\n2. user_sport_profiles_table.sql (minimal setup)\n\nThen try the onboarding again.',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
       } catch (error) {
-        console.log('Table check failed:', error);
+        console.log('Table/insert test failed:', error);
       }
       
       // Update profile with onboarding data
@@ -750,6 +787,29 @@ export default function OnboardingScreen({ navigation }) {
           You can update these preferences anytime in your Profile settings.
         </Text>
 
+        {/* Debug button for testing database */}
+        <TouchableOpacity
+          style={{
+            backgroundColor: '#FF6B6B',
+            padding: 10,
+            borderRadius: 8,
+            marginVertical: 10,
+          }}
+          onPress={async () => {
+            console.log('🔧 Manual test button pressed');
+            try {
+              const result = await profileService.testUserSportProfileInsert(user.id);
+              Alert.alert('Test Result', JSON.stringify(result, null, 2));
+            } catch (error) {
+              Alert.alert('Test Error', error.message);
+            }
+          }}
+        >
+          <Text style={{ color: 'white', textAlign: 'center' }}>
+            🧪 Test Database Connection
+          </Text>
+        </TouchableOpacity>
+
         <View style={styles.summaryContainer}>
           <View style={styles.summaryHeader}>
             <Ionicons name="person-circle" size={24} color="#10B981" />
@@ -890,6 +950,7 @@ export default function OnboardingScreen({ navigation }) {
                 transform: [{ translateY: stepSlideAnim }]
               }}
             >
+              {console.log('📱 Rendering step 4 (final summary)')}
               {renderStep4()}
             </Animated.View>
           )}
@@ -926,7 +987,10 @@ export default function OnboardingScreen({ navigation }) {
             ) : (
               <TouchableOpacity
                 style={styles.completeButton}
-                onPress={handleComplete}
+                onPress={() => {
+                  console.log('🎯 Complete button pressed!');
+                  handleComplete();
+                }}
                 disabled={loading}
               >
                 <Text style={styles.completeButtonText}>

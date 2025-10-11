@@ -372,42 +372,82 @@ export const profileService = {
 
     console.log('profileData to save:', profileData);
 
-    // Try upsert first
+    // Check if record already exists
+    const { data: existingRecord } = await supabase
+      .from('user_sport_profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('sport_id', sportData.sport_id)
+      .single();
+      
+    if (existingRecord) {
+      console.log('Record already exists, updating:', existingRecord);
+      
+      // Update existing record
+      const { data: updateData, error: updateError } = await supabase
+        .from('user_sport_profiles')
+        .update({
+          skill_level: sportData.skill_level,
+          preferred_position: sportData.preferred_position || 'No Preference',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', userId)
+        .eq('sport_id', sportData.sport_id)
+        .select()
+        .single();
+        
+      if (updateError) {
+        console.error('Update failed:', updateError);
+        throw updateError;
+      }
+      
+      console.log('Update succeeded:', updateData);
+      return updateData;
+    }
+
+    // Try to insert new record
     const { data, error } = await supabase
       .from('user_sport_profiles')
-      .upsert(profileData, {
-        onConflict: 'user_id,sport_id',
-        ignoreDuplicates: false,
-      })
+      .insert(profileData)
       .select()
       .single();
 
     if (error) {
-      console.error('Upsert failed, error details:', {
+      console.error('Insert failed, error details:', {
         message: error.message,
         details: error.details,
         hint: error.hint,
         code: error.code
       });
       
-      // If upsert fails, try a simple insert
-      console.log('Trying simple insert instead...');
-      const { data: insertData, error: insertError } = await supabase
-        .from('user_sport_profiles')
-        .insert(profileData)
-        .select()
-        .single();
+      // If it's a duplicate key error, try to update instead
+      if (error.code === '23505') {
+        console.log('Duplicate key detected, trying update instead...');
+        const { data: updateData, error: updateError } = await supabase
+          .from('user_sport_profiles')
+          .update({
+            skill_level: sportData.skill_level,
+            preferred_position: sportData.preferred_position || 'No Preference',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', userId)
+          .eq('sport_id', sportData.sport_id)
+          .select()
+          .single();
+          
+        if (updateError) {
+          console.error('Fallback update also failed:', updateError);
+          throw updateError;
+        }
         
-      if (insertError) {
-        console.error('Insert also failed:', insertError);
-        throw insertError;
+        console.log('Fallback update succeeded:', updateData);
+        return updateData;
       }
       
-      console.log('Insert succeeded:', insertData);
-      return insertData;
+      throw error;
     }
     
-    console.log('Upsert succeeded:', data);
+    console.log('Insert succeeded:', data);
     return data;
   },
 
@@ -453,6 +493,114 @@ export const profileService = {
     } catch (err) {
       console.error('Table check exception:', err);
       return { exists: false, error: err.message };
+    }
+  },
+
+  // Function to check if user_sport_profiles table exists and create if needed
+  ensureUserSportProfilesTable: async () => {
+    try {
+      console.log('🔧 Checking if user_sport_profiles table exists...');
+      
+      // Try a simple select to see if table exists
+      const { data, error } = await supabase
+        .from('user_sport_profiles')
+        .select('id')
+        .limit(1);
+        
+      if (error && error.code === '42P01') {
+        console.log('❌ Table does not exist. Please run the complete-supabase-setup.sql file in your Supabase SQL Editor.');
+        return { 
+          success: false, 
+          error: 'Table user_sport_profiles does not exist. Please run the SQL setup file.' 
+        };
+      } else if (error) {
+        console.log('❌ Table access error:', error);
+        return { success: false, error: error.message };
+      }
+      
+      console.log('✅ Table exists and is accessible');
+      return { success: true };
+    } catch (err) {
+      console.error('❌ Exception checking table:', err);
+      return { success: false, error: err.message };
+    }
+  },
+
+  // Test function to check database connectivity and permissions
+  testUserSportProfileInsert: async (userId) => {
+    try {
+      console.log('🧪 Testing database connectivity for user:', userId);
+      
+      // First check if the table exists
+      const tableCheck = await profileService.ensureUserSportProfilesTable();
+      if (!tableCheck.success) {
+        return tableCheck;
+      }
+      
+      // Check if user already has records
+      const { data: existingRecords, error: selectError } = await supabase
+        .from('user_sport_profiles')
+        .select('*')
+        .eq('user_id', userId);
+        
+      if (selectError) {
+        console.error('❌ Cannot read from table:', selectError);
+        return { success: false, error: selectError };
+      }
+      
+      console.log('📊 Existing records for user:', existingRecords);
+      
+      if (existingRecords && existingRecords.length > 0) {
+        console.log('✅ Database is working! User already has sport profiles.');
+        return { 
+          success: true, 
+          message: 'Database is accessible and user has existing records',
+          existingRecords 
+        };
+      }
+      
+      // Try to insert a test record with a unique sport ID
+      const testSportId = `test_${Date.now()}`;
+      const testData = {
+        user_id: userId,
+        sport_id: testSportId,
+        skill_level: 'Beginner',
+        preferred_position: 'Test Position',
+        total_matches: 0,
+        wins: 0,
+        losses: 0,
+        points: 0,
+      };
+      
+      const { data, error } = await supabase
+        .from('user_sport_profiles')
+        .insert(testData)
+        .select()
+        .single();
+        
+      if (error) {
+        console.error('❌ Test insert failed:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        return { success: false, error };
+      }
+      
+      console.log('✅ Test insert succeeded:', data);
+      
+      // Clean up test data
+      await supabase
+        .from('user_sport_profiles')
+        .delete()
+        .eq('id', data.id);
+        
+      console.log('✅ Test cleanup completed');
+      return { success: true, message: 'Database test completed successfully', data };
+    } catch (err) {
+      console.error('❌ Test exception:', err);
+      return { success: false, error: err.message };
     }
   },
 
