@@ -581,6 +581,13 @@ export default function MessagesScreen({ navigation }) {
                 <View style={styles.emptySection}>
                   <Ionicons name="calendar-outline" size={40} color={colors.textSecondary} />
                   <Text style={styles.emptySectionText}>No upcoming matches yet</Text>
+                  <TouchableOpacity
+                    style={styles.joinMatchesButton}
+                    onPress={() => navigation.navigate('Home')}
+                  >
+                    <Ionicons name="add-circle" size={18} color="#FFFFFF" />
+                    <Text style={styles.joinMatchesButtonText}>Join Matches</Text>
+                  </TouchableOpacity>
                 </View>
               )}
             </View>
@@ -956,6 +963,21 @@ const createStyles = (colors) => StyleSheet.create({
     gap: 6,
   },
   addFriendsButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  joinMatchesButton: {
+    backgroundColor: colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginTop: 12,
+    gap: 6,
+  },
+  joinMatchesButtonText: {
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
