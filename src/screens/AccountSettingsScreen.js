@@ -172,44 +172,55 @@ export default function AccountSettingsScreen({ navigation }) {
 
   return (
     <AnimatedBackground>
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Account Settings</Text>
-        <TouchableOpacity onPress={handleManualSave} disabled={saving}>
-          {saving ? (
-            <ActivityIndicator size="small" color={colors.primary} />
-          ) : (
-            <Text style={styles.saveButton}>Save</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+      <View style={styles.container}>
+        <KeyboardAvoidingView
+          style={styles.keyboardView}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Account Settings</Text>
+          <TouchableOpacity onPress={handleManualSave} disabled={saving} style={styles.saveButtonContainer}>
+            {saving ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Text style={styles.saveButton}>Save</Text>
+            )}
+          </TouchableOpacity>
+        </View>
 
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Profile Picture */}
+        {/* Profile Picture Section */}
         <View style={styles.avatarSection}>
-          <View style={styles.avatarContainer}>
-            <Ionicons name="person" size={48} color="#FFFFFF" />
+          <View style={styles.avatarWrapper}>
+            <View style={styles.avatarContainer}>
+              <Ionicons name="person" size={48} color={colors.text} />
+            </View>
+            <TouchableOpacity style={styles.cameraIconContainer}>
+              <Ionicons name="camera" size={16} color="#FFFFFF" />
+            </TouchableOpacity>
           </View>
           <TouchableOpacity style={styles.changePhotoButton}>
-            <Ionicons name="camera" size={16} color={colors.primary} />
+            <Ionicons name="camera-outline" size={16} color={colors.primary} />
             <Text style={styles.changePhotoText}>Change Photo</Text>
           </TouchableOpacity>
         </View>
 
         {/* Personal Information */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Personal Information</Text>
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.iconGlow}>
+              <Ionicons name="person-outline" size={20} color={colors.primary} />
+            </View>
+            <Text style={styles.sectionTitle}>Personal Information</Text>
+          </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>First Name</Text>
@@ -297,32 +308,44 @@ export default function AccountSettingsScreen({ navigation }) {
           </View>
         </View>
 
-
-
         {/* Account Actions */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account Actions</Text>
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.iconGlow}>
+              <Ionicons name="shield-checkmark-outline" size={20} color={colors.primary} />
+            </View>
+            <Text style={styles.sectionTitle}>Security & Privacy</Text>
+          </View>
 
-          <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="key-outline" size={20} color={colors.text} />
-            <Text style={styles.actionButtonText}>Change Password</Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
+          <View style={styles.actionsContainer}>
+            <TouchableOpacity style={styles.actionButton}>
+              <View style={styles.actionIconContainer}>
+                <Ionicons name="key-outline" size={20} color={colors.text} />
+              </View>
+              <Text style={styles.actionButtonText}>Change Password</Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="shield-checkmark-outline" size={20} color={colors.text} />
-            <Text style={styles.actionButtonText}>Privacy Settings</Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
+            <TouchableOpacity style={styles.actionButton}>
+              <View style={styles.actionIconContainer}>
+                <Ionicons name="lock-closed-outline" size={20} color={colors.text} />
+              </View>
+              <Text style={styles.actionButtonText}>Privacy Settings</Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.actionButton, styles.dangerButton]}>
-            <Ionicons name="trash-outline" size={20} color={colors.error} />
-            <Text style={[styles.actionButtonText, { color: colors.error }]}>Delete Account</Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.error} />
-          </TouchableOpacity>
+            <TouchableOpacity style={[styles.actionButton, styles.dangerButton]}>
+              <View style={[styles.actionIconContainer, styles.dangerIconContainer]}>
+                <Ionicons name="trash-outline" size={20} color={colors.error} />
+              </View>
+              <Text style={[styles.actionButtonText, { color: colors.error }]}>Delete Account</Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.error} />
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+    </View>
     </AnimatedBackground>
   );
 }
@@ -332,27 +355,46 @@ const createStyles = (colors) => StyleSheet.create({
     flex: 1,
     backgroundColor: 'transparent',
   },
+  keyboardView: {
+    flex: 1,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 60,
-    paddingBottom: 20,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    paddingBottom: 16,
+    backgroundColor: 'transparent',
   },
   backButton: {
-    padding: 8,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.glass,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: colors.glassBorder,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
     color: colors.text,
     flex: 1,
     textAlign: 'center',
-    marginRight: 40,
+    letterSpacing: -0.5,
+  },
+  saveButtonContainer: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   saveButton: {
     fontSize: 16,
@@ -364,20 +406,49 @@ const createStyles = (colors) => StyleSheet.create({
   },
   content: {
     paddingBottom: 40,
+    paddingTop: 8,
   },
   avatarSection: {
     alignItems: 'center',
     paddingVertical: 32,
-    backgroundColor: colors.surface,
+    marginHorizontal: 20,
+    marginBottom: 16,
+  },
+  avatarWrapper: {
+    position: 'relative',
+    marginBottom: 16,
   },
   avatarContainer: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#E5E5E5',
+    backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    borderWidth: 3,
+    borderColor: colors.primary + '40',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  cameraIconContainer: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: colors.primary,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: colors.card,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   changePhotoButton: {
     flexDirection: 'row',
@@ -385,71 +456,132 @@ const createStyles = (colors) => StyleSheet.create({
     gap: 8,
     paddingHorizontal: 16,
     paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: colors.surface + '60',
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
   },
   changePhotoText: {
     fontSize: 14,
     fontWeight: '600',
     color: colors.primary,
   },
-  section: {
-    backgroundColor: colors.surface,
-    marginTop: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.text,
+  sectionCard: {
+    marginHorizontal: 20,
     marginBottom: 16,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
+    paddingHorizontal: 20,
+  },
+  iconGlow: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -0.5,
+  },
   inputGroup: {
-    marginBottom: 20,
+    marginBottom: 16,
+    paddingHorizontal: 20,
   },
   label: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.text,
     marginBottom: 8,
+    opacity: 0.8,
   },
   input: {
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.card,
+    borderWidth: 1.5,
+    borderColor: colors.glassBorder,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    fontSize: 16,
+    fontSize: 15,
     color: colors.text,
+    fontWeight: '500',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   disabledInput: {
-    opacity: 0.6,
-    backgroundColor: colors.border,
+    opacity: 0.5,
+    backgroundColor: colors.card + '80',
   },
   textArea: {
     minHeight: 100,
     paddingTop: 12,
+    textAlignVertical: 'top',
   },
   helperText: {
-    fontSize: 12,
+    fontSize: 11,
     color: colors.textSecondary,
-    marginTop: 4,
+    marginTop: 6,
     fontStyle: 'italic',
+    opacity: 0.7,
   },
-
+  actionsContainer: {
+    gap: 12,
+    paddingHorizontal: 20,
+  },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 16,
+    paddingHorizontal: 16,
     gap: 12,
+    borderRadius: 12,
+    backgroundColor: colors.card,
+    borderWidth: 1.5,
+    borderColor: colors.glassBorder,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  actionIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+  },
+  dangerIconContainer: {
+    backgroundColor: colors.error + '20',
+    borderColor: colors.error + '30',
   },
   actionButtonText: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '500',
     color: colors.text,
   },
   dangerButton: {
-    borderBottomWidth: 0,
+    backgroundColor: colors.card,
+    borderColor: colors.error + '30',
   },
 });
