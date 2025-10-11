@@ -115,6 +115,20 @@ const FriendsScreen = ({ navigation }) => {
   const handleDropdownUserSelect = (user) => {
     // Close dropdown when user is selected
     setSearchDropdownVisible(false);
+    
+    // Navigate to UserProfile screen (same as leaderboard behavior)
+    navigation.navigate('UserProfile', { 
+      userId: user.id, 
+      userData: {
+        id: user.id,
+        name: user.full_name || user.username,
+        username: user.username,
+        avatar: user.avatar_url,
+        points: 0, // Default values since we don't have this data
+        rank: 0,
+        trend: 'up',
+      }
+    });
   };
 
   // Enhanced error handling utilities
