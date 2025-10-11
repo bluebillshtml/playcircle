@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   Image,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,6 +15,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import AnimatedBackground from '../components/AnimatedBackground';
 import { friendsService } from '../services/friendsService';
+import { supabase } from '../services/supabase';
 
 export default function UserProfileScreen({ route, navigation }) {
   const { userId, userData } = route.params;
@@ -21,8 +23,70 @@ export default function UserProfileScreen({ route, navigation }) {
   const { user } = useAuth();
   const [friendStatus, setFriendStatus] = useState('none'); // 'none', 'pending', 'friends'
   const [loading, setLoading] = useState(false);
+  const [checkingStatus, setCheckingStatus] = useState(true);
 
   const styles = createStyles(colors);
+
+  // Check friendship status on mount
+  useEffect(() => {
+    checkFriendshipStatus();
+  }, [userId, user?.id]);
+
+  const checkFriendshipStatus = async () => {
+    if (!user?.id || !userId) {
+      setCheckingStatus(false);
+      return;
+    }
+
+    try {
+      setCheckingStatus(true);
+
+      // Check if they are already friends
+      const { data: currentUserFriends } = await supabase
+        .from('user_friends')
+        .select('friends')
+        .eq('user_id', user.id)
+        .single();
+
+      if (currentUserFriends?.friends) {
+        const isFriend = currentUserFriends.friends.some(
+          (friend: any) => friend.user_id === userId && friend.status === 'accepted'
+        );
+
+        if (isFriend) {
+          setFriendStatus('friends');
+          setCheckingStatus(false);
+          return;
+        }
+      }
+
+      // Check if there's a pending request sent by current user
+      const { data: sentRequests } = await supabase
+        .from('user_friends')
+        .select('friend_requests_sent')
+        .eq('user_id', user.id)
+        .single();
+
+      if (sentRequests?.friend_requests_sent) {
+        const hasPendingRequest = sentRequests.friend_requests_sent.some(
+          (request: any) => request.user_id === userId && request.status === 'pending'
+        );
+
+        if (hasPendingRequest) {
+          setFriendStatus('pending');
+          setCheckingStatus(false);
+          return;
+        }
+      }
+
+      setFriendStatus('none');
+    } catch (error) {
+      console.error('Error checking friendship status:', error);
+      setFriendStatus('none');
+    } finally {
+      setCheckingStatus(false);
+    }
+  };
 
   const handleAddFriend = async () => {
     if (!user?.id) {
@@ -57,6 +121,16 @@ export default function UserProfileScreen({ route, navigation }) {
   };
 
   const renderActionButton = () => {
+    // Show loading state while checking status
+    if (checkingStatus) {
+      return (
+        <TouchableOpacity style={[styles.actionButton, styles.pendingButton]} disabled>
+          <ActivityIndicator size="small" color={colors.textSecondary} />
+          <Text style={[styles.actionButtonText, { color: colors.textSecondary }]}>Checking...</Text>
+        </TouchableOpacity>
+      );
+    }
+
     if (friendStatus === 'friends') {
       return (
         <TouchableOpacity style={[styles.actionButton, styles.friendsButton]} disabled>
@@ -81,7 +155,11 @@ export default function UserProfileScreen({ route, navigation }) {
         onPress={handleAddFriend}
         disabled={loading}
       >
-        <Ionicons name="person-add" size={20} color="#FFFFFF" />
+        {loading ? (
+          <ActivityIndicator size="small" color="#FFFFFF" />
+        ) : (
+          <Ionicons name="person-add" size={20} color="#FFFFFF" />
+        )}
         <Text style={[styles.actionButtonText, { color: '#FFFFFF' }]}>
           {loading ? 'Sending...' : 'Add Friend'}
         </Text>
