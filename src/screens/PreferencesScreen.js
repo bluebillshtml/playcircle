@@ -12,7 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useSport } from '../context/SportContext';
-import { profileService } from '../services/supabase';
+import { profileService, supabase } from '../services/supabase';
 import AnimatedBackground from '../components/AnimatedBackground';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -49,6 +49,11 @@ export default function PreferencesScreen({ navigation }) {
     useEffect(() => {
         loadData();
     }, [user, profile]);
+
+    const handleRefresh = async () => {
+        console.log('🔄 Manual refresh triggered');
+        await loadData();
+    };
 
     // Local storage functions for fallback when Supabase isn't available
     const saveToLocalStorage = async (sportProfiles) => {
@@ -241,22 +246,24 @@ export default function PreferencesScreen({ navigation }) {
         try {
             setSaving(true);
 
-            // Delete existing sport profiles first
-            try {
-                await profileService.deleteUserSportProfiles(user.id);
-                console.log('Deleted existing sport profiles');
-            } catch (error) {
-                console.log('Error deleting sport profiles (expected if no Supabase):', error);
-            }
-
-            // Create new sport profiles for selected sports
             console.log('=== PREFERENCES SAVE DEBUG ===');
             console.log('Selected sports:', selectedSports);
             console.log('Skill levels state:', skillLevels);
             console.log('Positions state:', positions);
 
-            const sportProfilesToSave = [];
+            // Get existing sport profiles to see what needs to be updated/deleted
+            let existingProfiles = [];
+            try {
+                existingProfiles = await profileService.getUserSportProfiles(user.id);
+                console.log('Existing profiles:', existingProfiles);
+            } catch (error) {
+                console.log('Could not load existing profiles:', error.message);
+            }
 
+            const sportProfilesToSave = [];
+            const selectedSportIds = selectedSports.map(s => s.id);
+
+            // Update/create profiles for selected sports
             for (const sport of selectedSports) {
                 const sportProfileData = {
                     sport_id: sport.id,
@@ -264,17 +271,35 @@ export default function PreferencesScreen({ navigation }) {
                     preferred_position: positions[sport.id] || POSITIONS[sport.id]?.[0] || 'No Preference',
                 };
 
-                console.log(`Creating sport profile for ${sport.name}:`, sportProfileData);
-                console.log(`  - Skill level from state: ${skillLevels[sport.id]}`);
-                console.log(`  - Position from state: ${positions[sport.id]}`);
+                console.log(`Saving sport profile for ${sport.name}:`, sportProfileData);
+                console.log(`  - Skill level: ${skillLevels[sport.id]}`);
+                console.log(`  - Position: ${positions[sport.id]}`);
 
                 sportProfilesToSave.push(sportProfileData);
 
                 try {
-                    await profileService.createUserSportProfile(user.id, sportProfileData);
-                    console.log(`✅ Successfully saved ${sport.name} to Supabase`);
+                    const result = await profileService.createUserSportProfile(user.id, sportProfileData);
+                    console.log(`✅ Successfully saved ${sport.name} to database:`, result);
                 } catch (error) {
-                    console.log(`❌ Error saving ${sport.name} to Supabase (expected if no connection):`, error.message);
+                    console.error(`❌ Error saving ${sport.name} to database:`, error.message);
+                }
+            }
+
+            // Delete profiles for sports that are no longer selected
+            const profilesToDelete = existingProfiles.filter(
+                profile => !selectedSportIds.includes(profile.sport_id)
+            );
+
+            for (const profile of profilesToDelete) {
+                try {
+                    await supabase
+                        .from('user_sport_profiles')
+                        .delete()
+                        .eq('user_id', user.id)
+                        .eq('sport_id', profile.sport_id);
+                    console.log(`🗑️ Deleted profile for sport: ${profile.sport_id}`);
+                } catch (error) {
+                    console.log(`❌ Error deleting profile for ${profile.sport_id}:`, error.message);
                 }
             }
 
@@ -343,16 +368,30 @@ export default function PreferencesScreen({ navigation }) {
                         <Ionicons name="arrow-back" size={24} color={colors.text} />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>Preferences</Text>
-                    <TouchableOpacity onPress={handleSave} disabled={saving}>
-                        {saving ? (
-                            <ActivityIndicator size="small" color={colors.primary} />
-                        ) : (
-                            <Text style={styles.saveButton}>Save</Text>
-                        )}
-                    </TouchableOpacity>
+                    <View style={styles.headerActions}>
+                        <TouchableOpacity onPress={handleRefresh} style={styles.refreshButton}>
+                            <Ionicons name="refresh" size={20} color={colors.primary} />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={handleSave} disabled={saving}>
+                            {saving ? (
+                                <ActivityIndicator size="small" color={colors.primary} />
+                            ) : (
+                                <Text style={styles.saveButton}>Save</Text>
+                            )}
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+                    {/* Debug Info */}
+                    {__DEV__ && (
+                        <View style={styles.debugInfo}>
+                            <Text style={styles.debugText}>
+                                🔧 Debug: {selectedSports.length} sports loaded
+                            </Text>
+                        </View>
+                    )}
+
                     {/* Sports Selection */}
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Sports You Play</Text>
@@ -490,7 +529,14 @@ const createStyles = (colors) => StyleSheet.create({
         color: colors.text,
         flex: 1,
         textAlign: 'center',
-        marginRight: 40,
+    },
+    headerActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 15,
+    },
+    refreshButton: {
+        padding: 4,
     },
     saveButton: {
         fontSize: 16,
@@ -499,6 +545,20 @@ const createStyles = (colors) => StyleSheet.create({
     },
     scrollView: {
         flex: 1,
+    },
+    debugInfo: {
+        backgroundColor: colors.card,
+        marginHorizontal: 16,
+        marginBottom: 8,
+        borderRadius: 8,
+        padding: 12,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    debugText: {
+        fontSize: 12,
+        color: colors.textSecondary,
+        textAlign: 'center',
     },
     loadingText: {
         color: colors.textSecondary,
