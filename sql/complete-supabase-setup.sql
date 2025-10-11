@@ -1164,3 +1164,321 @@ CREATE POLICY "Users can insert chat members" ON chat_members
             AND cm.is_active = true
         )
     );
+
+-- =====================================================
+-- 6. USER PRIVACY SETTINGS TABLE
+-- =====================================================
+CREATE TABLE IF NOT EXISTS user_privacy_settings (
+  user_id UUID PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
+  allow_friend_requests TEXT CHECK (allow_friend_requests IN ('everyone', 'friends-of-friends', 'no-one')) DEFAULT 'everyone',
+  show_online_status BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Enable RLS on privacy settings
+ALTER TABLE user_privacy_settings ENABLE ROW LEVEL SECURITY;
+
+-- Create privacy settings policies
+CREATE POLICY "Users can view their own privacy settings" ON user_privacy_settings
+  FOR SELECT USING (user_id = auth.uid());
+
+CREATE POLICY "Users can create their own privacy settings" ON user_privacy_settings
+  FOR INSERT WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "Users can update their own privacy settings" ON user_privacy_settings
+  FOR UPDATE USING (user_id = auth.uid());
+
+-- =====================================================
+-- 7. FRIENDS SYSTEM FUNCTIONS
+-- =====================================================
+
+-- Drop existing functions first to avoid conflicts
+DROP FUNCTION IF EXISTS send_friend_request(UUID, UUID);
+DROP FUNCTION IF EXISTS accept_friend_request(UUID, UUID);
+DROP FUNCTION IF EXISTS decline_friend_request(UUID, UUID);
+DROP FUNCTION IF EXISTS get_user_friends(UUID);
+DROP FUNCTION IF EXISTS get_pending_friend_requests(UUID);
+DROP FUNCTION IF EXISTS get_suggested_friends(UUID);
+DROP FUNCTION IF EXISTS get_recent_members(UUID);
+
+-- Function to send friend request
+CREATE OR REPLACE FUNCTION send_friend_request(sender_id UUID, recipient_id UUID)
+RETURNS UUID AS $$
+DECLARE
+  friendship_id UUID;
+  smaller_id UUID;
+  larger_id UUID;
+BEGIN
+  -- Normalize user IDs
+  IF sender_id < recipient_id THEN
+    smaller_id := sender_id;
+    larger_id := recipient_id;
+  ELSE
+    smaller_id := recipient_id;
+    larger_id := sender_id;
+  END IF;
+  
+  -- Insert or update friendship
+  INSERT INTO friendships (user1_id, user2_id, requested_by, status)
+  VALUES (smaller_id, larger_id, sender_id, 'pending')
+  ON CONFLICT (user1_id, user2_id) 
+  DO UPDATE SET 
+    requested_by = sender_id,
+    status = 'pending',
+    updated_at = NOW()
+  RETURNING id INTO friendship_id;
+  
+  RETURN friendship_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to accept friend request
+CREATE OR REPLACE FUNCTION accept_friend_request(friendship_id UUID, accepter_id UUID)
+RETURNS BOOLEAN AS $$
+DECLARE
+  friendship_record RECORD;
+BEGIN
+  -- Get friendship record
+  SELECT * INTO friendship_record
+  FROM friendships
+  WHERE id = friendship_id
+    AND (user1_id = accepter_id OR user2_id = accepter_id)
+    AND status = 'pending';
+  
+  IF NOT FOUND THEN
+    RETURN false;
+  END IF;
+  
+  -- Update status to accepted
+  UPDATE friendships
+  SET status = 'accepted', updated_at = NOW()
+  WHERE id = friendship_id;
+  
+  RETURN true;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to decline friend request
+CREATE OR REPLACE FUNCTION decline_friend_request(friendship_id UUID, decliner_id UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+  -- Update status to declined
+  UPDATE friendships
+  SET status = 'declined', updated_at = NOW()
+  WHERE id = friendship_id
+    AND (user1_id = decliner_id OR user2_id = decliner_id)
+    AND status = 'pending';
+  
+  RETURN FOUND;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to get user's friends
+CREATE OR REPLACE FUNCTION get_user_friends(p_user_id UUID)
+RETURNS TABLE (
+  friend_id UUID,
+  username TEXT,
+  full_name TEXT,
+  avatar_url TEXT,
+  friendship_date TIMESTAMP WITH TIME ZONE
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    CASE 
+      WHEN f.user1_id = p_user_id THEN f.user2_id
+      ELSE f.user1_id
+    END as friend_id,
+    p.username,
+    p.full_name,
+    p.avatar_url,
+    f.updated_at as friendship_date
+  FROM friendships f
+  JOIN profiles p ON (
+    CASE 
+      WHEN f.user1_id = p_user_id THEN p.id = f.user2_id
+      ELSE p.id = f.user1_id
+    END
+  )
+  WHERE (f.user1_id = p_user_id OR f.user2_id = p_user_id)
+    AND f.status = 'accepted'
+  ORDER BY f.updated_at DESC;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to get pending friend requests for a user
+CREATE OR REPLACE FUNCTION get_pending_friend_requests(p_user_id UUID)
+RETURNS TABLE (
+  request_id UUID,
+  from_user_id UUID,
+  from_username TEXT,
+  from_full_name TEXT,
+  from_avatar_url TEXT,
+  requested_at TIMESTAMP WITH TIME ZONE
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    f.id as request_id,
+    f.requested_by as from_user_id,
+    p.username as from_username,
+    p.full_name as from_full_name,
+    p.avatar_url as from_avatar_url,
+    f.created_at as requested_at
+  FROM friendships f
+  JOIN profiles p ON f.requested_by = p.id
+  WHERE (f.user1_id = p_user_id OR f.user2_id = p_user_id)
+    AND f.requested_by != p_user_id
+    AND f.status = 'pending'
+  ORDER BY f.created_at DESC;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to get suggested friends (replaces view with function for parameterization)
+CREATE OR REPLACE FUNCTION get_suggested_friends(p_user_id UUID)
+RETURNS TABLE (
+  id UUID,
+  username TEXT,
+  full_name TEXT,
+  avatar_url TEXT,
+  mutual_sessions BIGINT,
+  sport_tags TEXT[],
+  last_played_together TIMESTAMP WITH TIME ZONE,
+  friendship_status TEXT
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT DISTINCT
+    p.id,
+    p.username,
+    p.full_name,
+    p.avatar_url,
+    COUNT(DISTINCT mp1.match_id) as mutual_sessions,
+    ARRAY_AGG(DISTINCT m.sport_id) as sport_tags,
+    MAX(m.match_date::TIMESTAMP WITH TIME ZONE) as last_played_together,
+    'none'::TEXT as friendship_status
+  FROM profiles p
+  JOIN match_players mp1 ON p.id = mp1.user_id
+  JOIN match_players mp2 ON mp1.match_id = mp2.match_id 
+  JOIN matches m ON mp1.match_id = m.id
+  WHERE mp2.user_id = p_user_id -- current user
+    AND p.id != p_user_id -- exclude self
+    AND m.match_date >= CURRENT_DATE - INTERVAL '14 days' -- last 14 days
+    AND NOT EXISTS (
+      -- Exclude users who already have any relationship
+      SELECT 1 FROM friendships f 
+      WHERE ((f.user1_id = p_user_id AND f.user2_id = p.id) OR (f.user2_id = p_user_id AND f.user1_id = p.id))
+    )
+  GROUP BY p.id, p.username, p.full_name, p.avatar_url
+  ORDER BY mutual_sessions DESC, last_played_together DESC;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to get recent members (replaces view with function for parameterization)
+CREATE OR REPLACE FUNCTION get_recent_members(p_user_id UUID)
+RETURNS TABLE (
+  id UUID,
+  username TEXT,
+  full_name TEXT,
+  avatar_url TEXT,
+  interaction_type TEXT,
+  location TEXT,
+  court_name TEXT,
+  session_title TEXT,
+  interaction_date DATE,
+  interaction_time TIME,
+  last_interaction TIMESTAMP WITH TIME ZONE,
+  friendship_status TEXT,
+  online_status BOOLEAN
+) AS $$
+BEGIN
+  RETURN QUERY
+  (
+    -- From recent sessions
+    SELECT DISTINCT
+      p.id,
+      p.username,
+      p.full_name,
+      p.avatar_url,
+      'session'::TEXT as interaction_type,
+      COALESCE(v.name, 'Unknown Venue') as location,
+      COALESCE(c.name, 'Court') as court_name,
+      CONCAT(COALESCE(v.name, 'Unknown Venue'), ' – ', COALESCE(c.name, 'Court')) as session_title,
+      m.match_date as interaction_date,
+      m.match_time as interaction_time,
+      (m.match_date + m.match_time)::TIMESTAMP WITH TIME ZONE as last_interaction,
+      -- Check friendship status
+      CASE 
+        WHEN EXISTS (
+          SELECT 1 FROM friendships f 
+          WHERE ((f.user1_id = p.id AND f.user2_id = p_user_id) OR (f.user1_id = p_user_id AND f.user2_id = p.id))
+            AND f.status = 'accepted'
+        ) THEN 'friends'
+        WHEN EXISTS (
+          SELECT 1 FROM friendships f 
+          WHERE ((f.user1_id = p.id AND f.user2_id = p_user_id) OR (f.user1_id = p_user_id AND f.user2_id = p.id))
+            AND f.status = 'pending'
+        ) THEN 'pending'
+        ELSE 'none'
+      END::TEXT as friendship_status,
+      false as online_status -- Placeholder for online status
+    FROM profiles p
+    JOIN match_players mp1 ON p.id = mp1.user_id
+    JOIN match_players mp2 ON mp1.match_id = mp2.match_id
+    JOIN matches m ON mp1.match_id = m.id
+    LEFT JOIN courts c ON m.court_id = c.id
+    LEFT JOIN venues v ON c.venue_id = v.id
+    WHERE mp2.user_id = p_user_id
+      AND p.id != p_user_id
+      AND m.match_date >= CURRENT_DATE - INTERVAL '14 days'
+  )
+  UNION
+  (
+    -- From recent chats
+    SELECT DISTINCT
+      p.id,
+      p.username,
+      p.full_name,
+      p.avatar_url,
+      'chat'::TEXT as interaction_type,
+      'Chat Message' as location,
+      '' as court_name,
+      'Chat Message' as session_title,
+      CURRENT_DATE as interaction_date,
+      CURRENT_TIME as interaction_time,
+      cm1.joined_at as last_interaction,
+      -- Check friendship status
+      CASE 
+        WHEN EXISTS (
+          SELECT 1 FROM friendships f 
+          WHERE ((f.user1_id = p.id AND f.user2_id = p_user_id) OR (f.user1_id = p_user_id AND f.user2_id = p.id))
+            AND f.status = 'accepted'
+        ) THEN 'friends'
+        WHEN EXISTS (
+          SELECT 1 FROM friendships f 
+          WHERE ((f.user1_id = p.id AND f.user2_id = p_user_id) OR (f.user1_id = p_user_id AND f.user2_id = p.id))
+            AND f.status = 'pending'
+        ) THEN 'pending'
+        ELSE 'none'
+      END::TEXT as friendship_status,
+      false as online_status -- Placeholder for online status
+    FROM profiles p
+    JOIN chat_members cm1 ON p.id = cm1.user_id
+    JOIN chat_members cm2 ON cm1.chat_id = cm2.chat_id
+    WHERE cm2.user_id = p_user_id
+      AND p.id != p_user_id
+      AND cm1.joined_at >= NOW() - INTERVAL '14 days'
+      AND cm1.is_active = true
+      AND cm2.is_active = true
+  )
+  ORDER BY last_interaction DESC;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- =====================================================
+-- 8. CREATE DEFAULT PRIVACY SETTINGS FOR EXISTING USERS
+-- =====================================================
+INSERT INTO user_privacy_settings (user_id)
+SELECT id FROM profiles
+ON CONFLICT (user_id) DO NOTHING;

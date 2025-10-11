@@ -38,12 +38,7 @@ import {
   validatePrivacySettingsUpdate,
   sanitizeUserId,
 } from '../utils/friendsValidation';
-import {
-  createMockSuggestedFriends,
-  createMockRecentMembers,
-  createMockFriendRequests,
-  createMockPrivacySettings,
-} from '../utils/friendsFactory';
+
 
 // =====================================================
 // TYPES AND INTERFACES
@@ -89,17 +84,6 @@ export class FriendsService {
    */
   async getSuggestedFriends(userId: string): Promise<ApiResponse<SuggestedFriend[]>> {
     try {
-      // Check if supabase is available
-      if (!supabase) {
-        console.log('Supabase not available, using mock data');
-        const mockData = createMockSuggestedFriends(5);
-        return {
-          data: mockData,
-          error: null,
-          success: true,
-        };
-      }
-
       // Validate user ID
       const validation = validateUserId(userId);
       if (!validation.valid) {
@@ -144,15 +128,10 @@ export class FriendsService {
       };
     } catch (error) {
       console.error('Error fetching suggested friends:', error);
-      
-      // Fallback to mock data when Supabase fails
-      console.log('Falling back to mock suggested friends data');
-      const mockData = createMockSuggestedFriends(5);
-      
       return {
-        data: mockData,
-        error: null,
-        success: true,
+        data: null,
+        error: transformApiError(error),
+        success: false,
       };
     }
   }
@@ -166,17 +145,6 @@ export class FriendsService {
    */
   async getRecentMembers(userId: string): Promise<ApiResponse<RecentMember[]>> {
     try {
-      // Check if supabase is available
-      if (!supabase) {
-        console.log('Supabase not available, using mock data');
-        const mockData = createMockRecentMembers(8);
-        return {
-          data: mockData,
-          error: null,
-          success: true,
-        };
-      }
-
       const validation = validateUserId(userId);
       if (!validation.valid) {
         return {
@@ -220,15 +188,10 @@ export class FriendsService {
       };
     } catch (error) {
       console.error('Error fetching recent members:', error);
-      
-      // Fallback to mock data when Supabase fails
-      console.log('Falling back to mock recent members data');
-      const mockData = createMockRecentMembers(8);
-      
       return {
-        data: mockData,
-        error: null,
-        success: true,
+        data: null,
+        error: transformApiError(error),
+        success: false,
       };
     }
   }
@@ -367,17 +330,6 @@ export class FriendsService {
    */
   async getPendingFriendRequests(userId: string): Promise<ApiResponse<FriendRequest[]>> {
     try {
-      // Check if supabase is available
-      if (!supabase) {
-        console.log('Supabase not available, using mock data');
-        const mockData = createMockFriendRequests(3);
-        return {
-          data: mockData,
-          error: null,
-          success: true,
-        };
-      }
-
       const validation = validateUserId(userId);
       if (!validation.valid) {
         return {
@@ -420,15 +372,10 @@ export class FriendsService {
       };
     } catch (error) {
       console.error('Error fetching friend requests:', error);
-      
-      // Fallback to mock data when Supabase fails
-      console.log('Falling back to mock friend requests data');
-      const mockData = createMockFriendRequests(3);
-      
       return {
-        data: mockData,
-        error: null,
-        success: true,
+        data: null,
+        error: transformApiError(error),
+        success: false,
       };
     }
   }
@@ -535,17 +482,6 @@ export class FriendsService {
    */
   async getPrivacySettings(userId: string): Promise<ApiResponse<PrivacySettings>> {
     try {
-      // Check if supabase is available
-      if (!supabase) {
-        console.log('Supabase not available, using mock data');
-        const mockData = createMockPrivacySettings();
-        return {
-          data: mockData,
-          error: null,
-          success: true,
-        };
-      }
-
       const validation = validateUserId(userId);
       if (!validation.valid) {
         return {
@@ -618,15 +554,10 @@ export class FriendsService {
       };
     } catch (error) {
       console.error('Error fetching privacy settings:', error);
-      
-      // Fallback to mock data when Supabase fails
-      console.log('Falling back to mock privacy settings data');
-      const mockData = createMockPrivacySettings();
-      
       return {
-        data: mockData,
-        error: null,
-        success: true,
+        data: null,
+        error: transformApiError(error),
+        success: false,
       };
     }
   }
@@ -767,30 +698,10 @@ export class FriendsService {
     } catch (error) {
       console.error('Error searching users:', error);
       
-      // Fallback to mock data when Supabase fails
-      console.log('Falling back to mock search data');
-      const mockSuggested = createMockSuggestedFriends(3);
-      const mockRecent = createMockRecentMembers(3);
-      
-      // Filter mock data based on query
-      const sanitizedQuery = query.trim().toLowerCase();
-      const filteredSuggested = mockSuggested.filter(friend =>
-        friend.username.toLowerCase().includes(sanitizedQuery) ||
-        friend.full_name.toLowerCase().includes(sanitizedQuery)
-      );
-      
-      const filteredRecent = mockRecent.filter(member =>
-        member.username.toLowerCase().includes(sanitizedQuery) ||
-        member.full_name.toLowerCase().includes(sanitizedQuery)
-      );
-      
       return {
-        data: {
-          suggested_friends: filteredSuggested,
-          recent_members: filteredRecent,
-        },
-        error: null,
-        success: true,
+        data: null,
+        error: transformApiError(error),
+        success: false,
       };
     }
   }
