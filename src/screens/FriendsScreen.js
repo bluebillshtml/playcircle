@@ -10,6 +10,7 @@ import {
   RefreshControl,
   Alert,
   Animated,
+  Image,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
@@ -40,6 +41,7 @@ const FriendsScreen = ({ navigation }) => {
 
   const {
     // Data
+    friends,
     suggestedFriends,
     recentMembers,
     friendRequests,
@@ -591,6 +593,63 @@ const FriendsScreen = ({ navigation }) => {
     );
   };
 
+  const renderFriendsList = () => {
+    if (loading.friends) {
+      return (
+        <View style={styles.friendsLoadingContainer}>
+          <ActivityIndicator size="small" color={colors.primary} />
+        </View>
+      );
+    }
+
+    if (friends.length === 0) {
+      return null; // Don't show empty state, it's handled by the global empty state
+    }
+
+    return (
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionHeaderTitle, { color: colors.text }]}>
+            My Friends
+          </Text>
+          <View style={[styles.badge, { backgroundColor: colors.primary }]}>
+            <Text style={styles.badgeText}>{friends.length}</Text>
+          </View>
+        </View>
+        
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.friendsScrollContent}
+        >
+          {friends.map((friend) => (
+            <TouchableOpacity
+              key={friend.id}
+              style={styles.friendCard}
+              onPress={() => navigation.navigate('UserProfile', { userId: friend.id, userData: friend })}
+            >
+              <View style={styles.friendAvatar}>
+                {friend.avatar_url ? (
+                  <Image
+                    source={{ uri: friend.avatar_url }}
+                    style={styles.friendAvatarImage}
+                  />
+                ) : (
+                  <View style={[styles.friendAvatarPlaceholder, { backgroundColor: colors.primary + '20' }]}>
+                    <Ionicons name="person" size={24} color={colors.primary} />
+                  </View>
+                )}
+              </View>
+              <Text style={[styles.friendName, { color: colors.text }]} numberOfLines={1}>
+                {friend.full_name || friend.username}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+    );
+  };
+
   const styles = createStyles(colors);
 
   return (
@@ -682,6 +741,9 @@ const FriendsScreen = ({ navigation }) => {
 
           {/* Friend Requests Section */}
           {renderFriendRequests()}
+
+          {/* My Friends Section */}
+          {renderFriendsList()}
 
           {/* Suggested Friends Section */}
           <View style={styles.section}>
@@ -995,6 +1057,49 @@ const createStyles = (colors) => StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
+  },
+
+  // Friends List Section
+  friendsLoadingContainer: {
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+  friendsScrollContent: {
+    paddingHorizontal: 24,
+    gap: 12,
+  },
+  friendCard: {
+    alignItems: 'center',
+    width: 70,
+  },
+  friendAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    overflow: 'hidden',
+  },
+  friendAvatarImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+  },
+  friendAvatarPlaceholder: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  friendName: {
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });
 
