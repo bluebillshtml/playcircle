@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     first_name VARCHAR(100),
     last_name VARCHAR(100),
     avatar_url TEXT,
+    banner_url TEXT,
     phone VARCHAR(20),
     bio TEXT,
     location VARCHAR(255),
@@ -76,6 +77,10 @@ BEGIN
     
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'avatar_url') THEN
         ALTER TABLE profiles ADD COLUMN avatar_url TEXT;
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'banner_url') THEN
+        ALTER TABLE profiles ADD COLUMN banner_url TEXT;
     END IF;
     
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'preferred_language') THEN
@@ -531,6 +536,7 @@ CREATE TABLE IF NOT EXISTS public.leaderboard (
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES 
     ('profile-pictures', 'profile-pictures', true, 5242880, ARRAY['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif']),
+    ('banner-images', 'banner-images', true, 10485760, ARRAY['image/jpeg', 'image/jpg', 'image/png', 'image/webp']),
     ('match-photos', 'match-photos', true, 10485760, ARRAY['image/jpeg', 'image/jpg', 'image/png', 'image/webp']),
     ('court-images', 'court-images', true, 10485760, ARRAY['image/jpeg', 'image/jpg', 'image/png', 'image/webp']),
     ('documents', 'documents', false, 5242880, ARRAY['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'])
@@ -1041,7 +1047,7 @@ CREATE POLICY "Users can create friend requests" ON friendships
         (user1_id = auth.uid() OR user2_id = auth.uid())
     );
 
--- Storage policies
+-- Storage policies for profile pictures
 DROP POLICY IF EXISTS "Profile pictures are publicly accessible" ON storage.objects;
 CREATE POLICY "Profile pictures are publicly accessible"
     ON storage.objects FOR SELECT
@@ -1068,6 +1074,36 @@ CREATE POLICY "Users can delete own profile picture"
     ON storage.objects FOR DELETE
     USING (
         bucket_id = 'profile-pictures' AND
+        auth.uid()::text = (storage.foldername(name))[1]
+    );
+
+-- Storage policies for banner images
+DROP POLICY IF EXISTS "Banner images are publicly accessible" ON storage.objects;
+CREATE POLICY "Banner images are publicly accessible"
+    ON storage.objects FOR SELECT
+    USING (bucket_id = 'banner-images');
+
+DROP POLICY IF EXISTS "Users can upload own banner image" ON storage.objects;
+CREATE POLICY "Users can upload own banner image"
+    ON storage.objects FOR INSERT
+    WITH CHECK (
+        bucket_id = 'banner-images' AND
+        auth.uid()::text = (storage.foldername(name))[1]
+    );
+
+DROP POLICY IF EXISTS "Users can update own banner image" ON storage.objects;
+CREATE POLICY "Users can update own banner image"
+    ON storage.objects FOR UPDATE
+    USING (
+        bucket_id = 'banner-images' AND
+        auth.uid()::text = (storage.foldername(name))[1]
+    );
+
+DROP POLICY IF EXISTS "Users can delete own banner image" ON storage.objects;
+CREATE POLICY "Users can delete own banner image"
+    ON storage.objects FOR DELETE
+    USING (
+        bucket_id = 'banner-images' AND
         auth.uid()::text = (storage.foldername(name))[1]
     );
 

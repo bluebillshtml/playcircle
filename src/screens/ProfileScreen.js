@@ -21,7 +21,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
-import { supabase, supabaseService } from '../services/supabase';
+import { supabase, profileService } from '../services/supabase';
 import AnimatedBackground from '../components/AnimatedBackground';
 import ProfilePicture from '../components/ProfilePicture';
 
@@ -29,8 +29,8 @@ export default function ProfileScreen() {
   const { colors } = useTheme();
   const { user, profile, signOut, refreshProfile, setProfile } = useAuth();
   const navigation = useNavigation();
-  const [profileImage, setProfileImage] = useState(profile?.profile_picture_url || null);
-  const [coverImage, setCoverImage] = useState(profile?.cover_picture_url || null);
+  const [profileImage, setProfileImage] = useState(profile?.avatar_url || profile?.profile_picture_url || null);
+  const [coverImage, setCoverImage] = useState(profile?.banner_url || profile?.cover_picture_url || null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
   const [isBioExpanded, setIsBioExpanded] = useState(false);
@@ -57,15 +57,17 @@ export default function ProfileScreen() {
       if (refreshProfile) {
         refreshProfile();
       }
-      // Update profile image if it changed
-      if (profile?.profile_picture_url) {
-        setProfileImage(profile.profile_picture_url);
+      // Update profile image if it changed (check both avatar_url and legacy profile_picture_url)
+      const newProfileImage = profile?.avatar_url || profile?.profile_picture_url;
+      if (newProfileImage) {
+        setProfileImage(newProfileImage);
       }
-      // Update cover image if it changed
-      if (profile?.cover_picture_url) {
-        setCoverImage(profile.cover_picture_url);
+      // Update cover image if it changed (check both banner_url and legacy cover_picture_url)
+      const newCoverImage = profile?.banner_url || profile?.cover_picture_url;
+      if (newCoverImage) {
+        setCoverImage(newCoverImage);
       }
-    }, [profile?.profile_picture_url, profile?.cover_picture_url, refreshProfile])
+    }, [profile?.avatar_url, profile?.profile_picture_url, profile?.banner_url, profile?.cover_picture_url, refreshProfile])
   );
 
 
@@ -150,20 +152,17 @@ export default function ProfileScreen() {
 
         // Upload to Supabase storage
         try {
-          const fileName = `profile_${user.id}_${Date.now()}.jpg`;
+          // Use consistent filename to replace old image instead of creating new ones
+          const fileName = `${user.id}/profile.jpg`;
 
-          // Create FormData for React Native
-          const formData = new FormData();
-          formData.append('file', {
-            uri: imageUri,
-            type: 'image/jpeg',
-            name: fileName,
-          });
+          // Convert image URI to blob for Supabase upload
+          const response = await fetch(imageUri);
+          const blob = await response.blob();
 
-          // Upload to Supabase storage bucket using FormData
+          // Upload to Supabase storage bucket (upsert: true replaces old file)
           const { data: uploadData, error: uploadError } = await supabase.storage
             .from('profile-pictures')
-            .upload(fileName, formData, {
+            .upload(fileName, blob, {
               contentType: 'image/jpeg',
               upsert: true,
             });
@@ -180,9 +179,12 @@ export default function ProfileScreen() {
             .getPublicUrl(fileName);
 
           // Update profile in database
-          const updatedProfile = await supabaseService.updateProfile(user.id, {
+          const updatedProfile = await profileService.updateProfile(user.id, {
             profile_picture_url: publicUrl,
           });
+
+          // Update local state with the public URL
+          setProfileImage(publicUrl);
 
           // Update profile in auth context
           setProfile({ ...profile, ...updatedProfile });
@@ -226,20 +228,17 @@ export default function ProfileScreen() {
 
         // Upload to Supabase storage
         try {
-          const fileName = `cover_${user.id}_${Date.now()}.jpg`;
+          // Use consistent filename to replace old image instead of creating new ones
+          const fileName = `${user.id}/banner.jpg`;
 
-          // Create FormData for React Native
-          const formData = new FormData();
-          formData.append('file', {
-            uri: imageUri,
-            type: 'image/jpeg',
-            name: fileName,
-          });
+          // Convert image URI to blob for Supabase upload
+          const response = await fetch(imageUri);
+          const blob = await response.blob();
 
-          // Upload to Supabase storage bucket using FormData
+          // Upload to Supabase storage bucket (upsert: true replaces old file)
           const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('profile-pictures')
-            .upload(fileName, formData, {
+            .from('banner-images')
+            .upload(fileName, blob, {
               contentType: 'image/jpeg',
               upsert: true,
             });
@@ -252,14 +251,18 @@ export default function ProfileScreen() {
 
           // Get public URL
           const { data: { publicUrl } } = supabase.storage
-            .from('profile-pictures')
+            .from('banner-images')
             .getPublicUrl(fileName);
 
           // Update profile in database
-          const updatedProfile = await supabaseService.updateProfile(user.id, {
+          const updatedProfile = await profileService.updateProfile(user.id, {
             cover_picture_url: publicUrl,
           });
 
+          // Update local state with the public URL
+          setCoverImage(publicUrl);
+
+          // Update profile in auth context
           setProfile({ ...profile, ...updatedProfile });
 
           Alert.alert('Success', 'Cover photo updated successfully!');

@@ -41,7 +41,10 @@ const ProfilePicture = ({
   const { profile } = useAuth();
 
   // Use current user's profile picture if requested
-  const finalImageUrl = useCurrentUser ? profile?.profile_picture_url : imageUrl;
+  // Support both avatar_url (database field) and profile_picture_url (legacy)
+  const finalImageUrl = useCurrentUser 
+    ? (profile?.avatar_url || profile?.profile_picture_url) 
+    : imageUrl;
   
   // Generate fallback text from current user if needed
   const finalFallbackText = useCurrentUser 

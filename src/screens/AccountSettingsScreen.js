@@ -62,8 +62,8 @@ export default function AccountSettingsScreen({ navigation }) {
   const [phone, setPhone] = useState('');
   const [bio, setBio] = useState('');
   const [location, setLocation] = useState('');
-  const [profileImage, setProfileImage] = useState(profile?.profile_picture_url || null);
-  const [coverImage, setCoverImage] = useState(profile?.cover_picture_url || null);
+  const [profileImage, setProfileImage] = useState(profile?.avatar_url || profile?.profile_picture_url || null);
+  const [coverImage, setCoverImage] = useState(profile?.banner_url || profile?.cover_picture_url || null);
 
   // Store original values to detect changes
   const [originalValues, setOriginalValues] = useState({
@@ -93,8 +93,8 @@ export default function AccountSettingsScreen({ navigation }) {
         phone: profile.phone || '',
         bio: profile.bio || '',
         location: profile.location || '',
-        profileImage: profile.profile_picture_url || null,
-        coverImage: profile.cover_picture_url || null,
+        profileImage: profile.avatar_url || profile.profile_picture_url || null,
+        coverImage: profile.banner_url || profile.cover_picture_url || null,
         profileVisibilityEnabled: profile.profile_visibility_enabled ?? true,
         dataSharingEnabled: profile.data_sharing_enabled ?? false,
         activityTrackingEnabled: profile.activity_tracking_enabled ?? true,
@@ -242,20 +242,17 @@ export default function AccountSettingsScreen({ navigation }) {
       // Handle profile picture upload if changed
       if (profileImage !== originalValues.profileImage && profileImage && !profileImage.startsWith('http')) {
         try {
-          const fileName = `profile_${user.id}_${Date.now()}.jpg`;
+          // Use consistent filename to replace old image instead of creating new ones
+          const fileName = `${user.id}/profile.jpg`;
 
-          // Create FormData for React Native
-          const formData = new FormData();
-          formData.append('file', {
-            uri: profileImage,
-            type: 'image/jpeg',
-            name: fileName,
-          });
+          // Convert image URI to blob for Supabase upload
+          const response = await fetch(profileImage);
+          const blob = await response.blob();
 
-          // Upload to Supabase storage bucket using FormData
+          // Upload to Supabase storage bucket (upsert: true replaces old file)
           const { data: uploadData, error: uploadError } = await supabase.storage
             .from('profile-pictures')
-            .upload(fileName, formData, {
+            .upload(fileName, blob, {
               contentType: 'image/jpeg',
               upsert: true,
             });
@@ -284,20 +281,17 @@ export default function AccountSettingsScreen({ navigation }) {
       // Handle cover photo upload if changed
       if (coverImage !== originalValues.coverImage && coverImage && !coverImage.startsWith('http')) {
         try {
-          const fileName = `cover_${user.id}_${Date.now()}.jpg`;
+          // Use consistent filename to replace old image instead of creating new ones
+          const fileName = `${user.id}/banner.jpg`;
 
-          // Create FormData for React Native
-          const formData = new FormData();
-          formData.append('file', {
-            uri: coverImage,
-            type: 'image/jpeg',
-            name: fileName,
-          });
+          // Convert image URI to blob for Supabase upload
+          const response = await fetch(coverImage);
+          const blob = await response.blob();
 
-          // Upload to Supabase storage bucket using FormData
+          // Upload to Supabase storage bucket (upsert: true replaces old file)
           const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('profile-pictures')
-            .upload(fileName, formData, {
+            .from('banner-images')
+            .upload(fileName, blob, {
               contentType: 'image/jpeg',
               upsert: true,
             });
@@ -311,7 +305,7 @@ export default function AccountSettingsScreen({ navigation }) {
 
           // Get public URL
           const { data: { publicUrl } } = supabase.storage
-            .from('profile-pictures')
+            .from('banner-images')
             .getPublicUrl(fileName);
 
           coverPictureUrl = publicUrl;

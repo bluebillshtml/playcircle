@@ -257,8 +257,10 @@ export const profileService = {
         : updates.first_name || updates.last_name || updates.full_name,
       phone: updates.phone,
       bio: updates.bio,
-      avatar_url: updates.avatar_url,
-
+      // Map profile_picture_url to avatar_url for database consistency
+      avatar_url: updates.avatar_url || updates.profile_picture_url,
+      // Map cover_picture_url to banner_url for database consistency
+      banner_url: updates.banner_url || updates.cover_picture_url,
       location: updates.location,
       onboarding_completed: updates.onboarding_completed,
       favorite_sports: updates.favorite_sports,
@@ -294,8 +296,8 @@ export const profileService = {
               : updates.first_name || updates.last_name || 'User',
             phone: updates.phone || '',
             bio: updates.bio || '',
-            avatar_url: updates.avatar_url || '',
-
+            avatar_url: updates.avatar_url || updates.profile_picture_url || '',
+            banner_url: updates.banner_url || updates.cover_picture_url || '',
             location: updates.location || '',
             onboarding_completed: updates.onboarding_completed !== undefined ? updates.onboarding_completed : false,
             favorite_sports: updates.favorite_sports || [],
