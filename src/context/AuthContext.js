@@ -80,8 +80,6 @@ export const AuthProvider = ({ children }) => {
         // Map full_name to first_name and last_name for backward compatibility
         first_name: profileData.first_name || (profileData.full_name ? profileData.full_name.split(' ')[0] : ''),
         last_name: profileData.last_name || (profileData.full_name ? profileData.full_name.split(' ').slice(1).join(' ') : ''),
-        // Ensure skill_level exists (it might be in user_sport_profiles)
-        skill_level: profileData.skill_level || 'Beginner',
         // Ensure onboarding_completed exists
         onboarding_completed: profileData.onboarding_completed || false,
       };
@@ -99,7 +97,6 @@ export const AuthProvider = ({ children }) => {
           full_name: userMetadata.full_name || userMetadata.name || null,
           first_name: userMetadata.first_name || null,
           last_name: userMetadata.last_name || null,
-          skill_level: 'Beginner',
           onboarding_completed: false,
         });
       } else {

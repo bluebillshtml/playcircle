@@ -8,6 +8,7 @@ import {
   Animated,
   Modal,
   ImageBackground,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
@@ -358,18 +359,27 @@ export default function OnboardingScreen({ navigation }) {
     try {
       setLoading(true);
       
+      // Debug: Check table accessibility first
+      console.log('=== ONBOARDING SAVE DEBUG ===');
+      console.log('User ID:', user.id);
+      console.log('Selected sports:', selectedSports);
+      console.log('Skill levels:', skillLevels);
+      console.log('Positions:', positions);
+      
+      // Check if table exists and is accessible
+      try {
+        const tableCheck = await profileService.checkUserSportProfilesTable();
+        console.log('Table check result:', tableCheck);
+      } catch (error) {
+        console.log('Table check failed:', error);
+      }
+      
       // Update profile with onboarding data
       const updatedProfile = {
         ...profile,
         favorite_sports: selectedSports.map(s => s.id),
         onboarding_completed: true,
       };
-
-      // Create sport profiles for each selected sport
-      console.log('=== ONBOARDING SAVE DEBUG ===');
-      console.log('Selected sports:', selectedSports);
-      console.log('Skill levels:', skillLevels);
-      console.log('Positions:', positions);
       
       const sportProfilesToSave = [];
       
@@ -380,14 +390,30 @@ export default function OnboardingScreen({ navigation }) {
           preferred_position: positions[sport.id],
         };
         
+        // Validate data before saving
+        if (!sportProfileData.skill_level) {
+          console.error(`❌ Missing skill level for ${sport.name}`);
+          continue;
+        }
+        
+        if (!sportProfileData.preferred_position) {
+          console.error(`❌ Missing position for ${sport.name}`);
+          continue;
+        }
+        
         console.log(`Creating sport profile for ${sport.name}:`, sportProfileData);
         sportProfilesToSave.push(sportProfileData);
         
         try {
-          await profileService.createUserSportProfile(user.id, sportProfileData);
-          console.log(`✅ Successfully saved ${sport.name} to Supabase from onboarding`);
+          const result = await profileService.createUserSportProfile(user.id, sportProfileData);
+          console.log(`✅ Successfully saved ${sport.name} to Supabase:`, result);
         } catch (error) {
-          console.log(`❌ Error saving ${sport.name} to Supabase (expected if no connection):`, error.message);
+          console.error(`❌ Error saving ${sport.name} to Supabase:`, {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code
+          });
         }
       }
       

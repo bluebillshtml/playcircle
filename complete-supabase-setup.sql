@@ -23,7 +23,6 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     phone VARCHAR(20),
     bio TEXT,
     location VARCHAR(255),
-    skill_level TEXT CHECK (skill_level IN ('Beginner', 'Intermediate', 'Advanced', 'Professional')),
     preferred_language VARCHAR(10) DEFAULT 'en',
     notifications_enabled BOOLEAN DEFAULT true,
     email_notifications BOOLEAN DEFAULT true,
@@ -37,6 +36,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     preferred_sport VARCHAR(50) DEFAULT 'padel',
     playing_style VARCHAR(50),
     favorite_position VARCHAR(50),
+    favorite_sports TEXT[], -- Array of sport IDs
     availability TEXT[],
     skill_rating DECIMAL(3,2) DEFAULT 0.0,
     is_verified BOOLEAN DEFAULT false,
@@ -162,8 +162,17 @@ BEGIN
         ALTER TABLE profiles ADD COLUMN losses INTEGER DEFAULT 0;
     END IF;
     
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'favorite_sports') THEN
+        ALTER TABLE profiles ADD COLUMN favorite_sports TEXT[];
+    END IF;
+    
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'onboarding_completed') THEN
         ALTER TABLE profiles ADD COLUMN onboarding_completed BOOLEAN DEFAULT false;
+    END IF;
+    
+    -- Remove skill_level from profiles table since it should be per-sport
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'profiles' AND column_name = 'skill_level') THEN
+        ALTER TABLE profiles DROP COLUMN skill_level;
     END IF;
 END $$;
 
@@ -183,14 +192,14 @@ WHERE full_name IS NOT NULL AND (first_name IS NULL OR last_name IS NULL);
 
 CREATE TABLE IF NOT EXISTS public.user_sport_profiles (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     sport_id TEXT NOT NULL,
-    skill_level TEXT CHECK (skill_level IN ('Beginner', 'Intermediate', 'Advanced', 'Professional')),
+    skill_level TEXT NOT NULL CHECK (skill_level IN ('Beginner', 'Intermediate', 'Advanced', 'Expert')),
     total_matches INTEGER DEFAULT 0,
     wins INTEGER DEFAULT 0,
     losses INTEGER DEFAULT 0,
     points INTEGER DEFAULT 0,
-    favorite_position TEXT,
+    preferred_position TEXT DEFAULT 'No Preference',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
     UNIQUE(user_id, sport_id)
@@ -289,7 +298,7 @@ CREATE TABLE IF NOT EXISTS public.matches (
     match_time TIME NOT NULL,
     duration_minutes INTEGER NOT NULL DEFAULT 90,
     match_type TEXT CHECK (match_type IN ('competitive', 'casual', 'tournament')) NOT NULL,
-    skill_level TEXT CHECK (skill_level IN ('Beginner', 'Intermediate', 'Advanced', 'Professional', 'Mixed')),
+    skill_level TEXT CHECK (skill_level IN ('Beginner', 'Intermediate', 'Advanced', 'Expert', 'Mixed')),
     max_players INTEGER DEFAULT 4,
     current_players INTEGER DEFAULT 0,
     total_cost DECIMAL(10, 2) NOT NULL,
@@ -533,7 +542,6 @@ ON CONFLICT (id) DO NOTHING;
 
 -- Profiles indexes
 CREATE INDEX IF NOT EXISTS idx_profiles_username ON public.profiles(username);
-CREATE INDEX IF NOT EXISTS idx_profiles_skill_level ON public.profiles(skill_level);
 CREATE INDEX IF NOT EXISTS idx_profiles_is_active ON public.profiles(is_active);
 CREATE INDEX IF NOT EXISTS idx_profiles_last_active_at ON public.profiles(last_active_at);
 
@@ -584,14 +592,13 @@ BEGIN
     user_preferred_sport := COALESCE(NEW.raw_user_meta_data->>'preferred_sport', 'padel');
     
     -- 1. Create the main profile
-    INSERT INTO public.profiles (id, username, full_name, first_name, last_name, skill_level, preferred_sport)
+    INSERT INTO public.profiles (id, username, full_name, first_name, last_name, preferred_sport)
     VALUES (
         NEW.id,
         COALESCE(NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1)),
         COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
         COALESCE(NEW.raw_user_meta_data->>'first_name', ''),
         COALESCE(NEW.raw_user_meta_data->>'last_name', ''),
-        user_skill_level,
         user_preferred_sport
     );
     
@@ -604,12 +611,12 @@ BEGIN
     );
     
     -- 3. Create user sport profile for their preferred sport
-    INSERT INTO public.user_sport_profiles (user_id, sport_id, skill_level, favorite_position)
+    INSERT INTO public.user_sport_profiles (user_id, sport_id, skill_level, preferred_position)
     VALUES (
         NEW.id,
         user_preferred_sport,
         user_skill_level,
-        COALESCE(NEW.raw_user_meta_data->>'favorite_position', 'Any')
+        COALESCE(NEW.raw_user_meta_data->>'preferred_position', 'Any')
     );
     
     -- 4. Create user sport stats for their preferred sport
@@ -811,12 +818,18 @@ CREATE POLICY "User sport profiles are viewable by everyone"
 DROP POLICY IF EXISTS "Users can update own sport profiles" ON public.user_sport_profiles;
 CREATE POLICY "Users can update own sport profiles"
     ON public.user_sport_profiles FOR UPDATE
-    USING (auth.uid() = user_id);
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Users can insert own sport profiles" ON public.user_sport_profiles;
 CREATE POLICY "Users can insert own sport profiles"
     ON public.user_sport_profiles FOR INSERT
     WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can delete own sport profiles" ON public.user_sport_profiles;
+CREATE POLICY "Users can delete own sport profiles"
+    ON public.user_sport_profiles FOR DELETE
+    USING (auth.uid() = user_id);
 
 -- User preferences policies
 DROP POLICY IF EXISTS "Users can view own preferences" ON public.user_preferences;

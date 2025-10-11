@@ -27,7 +27,6 @@ export const authService = {
           first_name: userData.firstName,
           last_name: userData.lastName,
           full_name: `${userData.firstName} ${userData.lastName}`.trim(),
-          skill_level: userData.skillLevel || 'Beginner',
         }
       }
     });
@@ -259,6 +258,8 @@ export const profileService = {
       phone: updates.phone,
       bio: updates.bio,
       avatar_url: updates.avatar_url,
+      favorite_sports: updates.favorite_sports,
+      onboarding_completed: updates.onboarding_completed,
       updated_at: new Date().toISOString(),
     };
 
@@ -292,6 +293,8 @@ export const profileService = {
             phone: updates.phone || '',
             bio: updates.bio || '',
             avatar_url: updates.avatar_url || '',
+            favorite_sports: updates.favorite_sports || [],
+            onboarding_completed: updates.onboarding_completed || false,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           })
@@ -350,16 +353,26 @@ export const profileService = {
     console.log('userId:', userId);
     console.log('sportData:', sportData);
     
+    // Validate required fields
+    if (!userId || !sportData.sport_id || !sportData.skill_level) {
+      throw new Error('Missing required fields: userId, sport_id, and skill_level are required');
+    }
+    
     const profileData = {
       user_id: userId,
       sport_id: sportData.sport_id,
       skill_level: sportData.skill_level,
-      preferred_position: sportData.preferred_position,
+      preferred_position: sportData.preferred_position || 'No Preference',
+      total_matches: 0,
+      wins: 0,
+      losses: 0,
+      points: 0,
       updated_at: new Date().toISOString(),
     };
 
     console.log('profileData to save:', profileData);
 
+    // Try upsert first
     const { data, error } = await supabase
       .from('user_sport_profiles')
       .upsert(profileData, {
@@ -370,16 +383,38 @@ export const profileService = {
       .single();
 
     if (error) {
-      console.error('Supabase error:', error);
-      throw error;
+      console.error('Upsert failed, error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+      
+      // If upsert fails, try a simple insert
+      console.log('Trying simple insert instead...');
+      const { data: insertData, error: insertError } = await supabase
+        .from('user_sport_profiles')
+        .insert(profileData)
+        .select()
+        .single();
+        
+      if (insertError) {
+        console.error('Insert also failed:', insertError);
+        throw insertError;
+      }
+      
+      console.log('Insert succeeded:', insertData);
+      return insertData;
     }
     
-    console.log('Saved data:', data);
+    console.log('Upsert succeeded:', data);
     return data;
   },
 
   // Get user sport profiles
   getUserSportProfiles: async (userId) => {
+    console.log('Getting sport profiles for user:', userId);
+    
     const { data, error } = await supabase
       .from('user_sport_profiles')
       .select('*')
@@ -387,14 +422,38 @@ export const profileService = {
       .order('created_at', { ascending: true });
 
     if (error) {
+      console.error('Error getting user sport profiles:', error);
       // If table doesn't exist or other database error, return empty array
       if (error.code === 'PGRST116' || error.code === '42P01') {
+        console.log('Table does not exist or no data found, returning empty array');
         return [];
       }
       throw error;
     }
     
+    console.log('Retrieved sport profiles:', data);
     return data || [];
+  },
+
+  // Debug function to check table structure
+  checkUserSportProfilesTable: async () => {
+    try {
+      const { data, error } = await supabase
+        .from('user_sport_profiles')
+        .select('*')
+        .limit(1);
+        
+      if (error) {
+        console.error('Table check failed:', error);
+        return { exists: false, error: error.message };
+      }
+      
+      console.log('Table exists and is accessible');
+      return { exists: true, sampleData: data };
+    } catch (err) {
+      console.error('Table check exception:', err);
+      return { exists: false, error: err.message };
+    }
   },
 
   // Delete user sport profiles
