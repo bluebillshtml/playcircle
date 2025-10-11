@@ -14,16 +14,16 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import AnimatedBackground from '../components/AnimatedBackground';
 import { profileService } from '../services/supabase';
 
 export default function LanguagesScreen({ navigation }) {
   const { colors } = useTheme();
   const { user, profile, setProfile } = useAuth();
+  const { currentLanguage, changeLanguage, t, isLanguageSupported } = useLanguage();
 
-  const [selectedLanguage, setSelectedLanguage] = useState(
-    profile?.preferred_language || 'en'
-  );
+  const [selectedLanguage, setSelectedLanguage] = useState(currentLanguage);
   const [dateFormat, setDateFormat] = useState('MM/DD/YYYY');
   const [timeFormat, setTimeFormat] = useState('12-hour');
   const [region, setRegion] = useState('United States');
@@ -38,9 +38,9 @@ export default function LanguagesScreen({ navigation }) {
   const languages = [
     { code: 'en', name: 'English', nativeName: 'English', flag: '🇺🇸' },
     { code: 'es', name: 'Spanish', nativeName: 'Español', flag: '🇪🇸' },
+    { code: 'it', name: 'Italian', nativeName: 'Italiano', flag: '🇮🇹' },
     { code: 'fr', name: 'French', nativeName: 'Français', flag: '🇫🇷' },
     { code: 'de', name: 'German', nativeName: 'Deutsch', flag: '🇩🇪' },
-    { code: 'it', name: 'Italian', nativeName: 'Italiano', flag: '🇮🇹' },
     { code: 'pt', name: 'Portuguese', nativeName: 'Português', flag: '🇵🇹' },
     { code: 'nl', name: 'Dutch', nativeName: 'Nederlands', flag: '🇳🇱' },
     { code: 'sv', name: 'Swedish', nativeName: 'Svenska', flag: '🇸🇪' },
@@ -78,12 +78,10 @@ export default function LanguagesScreen({ navigation }) {
     loadSettings();
   }, []);
 
-  // Auto-save language preference to Supabase
+  // Sync with language context
   useEffect(() => {
-    if (profile && user && selectedLanguage !== profile.preferred_language) {
-      handleLanguageChange(selectedLanguage);
-    }
-  }, [selectedLanguage]);
+    setSelectedLanguage(currentLanguage);
+  }, [currentLanguage]);
 
   const loadSettings = async () => {
     try {
@@ -110,32 +108,46 @@ export default function LanguagesScreen({ navigation }) {
   };
 
   const handleLanguageChange = async (languageCode) => {
-    try {
-      // Save to AsyncStorage immediately
-      await AsyncStorage.setItem('selectedLanguage', languageCode);
-      
-      const updates = {
-        preferred_language: languageCode,
-        updated_at: new Date().toISOString(),
-      };
+    // Check if language is supported
+    if (!isLanguageSupported(languageCode)) {
+      Alert.alert(
+        t('languages.comingSoon'),
+        `${languages.find(lang => lang.code === languageCode)?.name} ${t('languages.inProgress').toLowerCase()}`
+      );
+      return;
+    }
 
-      const updatedProfile = await profileService.updateProfile(user.id, updates);
-      setProfile(updatedProfile);
+    try {
+      // Use the language context to change language
+      const success = await changeLanguage(languageCode);
       
-      // Find the selected language info for the confirmation modal
-      const languageInfo = languages.find(lang => lang.code === languageCode);
-      setSelectedLanguageInfo(languageInfo);
-      
-      // Show confirmation modal
-      setShowConfirmationModal(true);
-      
-      // Auto-close after 2.5 seconds
-      setTimeout(() => {
-        setShowConfirmationModal(false);
-      }, 2500);
+      if (success) {
+        setSelectedLanguage(languageCode);
+        
+        // Update profile in Supabase
+        const updates = {
+          preferred_language: languageCode,
+          updated_at: new Date().toISOString(),
+        };
+
+        const updatedProfile = await profileService.updateProfile(user.id, updates);
+        setProfile(updatedProfile);
+        
+        // Find the selected language info for the confirmation modal
+        const languageInfo = languages.find(lang => lang.code === languageCode);
+        setSelectedLanguageInfo(languageInfo);
+        
+        // Show confirmation modal
+        setShowConfirmationModal(true);
+        
+        // Auto-close after 2.5 seconds
+        setTimeout(() => {
+          setShowConfirmationModal(false);
+        }, 2500);
+      }
     } catch (error) {
       console.error('Error updating language:', error);
-      Alert.alert('Error', 'Failed to update language preference');
+      Alert.alert(t('common.error'), 'Failed to update language preference');
     }
   };
 
@@ -160,25 +172,56 @@ export default function LanguagesScreen({ navigation }) {
     Alert.alert('Region Updated', `Region changed to ${regionValue}`);
   };
 
-  const renderLanguage = (language) => (
-    <TouchableOpacity
-      key={language.code}
-      style={styles.languageCard}
-      onPress={() => setSelectedLanguage(language.code)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.languageLeft}>
-        <Text style={styles.languageFlag}>{language.flag}</Text>
-        <View style={styles.languageInfo}>
-          <Text style={styles.languageName}>{language.name}</Text>
-          <Text style={styles.languageNative}>{language.nativeName}</Text>
+  const renderLanguage = (language) => {
+    const isSupported = isLanguageSupported(language.code);
+    const isSelected = selectedLanguage === language.code;
+    
+    return (
+      <TouchableOpacity
+        key={language.code}
+        style={[
+          styles.languageCard,
+          !isSupported && styles.languageCardDisabled
+        ]}
+        onPress={() => handleLanguageChange(language.code)}
+        activeOpacity={isSupported ? 0.7 : 1}
+        disabled={!isSupported}
+      >
+        <View style={styles.languageLeft}>
+          <Text style={[
+            styles.languageFlag,
+            !isSupported && styles.languageFlagDisabled
+          ]}>
+            {language.flag}
+          </Text>
+          <View style={styles.languageInfo}>
+            <View style={styles.languageNameRow}>
+              <Text style={[
+                styles.languageName,
+                !isSupported && styles.languageNameDisabled
+              ]}>
+                {language.name}
+              </Text>
+              {!isSupported && (
+                <View style={styles.inProgressBadge}>
+                  <Text style={styles.inProgressText}>{t('languages.inProgress')}</Text>
+                </View>
+              )}
+            </View>
+            <Text style={[
+              styles.languageNative,
+              !isSupported && styles.languageNativeDisabled
+            ]}>
+              {language.nativeName}
+            </Text>
+          </View>
         </View>
-      </View>
-      {selectedLanguage === language.code && (
-        <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
-      )}
-    </TouchableOpacity>
-  );
+        {isSelected && isSupported && (
+          <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <AnimatedBackground>
@@ -188,7 +231,7 @@ export default function LanguagesScreen({ navigation }) {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Languages</Text>
+        <Text style={styles.headerTitle}>{t('languages.title')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -197,13 +240,7 @@ export default function LanguagesScreen({ navigation }) {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Info Banner */}
-        <View style={styles.infoBanner}>
-          <Ionicons name="information-circle" size={24} color={colors.primary} />
-          <Text style={styles.infoText}>
-            Select your preferred language. The app will display content in your chosen language.
-          </Text>
-        </View>
+
 
         {/* Languages List */}
         <View style={styles.languageList}>
@@ -211,7 +248,7 @@ export default function LanguagesScreen({ navigation }) {
             <View style={styles.iconGlow}>
               <Ionicons name="globe-outline" size={20} color={colors.primary} />
             </View>
-            <Text style={styles.sectionTitle}>Available Languages</Text>
+            <Text style={styles.sectionTitle}>{t('languages.availableLanguages')}</Text>
           </View>
           {languages.map(renderLanguage)}
         </View>
@@ -222,7 +259,7 @@ export default function LanguagesScreen({ navigation }) {
             <View style={styles.iconGlow}>
               <Ionicons name="settings-outline" size={20} color={colors.primary} />
             </View>
-            <Text style={styles.sectionTitle}>Regional Settings</Text>
+            <Text style={styles.sectionTitle}>{t('languages.regionalSettings')}</Text>
           </View>
 
           <View style={styles.sectionCard}>
@@ -232,7 +269,7 @@ export default function LanguagesScreen({ navigation }) {
             >
               <View style={styles.settingLeft}>
                 <Ionicons name="calendar-outline" size={20} color={colors.text} />
-                <Text style={styles.settingText}>Date Format</Text>
+                <Text style={styles.settingText}>{t('languages.dateFormat')}</Text>
               </View>
               <View style={styles.settingRight}>
                 <Text style={styles.settingValue}>{dateFormat}</Text>
@@ -246,7 +283,7 @@ export default function LanguagesScreen({ navigation }) {
             >
               <View style={styles.settingLeft}>
                 <Ionicons name="time-outline" size={20} color={colors.text} />
-                <Text style={styles.settingText}>Time Format</Text>
+                <Text style={styles.settingText}>{t('languages.timeFormat')}</Text>
               </View>
               <View style={styles.settingRight}>
                 <Text style={styles.settingValue}>{timeFormat}</Text>
@@ -260,7 +297,7 @@ export default function LanguagesScreen({ navigation }) {
             >
               <View style={styles.settingLeft}>
                 <Ionicons name="location-outline" size={20} color={colors.text} />
-                <Text style={styles.settingText}>Region</Text>
+                <Text style={styles.settingText}>{t('languages.region')}</Text>
               </View>
               <View style={styles.settingRight}>
                 <Text style={styles.settingValue}>{region}</Text>
@@ -299,8 +336,8 @@ export default function LanguagesScreen({ navigation }) {
               <View style={styles.modalIconContainer}>
                 <Ionicons name="calendar-outline" size={40} color="#FFFFFF" />
               </View>
-              <Text style={styles.modalTitle}>Date Format</Text>
-              <Text style={styles.modalMessage}>Choose your preferred date format</Text>
+              <Text style={styles.modalTitle}>{t('languages.dateFormatTitle')}</Text>
+              <Text style={styles.modalMessage}>{t('languages.dateFormatMessage')}</Text>
               
               <View style={styles.optionsList}>
                 {dateFormats.map((format) => (
@@ -355,8 +392,8 @@ export default function LanguagesScreen({ navigation }) {
               <View style={styles.modalIconContainer}>
                 <Ionicons name="time-outline" size={40} color="#FFFFFF" />
               </View>
-              <Text style={styles.modalTitle}>Time Format</Text>
-              <Text style={styles.modalMessage}>Choose your preferred time format</Text>
+              <Text style={styles.modalTitle}>{t('languages.timeFormatTitle')}</Text>
+              <Text style={styles.modalMessage}>{t('languages.timeFormatMessage')}</Text>
               
               <View style={styles.optionsList}>
                 {timeFormats.map((format) => (
@@ -411,8 +448,8 @@ export default function LanguagesScreen({ navigation }) {
               <View style={styles.modalIconContainer}>
                 <Ionicons name="location-outline" size={40} color="#FFFFFF" />
               </View>
-              <Text style={styles.modalTitle}>Region</Text>
-              <Text style={styles.modalMessage}>Choose your region for localized content</Text>
+              <Text style={styles.modalTitle}>{t('languages.regionTitle')}</Text>
+              <Text style={styles.modalMessage}>{t('languages.regionMessage')}</Text>
               
               <View style={styles.optionsList}>
                 {regions.map((regionOption) => (
@@ -467,12 +504,12 @@ export default function LanguagesScreen({ navigation }) {
               <View style={styles.confirmationIconContainer}>
                 <Ionicons name="checkmark-circle-outline" size={48} color="#FFFFFF" />
               </View>
-              <Text style={styles.confirmationTitle}>Language Updated!</Text>
+              <Text style={styles.confirmationTitle}>{t('languages.languageUpdated')}</Text>
               {selectedLanguageInfo && (
                 <View style={styles.languageConfirmationInfo}>
                   <Text style={styles.languageFlag}>{selectedLanguageInfo.flag}</Text>
                   <Text style={styles.confirmationMessage}>
-                    Your language has been changed to {selectedLanguageInfo.name}
+                    {t('languages.languageChangedTo', { language: selectedLanguageInfo.name })}
                   </Text>
                 </View>
               )}
@@ -480,7 +517,7 @@ export default function LanguagesScreen({ navigation }) {
                 style={styles.confirmationButton}
                 onPress={() => setShowConfirmationModal(false)}
               >
-                <Text style={styles.confirmationButtonText}>Got it</Text>
+                <Text style={styles.confirmationButtonText}>{t('common.gotIt')}</Text>
               </TouchableOpacity>
             </View>
           </BlurView>
@@ -535,29 +572,7 @@ const createStyles = (colors) => StyleSheet.create({
     paddingBottom: 40,
     paddingTop: 8,
   },
-  infoBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.card,
-    marginHorizontal: 20,
-    marginTop: 16,
-    padding: 20,
-    borderRadius: 16,
-    gap: 12,
-    borderWidth: 1.5,
-    borderColor: colors.glassBorder,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  infoText: {
-    flex: 1,
-    fontSize: 14,
-    color: colors.text,
-    lineHeight: 20,
-  },
+
   languageList: {
     marginHorizontal: 20,
     marginTop: 16,
@@ -605,6 +620,11 @@ const createStyles = (colors) => StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
+  languageCardDisabled: {
+    backgroundColor: colors.surface,
+    opacity: 0.6,
+    shadowOpacity: 0.05,
+  },
   languageLeft: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -613,17 +633,44 @@ const createStyles = (colors) => StyleSheet.create({
   languageFlag: {
     fontSize: 32,
   },
+  languageFlagDisabled: {
+    opacity: 0.5,
+  },
   languageInfo: {
     gap: 4,
+    flex: 1,
+  },
+  languageNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   languageName: {
     fontSize: 16,
     fontWeight: '600',
     color: colors.text,
   },
+  languageNameDisabled: {
+    color: colors.textSecondary,
+  },
   languageNative: {
     fontSize: 14,
     color: colors.textSecondary,
+  },
+  languageNativeDisabled: {
+    opacity: 0.6,
+  },
+  inProgressBadge: {
+    backgroundColor: colors.textSecondary + '20',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  inProgressText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
   },
   section: {
     marginHorizontal: 20,

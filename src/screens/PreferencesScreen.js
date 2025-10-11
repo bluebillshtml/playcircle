@@ -15,6 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useSport } from '../context/SportContext';
+import { useLanguage } from '../context/LanguageContext';
 import { profileService } from '../services/supabase';
 import AnimatedBackground from '../components/AnimatedBackground';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -41,6 +42,7 @@ export default function PreferencesScreen({ navigation }) {
     const { colors } = useTheme();
     const { user, profile, setProfile } = useAuth();
     const { selectedSport, setSelectedSport } = useSport();
+    const { t } = useLanguage();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [selectedSports, setSelectedSports] = useState([]);
